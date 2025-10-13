@@ -37,25 +37,29 @@ export default async function handler(req, res) {
             else quality = lvl > base ? 5 : (lvl === base ? 3 : 1);
         }
 
-        // 1) Upsert memory_levels
         const now = new Date().toISOString();
-        const upsertRow = {
-            card_id: String(card_id),
-            type: clientType || null,
-            level: lvl,
-            last_reviewed_at: now,
-            updated_at: now,
-        };
 
-        const { data: up, error: upErr } = await supabase
+        // Lấy thông tin hiện tại (nếu có) để giữ type/last_learned_at
+        const { data: current, error: currentErr } = await supabase
             .from('memory_levels')
-            .upsert(upsertRow, { onConflict: 'card_id' })
-            .select('card_id, level')
-            .single();
-        if (upErr) throw upErr;
+            .select('card_id, type, level, leech_count, is_leech, last_learned_at')
+            .eq('card_id', card_id)
+            .maybeSingle();
+        if (currentErr) throw currentErr;
 
-        // 2) Ghi log review (không chặn flow nếu lỗi log)
-        await supabase.from('review_logs').insert({
+        let resolvedType = clientType || current?.type || null;
+        if (!resolvedType) {
+            const { data: cardRow, error: cardErr } = await supabase
+                .from('cards')
+                .select('type')
+                .eq('id', card_id)
+                .maybeSingle();
+            if (cardErr) throw cardErr;
+            resolvedType = cardRow?.type || null;
+        }
+
+        // 1) Ghi log review để tạo lịch sử & trigger DB (nếu cần)
+        const logPayload = {
             card_id: String(card_id),
             quality,
             meta: {
@@ -65,16 +69,63 @@ export default async function handler(req, res) {
                 new_level: lvl,
                 final: Number.isFinite(Number(final)) ? Number(final) : null,
             },
-        });
+        };
+        const { error: logErr } = await supabase.from('review_logs').insert(logPayload);
+        if (logErr) throw logErr;
 
-        // 3) Trả lại hàng memory_levels mới nhất để client làm tươi UI
+        // 2) Tính lại leech_count (bỏ qua lần trượt đầu tiên)
+        const { count: lowCount, error: countErr } = await supabase
+            .from('review_logs')
+            .select('*', { count: 'exact', head: true })
+            .eq('card_id', card_id)
+            .lte('quality', 1);
+        if (countErr) throw countErr;
+        const leechCount = Math.max(0, (lowCount || 0) - 1);
+        const isLeech = leechCount >= 3;
+
+        // 3) Upsert memory_levels với mức nhớ mới + leech metadata chính xác
+        const upsertRow = {
+            card_id: String(card_id),
+            type: resolvedType,
+            level: lvl,
+            leech_count: leechCount,
+            is_leech: isLeech,
+            last_reviewed_at: now,
+            updated_at: now,
+        };
+        if (!current?.last_learned_at) {
+            upsertRow.last_learned_at = now;
+        }
+
         const { data: memory, error: mlErr } = await supabase
             .from('memory_levels')
+            .upsert(upsertRow, { onConflict: 'card_id' })
             .select('*')
+            .single();
+        if (mlErr) throw mlErr;
+
+        // 4) Ghi đè điểm của session gần nhất (nếu có) để UI phản ánh đúng
+        const { data: sessionCard, error: sessionLookupErr } = await supabase
+            .from('session_cards')
+            .select('session_id, card_id')
             .eq('card_id', card_id)
+            .order('created_at', { ascending: false })
             .limit(1)
             .maybeSingle();
-        if (mlErr) throw mlErr;
+        if (!sessionLookupErr && sessionCard?.session_id) {
+            const { error: sessionUpdateErr } = await supabase
+                .from('session_cards')
+                .update({ final: lvl })
+                .eq('session_id', sessionCard.session_id)
+                .eq('card_id', card_id);
+            if (sessionUpdateErr) {
+                // eslint-disable-next-line no-console
+                console.error('[api/memory/level] failed to update session card', sessionUpdateErr);
+            }
+        } else if (sessionLookupErr) {
+            // eslint-disable-next-line no-console
+            console.error('[api/memory/level] failed to locate session card', sessionLookupErr);
+        }
 
         return res.status(200).json({ ok: true, quality, memory });
     } catch (e) {
