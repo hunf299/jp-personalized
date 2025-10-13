@@ -272,7 +272,7 @@ export default function FlashcardsPage() {
       // đảm bảo lấy score là number
       const w = Number.isFinite(Number(warmupScores[b.id]?.score)) ? Number(warmupScores[b.id].score) : 0;
       const r = Number.isFinite(Number(recallScores[b.id]?.score)) ? Number(recallScores[b.id].score) : 0;
-      const final = Math.floor((Number(w) + Number(r)) / 2);
+      const final = Math.round((Number(w) + Number(r)) / 2);
 
       return {
         card_id: String(b.id),   // **bắt buộc**: server dùng card_id
