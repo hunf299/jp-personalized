@@ -1,0 +1,1 @@
+import { countByType } from '../../lib/server/db'; export default async function handler(req,res){ try{ const counts=await countByType(); res.json(counts);}catch(e){ res.status(500).json({error:String(e)})}}

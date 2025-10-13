@@ -1,0 +1,1 @@
+import { listCards } from '../../../lib/server/db'; export default async function handler(req,res){ if(req.method!=='GET')return res.status(405).end(); try{ const rows=await listCards(); res.json(rows);}catch(e){ res.status(500).json({error:String(e)})}}
