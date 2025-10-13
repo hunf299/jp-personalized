@@ -18,6 +18,38 @@ function findKey(keys, aliases) {
   return null;
 }
 
+function makeKey(row) {
+  return `${row.type}||${row.front}||${row.back}`;
+}
+
+function escapeForOr(value) {
+  const escaped = value
+    .replace(/\\/g, '\\\\')
+    .replace(/"/g, '\\"');
+  return `"${escaped}"`;
+}
+
+async function findExistingKeys(rows) {
+  const existing = new Set();
+  const chunkSize = 20;
+  for (let i = 0; i < rows.length; i += chunkSize) {
+    const chunk = rows.slice(i, i + chunkSize);
+    const orConditions = chunk
+      .map(r => `and(type.eq.${escapeForOr(r.type)},front.eq.${escapeForOr(r.front)},back.eq.${escapeForOr(r.back)})`)
+      .join(',');
+    if (!orConditions) continue;
+    const { data, error } = await supa
+      .from('cards')
+      .select('type,front,back')
+      .or(orConditions);
+    if (error) throw error;
+    for (const row of data || []) {
+      existing.add(makeKey(row));
+    }
+  }
+  return existing;
+}
+
 async function tableHasColumn(table, column) {
   // Try selecting the column; if it errors, assume not present.
   const { error } = await supa.from(table).select(column).limit(1);
@@ -47,6 +79,7 @@ export default async function handler(req, res) {
     const hasCategoryColumn = await tableHasColumn('cards', 'category');
 
     const rows = [];
+    const seen = new Set();
     for (const r of records) {
       const front = (r[kFront] ?? '').toString().trim();
       const back  = (r[kBack]  ?? '').toString().trim();
@@ -57,6 +90,9 @@ export default async function handler(req, res) {
         const category = (r[kCat]?.toString().trim()) || null;
         row.category = category || null;
       }
+      const key = makeKey(row);
+      if (seen.has(key)) continue;
+      seen.add(key);
       rows.push(row);
     }
 
@@ -64,10 +100,15 @@ export default async function handler(req, res) {
 
     // Prefer upsert to avoid duplicates (requires unique index on (type,front,back) when deleted=false)
     let resp;
-    try {
-      resp = await supa.from('cards').upsert(rows, { onConflict: 'type,front,back', ignoreDuplicates: true }).select('id');
-    } catch (e) {
-      resp = await supa.from('cards').insert(rows).select('id');
+    resp = await supa.from('cards').upsert(rows, { onConflict: 'type,front,back', ignoreDuplicates: true }).select('id');
+
+    if (resp.error && /no unique or exclusion constraint/i.test(resp.error.message || '')) {
+      const existing = await findExistingKeys(rows);
+      const filtered = rows.filter(row => !existing.has(makeKey(row)));
+      if (!filtered.length) {
+        return res.json({ ok:true, inserted: 0 });
+      }
+      resp = await supa.from('cards').insert(filtered).select('id');
     }
     if (resp.error) throw resp.error;
     const inserted = Array.isArray(resp.data) ? resp.data.length : 0;
