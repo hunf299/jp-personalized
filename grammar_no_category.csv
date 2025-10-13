@@ -1,0 +1,64 @@
+type,front,back
+grammar,○ Đặc biệt,Một vài động từ kết thúc bằng cột「い」nhưng vẫn thuộc nhóm II. Các
+grammar,động từ thường gặp là,"みます (xem), います (ở), おきます (thức dậy), かります"
+grammar,"(mượn), おります (xuống xe), あびます (tắm).",● Nhóm III (Bất quy tắc):
+grammar,○ Chỉ có 2 động từ gốc: 来ます (きます,đến) và します (します - làm).
+grammar,きょうします,"học), 買い物します (かいものします - mua sắm)."
+grammar,1. Thể て (V-te),"Đây là thể đa dụng nhất, dùng để kết nối và tạo ra rất nhiều mẫu câu."
+grammar,■ Đặc biệt,行きます → 行って (いって)
+grammar,○ Nhóm III,"します → して, きます → きて"
+grammar,○ Vてください,"Yêu cầu, nhờ vả. (Bài 14)"
+grammar,○ Vています,Đang diễn ra một hành động. (Bài 14)
+grammar,○ Vてもいいです,Xin phép làm gì đó. (Bài 15)
+grammar,○ Vてはいけません,Cấm đoán làm gì đó. (Bài 15)
+grammar,○ Vてから,Sau khi làm V... (Bài 16)
+grammar,○ Vてあげる/くれる/もらう,Cho/nhận hành động. (Bài 24)
+grammar,2. Thể ない (V-nai),Dạng phủ định dạng thông thường của động từ.
+grammar,○ Nhóm I,Chuyển đuôi cột い trước ます sang cột あ rồi + ない.
+grammar,(Lưu ý,い → わ)
+grammar,○ Nhóm III,"します → しない, きます → こない (Lưu ý cách đọc 来ない là konai)"
+grammar,○ Vないでください,Yêu cầu ai đó không làm gì. (Bài 17)
+grammar,○ Vなければなりません,Phải làm gì đó. (Bài 17)
+grammar,○ Vなくてもいいです,Không cần làm gì đó. (Bài 17)
+grammar,○ Vないほうがいいです,Lời khuyên không nên làm gì. (Bài 33)
+grammar,3. Thể た (V-ta),Dạng quá khứ dạng thông thường của động từ.
+grammar,● Cách chia,"Giống hệt thể て, chỉ cần thay て → た và で → だ."
+grammar,○ Vたことがあります,Đã từng làm gì đó (kinh nghiệm). (Bài 19)
+grammar,○ Vたり Vたりします,Liệt kê hành động không theo thứ tự. (Bài 19)
+grammar,○ Vたほうがいいです,Lời khuyên nên làm gì. (Bài 33)
+grammar,○ Vたあとで,Sau khi... (Bài 18)
+grammar,4. Thể từ điển (V-ru / 辞書形),Dạng nguyên mẫu của động từ.
+grammar,○ Nhóm I,Chuyển đuôi cột い trước ます sang cột う.
+grammar,○ Nhóm III,"します → する, きます → くる (Lưu ý cách đọc 来る là kuru)"
+grammar,○ Vることができます,Có thể làm gì. (Bài 18)
+grammar,○ 趣味はVることです,Sở thích là... (Bài 18)
+grammar,○ Vるまえに,Trước khi làm V... (Bài 18)
+grammar,5. Thể khả năng (可能形),"Diễn tả năng lực, khả năng ""có thể làm"" một việc gì đó."
+grammar,○ Nhóm I,Chuyển đuôi cột い trước ます sang cột え rồi + ます.
+grammar,○ Nhóm III,"します → できます, きます → こられます"
+grammar,● Mẫu câu,[Chủ ngữ] は/が [Danh từ] が [V khả năng] (Bài 27)
+grammar,"Dạng ""rủ rê"" thân mật của Vましょう hoặc thể hiện ý định.",● Cách chia:
+grammar,○ Nhóm I,Chuyển đuôi cột い trước ます sang cột お rồi + う.
+grammar,○ Nhóm III,"します → しよう, きます → こよう"
+grammar,● Mẫu câu,Vようと思っています: Diễn tả ý định đã có từ trước. (Bài 31)
+grammar,7. Thể mệnh lệnh (命令形) và Cấm đoán (禁止形),● Cách chia Thể mệnh lệnh:
+grammar,○ Nhóm III,"します → しろ, きます → こい"
+grammar,1. Mẫu câu Cho,Nhận (授受表現)
+grammar,● あげます,(Ai đó) cho (ai đó). Dùng khi người nói/người thuộc phía người nói cho người
+grammar,● もらいます,(Ai đó) nhận từ (ai đó).
+grammar,● くれます,(Ai đó) cho tôi/người trong gia đình tôi.
+grammar,● Vてあげます,Làm gì cho ai đó.
+grammar,● Vてもらいます,Nhận được hành động từ ai đó (được ai làm cho).
+grammar,● Vてくれます,Ai đó làm gì cho mình.
+grammar,● So sánh hơn,A は B より + [Tính từ] です (A thì ... hơn B)
+grammar,● So sánh nhất,"[Phạm vi] で/のなかで + A が いちばん + [Tính từ] です (Trong [phạm vi], A"
+grammar,● Hỏi và trả lời lựa chọn,"A と B と どちらが (Giữa A và B, cái nào hơn?)"
+grammar,■ A,"サッカーと野球と、どちらがおもしろいですか。(Bóng đá và bóng chày, môn"
+grammar,■ B,サッカーのほうがおもしろいです。(Bóng đá thú vị hơn.)
+grammar,● Xin phép,Vてもいいですか (Tôi làm ... có được không?)
+grammar,● Đề nghị giúp đỡ,Vましょうか (Để tôi làm ... cho bạn nhé?)
+grammar,● Nói về dự định,Vる/Vない + つもりです (Dự định làm/không làm gì)
+grammar,"● Thể hiện suy nghĩ, ý kiến",[Thể thường] + と思います (Tôi nghĩ là...)
+grammar,● Trích dẫn,[Câu nói] + と言います (Nói là...)
+grammar,○ ～から (Bởi vì...,mang tính chủ quan)
+grammar,○ ～ので (Bởi vì...,"mang tính khách quan, lịch sự hơn から)"

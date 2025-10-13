@@ -1,0 +1,244 @@
+type,front,back
+vocab,● わたし,Tôi
+vocab,● あなた,Bạn
+vocab,● あのひと (あのかた),Người kia (lịch sự)
+vocab,● みなさん,Mọi người
+vocab,● ～さん / ～ちゃん / ～くん / ～じん (～人),"Hậu tố tên người, quốc tịch"
+vocab,● せんせい (先生),Giáo viên
+vocab,● きょうし (教師),Giáo viên (nghề nghiệp)
+vocab,● がくせい (学生),"Học sinh, sinh viên"
+vocab,● かいしゃいん (会社員),Nhân viên công ty
+vocab,● ぎんこういん (銀行員),Nhân viên ngân hàng
+vocab,● いしゃ (医者),Bác sĩ
+vocab,● けんきゅうしゃ (研究者),Nhà nghiên cứu
+vocab,● エンジニア,Kỹ sư
+vocab,● だれ (どなた),Ai (lịch sự)
+vocab,● ともだち (友達),Bạn bè
+vocab,● かぞく (家族),Gia đình
+vocab,● おとうさん (お父さん),Bố
+vocab,● おかあさん (お母さん),Mẹ
+vocab,● ごしゅじん (ご主人) / おっと(夫),Chồng
+vocab,● おくさん (奥さん) / つま(妻),Vợ
+vocab,● こども (子ども),Con cái
+vocab,● おとな (大人),Người lớn
+vocab,● けいさつ (警察),Cảnh sát
+vocab,● ペット,Thú cưng
+vocab,● とり (鳥),Chim
+vocab,● がっこう (学校),Trường học
+vocab,● だいがく (大学),Đại học
+vocab,● びょういん (病院),Bệnh viện
+vocab,● ぎんこう (銀行),Ngân hàng
+vocab,● ゆうびんきょく (郵便局),Bưu điện
+vocab,● としょかん (図書館),Thư viện
+vocab,● びじゅつかん (美術館),Bảo tàng mỹ thuật
+vocab,● えき (駅),Ga tàu
+vocab,● かいしゃ (会社),Công ty
+vocab,● じむしょ (事務所),Văn phòng
+vocab,● うけつけ (受付),Quầy lễ tân
+vocab,● ロビー,Sảnh
+vocab,● へや (部屋),Phòng
+vocab,● きょうしつ (教室),Lớp học
+vocab,● しょくどう (食堂),Nhà ăn
+vocab,● かいぎしつ (会議室),Phòng họp
+vocab,● トイレ (おてあらい),Nhà vệ sinh
+vocab,● かいだん (階段),Cầu thang bộ
+vocab,● エレベーター / エスカレーター,Thang máy / Thang cuốn
+vocab,● いえ/うち (家/うち),Nhà
+vocab,● みせ (店),Cửa hàng
+vocab,● うりば (売り場),Quầy bán hàng
+vocab,● ちか (地下),Tầng hầm
+vocab,● こうえん (公園),Công viên
+vocab,● ばしょ (場所),"Nơi chốn, địa điểm"
+vocab,● りょう (寮),Ký túc xá
+vocab,● かべ (壁),Bức tường
+vocab,● うえ (上) / した (下),Trên / Dưới
+vocab,● まえ (前) / うしろ (後ろ),Trước / Sau
+vocab,● みぎ (右) / ひだり (左),Phải / Trái
+vocab,● なか (中) / そと (外),Trong / Ngoài
+vocab,● となり (隣),Bên cạnh
+vocab,● ちかく (近く),Gần
+vocab,● これ / それ / あれ,Cái này / đó / kia
+vocab,● ほん (本),Sách
+vocab,● じしょ (辞書),Từ điển
+vocab,● ざっし (雑誌),Tạp chí
+vocab,● しんぶん (新聞),Báo
+vocab,● ノート / てちょう (手帳),Vở / Sổ tay
+vocab,● めいし (名刺),Danh thiếp
+vocab,● カード,Thẻ
+vocab,● えんぴつ (鉛筆) / ボールペン,Bút chì / Bút bi
+vocab,● かぎ,Chìa khóa
+vocab,● とけい (時計),Đồng hồ
+vocab,● かさ (傘),"Ô, dù"
+vocab,● かばん,"Cặp, túi"
+vocab,● テレビ / ラジオ / カメラ,Tivi / Radio / Máy ảnh
+vocab,● コンピューター / パソコン,Máy tính / PC
+vocab,● くるま (車),Ô tô
+vocab,● つくえ (机) / いす,Bàn / Ghế
+vocab,● ふく (服),Quần áo
+vocab,● シャツ,Áo sơ mi
+vocab,● くつ (靴),Giày
+vocab,● にもつ (荷物),Hành lý
+vocab,● おかね (お金),Tiền
+vocab,● きっぷ (切符),Vé
+vocab,● てがみ (手紙),Thư
+vocab,● レポート,Báo cáo
+vocab,● しゃしん (写真),Ảnh
+vocab,● どうぐ (道具),"Dụng cụ, công cụ"
+vocab,● しりょう (資料),Tài liệu
+vocab,● しなもの (品物),Hàng hóa
+vocab,● ねだん (値段),Giá cả
+vocab,● きゅうりょう (給料),Lương
+vocab,● ばんぐみ (番組),"Chương trình (TV, radio)"
+vocab,● おさら (お皿),Cái đĩa
+vocab,● おちゃわん,Cái bát
+vocab,● コップ,Cái cốc
+vocab,● ガラス,Thủy tinh
+vocab,● ふくろ (袋),Cái túi
+vocab,● えだ (枝),Cành cây
+vocab,● はり (針),Kim đồng hồ
+vocab,● マーク,"Ký hiệu, dấu hiệu"
+vocab,● たべもの (食べ物),Đồ ăn
+vocab,● のみもの (飲み物),Đồ uống
+vocab,● ごはん (ご飯),Cơm
+vocab,● パン,Bánh mì
+vocab,● にく (肉),Thịt
+vocab,● さかな (魚),Cá
+vocab,● やさい (野菜),Rau
+vocab,● くだもの (果物),Trái cây
+vocab,● みず (水),Nước
+vocab,● おちゃ (お茶),Trà
+vocab,● コーヒー,Cà phê
+vocab,● ぎゅうにゅう (牛乳),Sữa
+vocab,● チョコレート,Sô cô la
+vocab,● あじ (味),Vị
+vocab,[お]みやげ (お土産),Quà lưu niệm
+vocab,● こえ (声),"Tiếng, giọng nói"
+vocab,● なみ (波),Sóng
+vocab,● はなび (花火),Pháo hoa
+vocab,● けしき (景色),Phong cảnh
+vocab,● じしん (地震),Động đất
+vocab,● いけん (意見),Ý kiến
+vocab,● しゅうかん (習慣),Tập quán
+vocab,● けいけん (経験),Kinh nghiệm
+vocab,● ちから (力),"Sức lực, năng lực"
+vocab,● にんき (人気),"Sự hâm mộ, yêu thích"
+vocab,● かたち (形),Hình dạng
+vocab,● いきます (行きます),Đi
+vocab,● きます (来ます),Đến
+vocab,● かえります (帰ります),Về
+vocab,● たべます (食べます),Ăn
+vocab,● のみます (飲みます),Uống
+vocab,● みます (見します),Xem
+vocab,● ききます (聞きます),"Nghe, hỏi"
+vocab,● よみます (読みます),Đọc
+vocab,● かきます (書きます),"Viết, vẽ"
+vocab,● かいます (買います),Mua
+vocab,● とります (撮ります),Chụp (ảnh)
+vocab,● あいます (会います),Gặp
+vocab,● おきます (起きます),Thức dậy
+vocab,● ねます (寝ます),Ngủ
+vocab,● はたらきます (働きます),Làm việc
+vocab,● べんきょうします (勉強します),Học
+vocab,● かいものします (買い物します),Mua sắm
+vocab,● します,Làm
+vocab,● あげます / くれます,"Cho, tặng"
+vocab,● もらいます,Nhận
+vocab,● おしえます (教えます),"Dạy, cho biết"
+vocab,● ならいます (習います),Học
+vocab,● かけます,"Gọi (điện), Mặc (áo)"
+vocab,● きります (切ります),Cắt
+vocab,● おくります (送ります),Gửi
+vocab,● もちます (持ちます),"Cầm, mang"
+vocab,● てつだいます (手伝います),Giúp đỡ
+vocab,● わかります,Hiểu
+vocab,● あります / います,Có
+vocab,● できます,"Có thể, được hoàn thành"
+vocab,● つけます / けします (消します),Bật / Tắt
+vocab,● いそぎます (急ぎます),Vội
+vocab,● まちます (待ちます),Đợi
+vocab,● よびます (呼びます),Gọi
+vocab,● はなします (話します),Nói chuyện
+vocab,● つかいます (使います),Dùng
+vocab,● とめます (止めます),"Dừng, đỗ"
+vocab,● みせます (見せます),Cho xem
+vocab,● すみます (住みます),Sống
+vocab,● しります (知ります),Biết
+vocab,● つくります (作ります),"Làm, chế tạo"
+vocab,[ドアが] あきます / [ドアを] あけます,[Cửa] mở / Mở [cửa]
+vocab,[ドアが] しまります / [ドアを] しめます,[Cửa] đóng / Đóng [cửa]
+vocab,[あめが] やみます ([雨が] 止みます),Tạnh [mưa]
+vocab,[かぜを] ひきます,Bị [cảm]
+vocab,● うります (売ります),Bán
+vocab,● おもいます (思います),Nghĩ
+vocab,● いいます (言います),Nói
+vocab,● こまります (困ります),"Khó khăn, khổ"
+vocab,● こわれます (壊れます),Bị hỏng
+vocab,● われます (割れます),Bị vỡ
+vocab,● おれます (折れます),Bị gãy
+vocab,● やぶれます (破れます),Bị rách
+vocab,● よごれます (汚れます),Bị bẩn
+vocab,● つきます (付きます),"Có dính, có kèm theo"
+vocab,● おとします (落とします),Đánh rơi
+vocab,● かかります (掛かります),Được khóa
+vocab,● まちがえます (間違えます),"Nhầm, sai"
+vocab,● うんどうします (運動します),Vận động
+vocab,● せいこうします (成功します),Thành công
+vocab,● しっぱいします (失敗します),Thất bại
+vocab,● ごうかくします (合格します),"Đỗ, qua"
+vocab,● ひやします (冷やします),Làm lạnh
+vocab,● にげます (逃げます),Chạy trốn
+vocab,● さわぎます (騒ぎます),Làm ồn
+vocab,● あきらめます,Từ bỏ
+vocab,● なげます (投げます),Ném
+vocab,● まもります (守ります),"Bảo vệ, tuân thủ"
+vocab,● つたえます (伝えます),Truyền đạt
+vocab,● ちゅういします (注意します),Chú ý
+vocab,● こみます (込みます),"Đông, đông đúc"
+vocab,● すきます,"Vắng, thưa"
+vocab,● こしょうします (故障します),Hỏng
+vocab,● うれます (売れます),Bán chạy
+vocab,● おどります (踊ります),"Nhảy, múa"
+vocab,● かみます,"Nhai, cắn"
+vocab,● えらびます (選びます),Lựa chọn
+vocab,● かよいます (通います),Đi đi về về
+vocab,[せきを] はずします ([席を] 外します),Rời [chỗ ngồi]
+vocab,[おゆが] わきます ([お湯が] 沸きます),[Nước nóng] sôi
+vocab,● あたらしい ⇔ ふるい,Mới ⇔ Cũ
+vocab,● いい (よい) ⇔ わるい,Tốt ⇔ Xấu
+vocab,● たかい ⇔ やすい,Đắt ⇔ Rẻ
+vocab,● たかい ⇔ ひくい,Cao ⇔ Thấp
+vocab,● おおきい ⇔ ちいさい,To ⇔ Nhỏ
+vocab,● おもしろい ⇔ つまらない,Thú vị ⇔ Chán
+vocab,● おいしい ⇔ まずい,Ngon ⇔ Dở
+vocab,● いそがしい (忙しい),Bận
+vocab,● たのしい (楽しい),Vui
+vocab,● しろい / くろい / あかい / あおい,Trắng / Đen / Đỏ / Xanh
+vocab,● むずかしい ⇔ やさしい,Khó ⇔ Dễ
+vocab,● ちかい ⇔ とおい,Gần ⇔ Xa
+vocab,● おもい ⇔ かるい,Nặng ⇔ Nhẹ
+vocab,● やさしい (優しい),"Tốt bụng, hiền lành"
+vocab,● えらい (偉い),"Vĩ đại, đáng nể"
+vocab,● ちょうどいい,Vừa vặn
+vocab,● ハンサム[な] / きれい[な],"Đẹp trai / Đẹp, sạch"
+vocab,● しずか[な] ⇔ にぎやか[な],Yên tĩnh ⇔ Náo nhiệt
+vocab,● しんせつ[な] (親切),Tốt bụng
+vocab,● げんき[な] (元気),Khỏe
+vocab,● ひま[な] (暇),Rảnh rỗi
+vocab,● べんり[な] (便利),Tiện lợi
+vocab,● すき[な] ⇔ きらい[な],Thích ⇔ Ghét
+vocab,● じょうず[な] ⇔ へた[な],Giỏi ⇔ Kém
+vocab,● かんたん[な] (簡単),Đơn giản
+vocab,● たいせつ[な] (大切),Quan trọng
+vocab,● あんぜん[な] (安全),An toàn
+vocab,● だめ[な],Không được
+vocab,● おなじ (同じ),Giống
+vocab,● まじめ[な],"Chăm chỉ, nghiêm túc"
+vocab,● ねっしん[な] (熱心[な]),Nhiệt tình
+vocab,● とても / あまり / ぜんぜん,Rất / Không ~ lắm / Hoàn toàn không
+vocab,● よく,"Thường, rõ"
+vocab,● すこし / ちょっと,Một chút
+vocab,● もう / まだ,"Đã / Vẫn, chưa"
+vocab,● ゆっくり,"Chậm, thong thả"
+vocab,● すぐ,Ngay lập tức
+vocab,● どうして,Tại sao
+vocab,● もちろん,Dĩ nhiên

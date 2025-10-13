@@ -1,0 +1,77 @@
+jp-personalized-app/
+├─ .data/
+│  └─ db.json
+├─ .next/
+├─ components/
+│  ├─ EnableNotifyButton.jsx
+│  ├─ GlobalBusy.jsx
+│  ├─ HandwritingCanvas.jsx
+│  ├─ Layout.jsx
+│  ├─ Pomodoro.jsx
+│  ├─ ReviewSettings.jsx
+│  └─ StrokePractice.jsx
+├─ lib/
+│  ├─ fsrs.js
+│  ├─ kanjiMeta.js
+│  ├─ kanjivg.js
+│  ├─ notify.js
+│  ├─ pomodoroStore.js
+│  ├─ srs.js
+│  ├─ useSettings.js
+│  └─ server/
+│     ├─ db.js
+│     └─ supabaseAdmin.js
+├─ node_modules/  (library root)
+├─ pages/
+│  ├─ _app.js
+│  ├─ flashcards.js
+│  ├─ grammar.js
+│  ├─ index.js
+│  ├─ kanji.js
+│  ├─ levels.js
+│  ├─ menu.js
+│  ├─ omni-review.js
+│  ├─ particles.js
+│  ├─ pomo-debug.js
+│  ├─ pomodoro.js
+│  ├─ progress.js
+│  ├─ review.js
+│  ├─ import/
+│  │  └─ csv.js
+│  ├─ kanji/
+│  │  └─ meta.js
+│  ├─ leech/
+│  │  └─ top.js
+│  ├─ memory/
+│  │  ├─ all.js
+│  │  ├─ bulk.js
+│  │  ├─ current.js
+│  │  └─ level.js
+│  ├─ pomodoro/
+│  │  └─ state.js
+│  ├─ review/
+│  │  ├─ apply.js
+│  │  └─ save.js
+│  ├─ sessions/
+│  │  ├─ delete.js
+│  │  └─ index.js
+│  ├─ settings/
+│  │  ├─ index.js
+│  │  ├─ env-check.js
+│  │  ├─ offsets.js
+│  │  ├─ pomodoro.js
+│  │  └─ stats.js
+│  └─ api/
+│     └─ cards/
+│        ├─ bulk.js
+│        ├─ import.js
+│        ├─ index.js
+│        ├─ query.js
+│        └─ quick-add.js
+├─ .env.example
+├─ .env.local
+├─ next.config.js
+├─ package.json
+├─ package-lock.json
+├─ README.md
+└─ schema.sql
