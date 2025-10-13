@@ -50,7 +50,9 @@ export default function ProgressPage() {
 
   const currentLevelOf = React.useCallback((card_id, fallback) => {
     const row = mem.rows.find(r => r.card_id === card_id);
-    return Number.isFinite(row?.level) ? row.level : (fallback ?? 0);
+    if (Number.isFinite(row?.level)) return row.level;
+    if (Number.isFinite(Number(fallback))) return Number(fallback);
+    return fallback ?? null;
   }, [mem.rows]);
 
 
@@ -123,9 +125,12 @@ export default function ProgressPage() {
     const dist = [0, 0, 0, 0, 0, 0];
     toArray(latest.cards).forEach((c) => {
       const finalScore = Number.isFinite(Number(c?.final)) ? Number(c.final) : null;
+      const recallScore = Number.isFinite(Number(c?.recall)) ? Number(c.recall) : null;
+      const warmupScore = Number.isFinite(Number(c?.warmup)) ? Number(c.warmup) : null;
       const cardId = c?.card_id ?? c?.cardId ?? c?.id ?? null;
-      const fallbackLevel = cardId ? currentLevelOf(cardId) : null;
-      const level = finalScore ?? (Number.isFinite(fallbackLevel) ? fallbackLevel : null);
+      const fallbackLevel = cardId ? currentLevelOf(cardId, null) : null;
+      const level =
+          finalScore ?? recallScore ?? warmupScore ?? (Number.isFinite(fallbackLevel) ? fallbackLevel : null);
       if (level != null && level >= 0 && level <= 5) dist[level] += 1;
     });
     return dist;
@@ -488,9 +493,11 @@ export default function ProgressPage() {
                     const labelText = front && back
                         ? `${front} · ${back}`
                         : (front || back || cardId || 'Thẻ');
-                    const level = Number.isFinite(Number(c?.final))
-                        ? Number(c.final)
-                        : currentLevelOf(cardId, memoRow?.level ?? null);
+                    const finalScore = Number.isFinite(Number(c?.final)) ? Number(c.final) : null;
+                    const recallScore = Number.isFinite(Number(c?.recall)) ? Number(c.recall) : null;
+                    const warmupScore = Number.isFinite(Number(c?.warmup)) ? Number(c.warmup) : null;
+                    const fallbackLevel = cardId ? currentLevelOf(cardId, memoRow?.level ?? null) : null;
+                    const level = finalScore ?? recallScore ?? warmupScore ?? fallbackLevel ?? 0;
                     return (
                         <Chip
                             key={c.id || cardId || `latest-card-${idx}`}
@@ -556,13 +563,26 @@ export default function ProgressPage() {
                                 flexWrap="wrap"
                                 sx={{ mb: 1 }}
                             >
-                              {toArray(s.cards).map((c) => (
-                                  <Chip
-                                      key={c.id}
-                                      label={c.front + ' (' + currentLevelOf(c.card_id, c.final) + ')' }
-                                      sx={{ mr: 1, mb: 1 }}
-                                  />
-                              ))}
+                              {toArray(s.cards).map((c, cIdx) => {
+                                const cardId = c.card_id ?? c.cardId ?? c.id ?? null;
+                                const memoRow = cardId ? memCardMap.get(cardId) : null;
+                                const front = c.front ?? memoRow?.front ?? '';
+                                const back = c.back ?? memoRow?.back ?? '';
+                                const finalScore = Number.isFinite(Number(c?.final)) ? Number(c.final) : null;
+                                const recallScore = Number.isFinite(Number(c?.recall)) ? Number(c.recall) : null;
+                                const warmupScore = Number.isFinite(Number(c?.warmup)) ? Number(c.warmup) : null;
+                                const fallbackLevel = cardId ? currentLevelOf(cardId, memoRow?.level ?? null) : null;
+                                const level = finalScore ?? recallScore ?? warmupScore ?? fallbackLevel ?? 0;
+                                const labelFront = front || memoRow?.front || cardId || 'Thẻ';
+                                const labelBack = back ? ` · ${back}` : '';
+                                return (
+                                    <Chip
+                                        key={c.id || cardId || `prev-card-${cIdx}`}
+                                        label={`${labelFront}${labelBack} (${level})`}
+                                        sx={{ mr: 1, mb: 1 }}
+                                    />
+                                );
+                              })}
                             </Stack>
                           </Collapse>
                         </div>
