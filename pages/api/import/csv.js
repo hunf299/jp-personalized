@@ -29,7 +29,7 @@ function escapeForOr(value) {
   return `"${escaped}"`;
 }
 
-async function findExistingKeys(rows) {
+async function findExistingKeys(rows, { hasDeletedColumn }) {
   const existing = new Set();
   const chunkSize = 20;
   for (let i = 0; i < rows.length; i += chunkSize) {
@@ -38,10 +38,13 @@ async function findExistingKeys(rows) {
       .map(r => `and(type.eq.${escapeForOr(r.type)},front.eq.${escapeForOr(r.front)},back.eq.${escapeForOr(r.back)})`)
       .join(',');
     if (!orConditions) continue;
-    const { data, error } = await supa
+    let query = supa
       .from('cards')
-      .select('type,front,back')
-      .or(orConditions);
+      .select('type,front,back');
+    if (hasDeletedColumn) {
+      query = query.eq('deleted', false);
+    }
+    const { data, error } = await query.or(orConditions);
     if (error) throw error;
     for (const row of data || []) {
       existing.add(makeKey(row));
@@ -77,6 +80,7 @@ export default async function handler(req, res) {
     }
 
     const hasCategoryColumn = await tableHasColumn('cards', 'category');
+    const hasDeletedColumn = await tableHasColumn('cards', 'deleted');
 
     const rows = [];
     const seen = new Set();
@@ -103,7 +107,7 @@ export default async function handler(req, res) {
     resp = await supa.from('cards').upsert(rows, { onConflict: 'type,front,back', ignoreDuplicates: true }).select('id');
 
     if (resp.error && /no unique or exclusion constraint/i.test(resp.error.message || '')) {
-      const existing = await findExistingKeys(rows);
+      const existing = await findExistingKeys(rows, { hasDeletedColumn });
       const filtered = rows.filter(row => !existing.has(makeKey(row)));
       if (!filtered.length) {
         return res.json({ ok:true, inserted: 0 });
