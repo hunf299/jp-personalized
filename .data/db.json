@@ -1,0 +1,2971 @@
+{
+  "cards": [
+    {
+      "id": "0idtd11ckfbcmgb04qv4",
+      "type": "vocab",
+      "front": "● わたし",
+      "back": "Tôi",
+      "category": "từ vựng"
+    },
+    {
+      "id": "3u9jzneuab4mgb04qv4",
+      "type": "vocab",
+      "front": "● あなた",
+      "back": "Bạn",
+      "category": "từ vựng"
+    },
+    {
+      "id": "9k1a5oikbmmmgb04qv4",
+      "type": "vocab",
+      "front": "● あのひと (あのかた)",
+      "back": "Người kia (lịch sự)",
+      "category": "từ vựng"
+    },
+    {
+      "id": "rzt9vgj2yqfmgb04qv4",
+      "type": "vocab",
+      "front": "● みなさん",
+      "back": "Mọi người",
+      "category": "từ vựng"
+    },
+    {
+      "id": "1t2r13hxo0hjmgb04qv4",
+      "type": "vocab",
+      "front": "● ～さん / ～ちゃん / ～くん / ～じん (～人)",
+      "back": "Hậu tố tên người, quốc tịch",
+      "category": "từ vựng"
+    },
+    {
+      "id": "qgrwe413pwimgb04qv4",
+      "type": "vocab",
+      "front": "● せんせい (先生)",
+      "back": "Giáo viên",
+      "category": "từ vựng"
+    },
+    {
+      "id": "c8dzb321fv4mgb04qv4",
+      "type": "vocab",
+      "front": "● きょうし (教師)",
+      "back": "Giáo viên (nghề nghiệp)",
+      "category": "từ vựng"
+    },
+    {
+      "id": "grw9ut0mnm9mgb04qv4",
+      "type": "vocab",
+      "front": "● がくせい (学生)",
+      "back": "Học sinh, sinh viên",
+      "category": "từ vựng"
+    },
+    {
+      "id": "tbxxotx4dfamgb04qv4",
+      "type": "vocab",
+      "front": "● かいしゃいん (会社員)",
+      "back": "Nhân viên công ty",
+      "category": "từ vựng"
+    },
+    {
+      "id": "v0csayjwk1hmgb04qv4",
+      "type": "vocab",
+      "front": "● ぎんこういん (銀行員)",
+      "back": "Nhân viên ngân hàng",
+      "category": "từ vựng"
+    },
+    {
+      "id": "a61i3up495dmgb04qv4",
+      "type": "vocab",
+      "front": "● いしゃ (医者)",
+      "back": "Bác sĩ",
+      "category": "từ vựng"
+    },
+    {
+      "id": "ot3vwr7lrhmgb04qv4",
+      "type": "vocab",
+      "front": "● けんきゅうしゃ (研究者)",
+      "back": "Nhà nghiên cứu",
+      "category": "từ vựng"
+    },
+    {
+      "id": "8w2ft2rabhqmgb04qv4",
+      "type": "vocab",
+      "front": "● エンジニア",
+      "back": "Kỹ sư",
+      "category": "từ vựng"
+    },
+    {
+      "id": "gq9my33smymgb04qv4",
+      "type": "vocab",
+      "front": "● だれ (どなた)",
+      "back": "Ai (lịch sự)",
+      "category": "từ vựng"
+    },
+    {
+      "id": "3vjt1ra6w4lmgb04qv4",
+      "type": "vocab",
+      "front": "● ともだち (友達)",
+      "back": "Bạn bè",
+      "category": "từ vựng"
+    },
+    {
+      "id": "7hauwxne9cmgb04qv4",
+      "type": "vocab",
+      "front": "● かぞく (家族)",
+      "back": "Gia đình",
+      "category": "từ vựng"
+    },
+    {
+      "id": "hwwdbxdkvemgb04qv4",
+      "type": "vocab",
+      "front": "● おとうさん (お父さん)",
+      "back": "Bố",
+      "category": "từ vựng"
+    },
+    {
+      "id": "4pn699fjq8lmgb04qv4",
+      "type": "vocab",
+      "front": "● おかあさん (お母さん)",
+      "back": "Mẹ",
+      "category": "từ vựng"
+    },
+    {
+      "id": "5qnhynfmabpmgb04qv4",
+      "type": "vocab",
+      "front": "● ごしゅじん (ご主人) / おっと(夫)",
+      "back": "Chồng",
+      "category": "từ vựng"
+    },
+    {
+      "id": "o4kqy7100ucmgb04qv4",
+      "type": "vocab",
+      "front": "● おくさん (奥さん) / つま(妻)",
+      "back": "Vợ",
+      "category": "từ vựng"
+    },
+    {
+      "id": "iczo6uzhrqamgb04qv4",
+      "type": "vocab",
+      "front": "● こども (子ども)",
+      "back": "Con cái",
+      "category": "từ vựng"
+    },
+    {
+      "id": "3p4pn349r6tmgb04qv4",
+      "type": "vocab",
+      "front": "● おとな (大人)",
+      "back": "Người lớn",
+      "category": "từ vựng"
+    },
+    {
+      "id": "kz7hx4o2x0fmgb04qv4",
+      "type": "vocab",
+      "front": "● けいさつ (警察)",
+      "back": "Cảnh sát",
+      "category": "từ vựng"
+    },
+    {
+      "id": "e8t6deup7kemgb04qv4",
+      "type": "vocab",
+      "front": "● ペット",
+      "back": "Thú cưng",
+      "category": "từ vựng"
+    },
+    {
+      "id": "dbjn3o8y0k4mgb04qv4",
+      "type": "vocab",
+      "front": "● とり (鳥)",
+      "back": "Chim",
+      "category": "từ vựng"
+    },
+    {
+      "id": "yen54dc7vvimgb04qv4",
+      "type": "vocab",
+      "front": "● がっこう (学校)",
+      "back": "Trường học",
+      "category": "từ vựng"
+    },
+    {
+      "id": "je6yspf1kebmgb04qv4",
+      "type": "vocab",
+      "front": "● だいがく (大学)",
+      "back": "Đại học",
+      "category": "từ vựng"
+    },
+    {
+      "id": "xocgfnjco9mgb04qv4",
+      "type": "vocab",
+      "front": "● びょういん (病院)",
+      "back": "Bệnh viện",
+      "category": "từ vựng"
+    },
+    {
+      "id": "1u9or1ubr78mgb04qv4",
+      "type": "vocab",
+      "front": "● ぎんこう (銀行)",
+      "back": "Ngân hàng",
+      "category": "từ vựng"
+    },
+    {
+      "id": "d4v9cr6q4uvmgb04qv4",
+      "type": "vocab",
+      "front": "● ゆうびんきょく (郵便局)",
+      "back": "Bưu điện",
+      "category": "từ vựng"
+    },
+    {
+      "id": "qxhzbyrkl1kmgb04qv4",
+      "type": "vocab",
+      "front": "● としょかん (図書館)",
+      "back": "Thư viện",
+      "category": "từ vựng"
+    },
+    {
+      "id": "kpy0220828hmgb04qv4",
+      "type": "vocab",
+      "front": "● びじゅつかん (美術館)",
+      "back": "Bảo tàng mỹ thuật",
+      "category": "từ vựng"
+    },
+    {
+      "id": "5e4qdivp0ugmgb04qv4",
+      "type": "vocab",
+      "front": "● えき (駅)",
+      "back": "Ga tàu",
+      "category": "từ vựng"
+    },
+    {
+      "id": "f8nejp9o13mgb04qv4",
+      "type": "vocab",
+      "front": "● かいしゃ (会社)",
+      "back": "Công ty",
+      "category": "từ vựng"
+    },
+    {
+      "id": "0c9adh6z3u09mgb04qv4",
+      "type": "vocab",
+      "front": "● じむしょ (事務所)",
+      "back": "Văn phòng",
+      "category": "từ vựng"
+    },
+    {
+      "id": "nylug7o2yqemgb04qv4",
+      "type": "vocab",
+      "front": "● うけつけ (受付)",
+      "back": "Quầy lễ tân",
+      "category": "từ vựng"
+    },
+    {
+      "id": "4snjvqdrkvmgb04qv4",
+      "type": "vocab",
+      "front": "● ロビー",
+      "back": "Sảnh",
+      "category": "từ vựng"
+    },
+    {
+      "id": "b2lulz1wukdmgb04qv4",
+      "type": "vocab",
+      "front": "● へや (部屋)",
+      "back": "Phòng",
+      "category": "từ vựng"
+    },
+    {
+      "id": "vdoimkpx93nmgb04qv4",
+      "type": "vocab",
+      "front": "● きょうしつ (教室)",
+      "back": "Lớp học",
+      "category": "từ vựng"
+    },
+    {
+      "id": "hhve35lnkjmgb04qv4",
+      "type": "vocab",
+      "front": "● しょくどう (食堂)",
+      "back": "Nhà ăn",
+      "category": "từ vựng"
+    },
+    {
+      "id": "bhzgx8vqkbkmgb04qv4",
+      "type": "vocab",
+      "front": "● かいぎしつ (会議室)",
+      "back": "Phòng họp",
+      "category": "từ vựng"
+    },
+    {
+      "id": "lhelumq6a6nmgb04qv4",
+      "type": "vocab",
+      "front": "● トイレ (おてあらい)",
+      "back": "Nhà vệ sinh",
+      "category": "từ vựng"
+    },
+    {
+      "id": "gk3b2l5ab8imgb04qv4",
+      "type": "vocab",
+      "front": "● かいだん (階段)",
+      "back": "Cầu thang bộ",
+      "category": "từ vựng"
+    },
+    {
+      "id": "gote5hb6u39mgb04qv4",
+      "type": "vocab",
+      "front": "● エレベーター / エスカレーター",
+      "back": "Thang máy / Thang cuốn",
+      "category": "từ vựng"
+    },
+    {
+      "id": "je5vflrranrmgb04qv4",
+      "type": "vocab",
+      "front": "● いえ/うち (家/うち)",
+      "back": "Nhà",
+      "category": "từ vựng"
+    },
+    {
+      "id": "p8lx75zg5qmgb04qv4",
+      "type": "vocab",
+      "front": "● みせ (店)",
+      "back": "Cửa hàng",
+      "category": "từ vựng"
+    },
+    {
+      "id": "lw4ech4f96smgb04qv4",
+      "type": "vocab",
+      "front": "● うりば (売り場)",
+      "back": "Quầy bán hàng",
+      "category": "từ vựng"
+    },
+    {
+      "id": "qtykadzjffomgb04qv4",
+      "type": "vocab",
+      "front": "● ちか (地下)",
+      "back": "Tầng hầm",
+      "category": "từ vựng"
+    },
+    {
+      "id": "wxsi2fdhi7mgb04qv4",
+      "type": "vocab",
+      "front": "● こうえん (公園)",
+      "back": "Công viên",
+      "category": "từ vựng"
+    },
+    {
+      "id": "hcnw4j22prqmgb04qv4",
+      "type": "vocab",
+      "front": "● ばしょ (場所)",
+      "back": "Nơi chốn, địa điểm",
+      "category": "từ vựng"
+    },
+    {
+      "id": "gxf7g7aj4i4mgb04qv4",
+      "type": "vocab",
+      "front": "● りょう (寮)",
+      "back": "Ký túc xá",
+      "category": "từ vựng"
+    },
+    {
+      "id": "c0brlts7hqdmgb04qv4",
+      "type": "vocab",
+      "front": "● かべ (壁)",
+      "back": "Bức tường",
+      "category": "từ vựng"
+    },
+    {
+      "id": "hxffb00chsmgb04qv4",
+      "type": "vocab",
+      "front": "● うえ (上) / した (下)",
+      "back": "Trên / Dưới",
+      "category": "từ vựng"
+    },
+    {
+      "id": "ljgmus0eszkmgb04qv4",
+      "type": "vocab",
+      "front": "● まえ (前) / うしろ (後ろ)",
+      "back": "Trước / Sau",
+      "category": "từ vựng"
+    },
+    {
+      "id": "i9nw7g06rycmgb04qv4",
+      "type": "vocab",
+      "front": "● みぎ (右) / ひだり (左)",
+      "back": "Phải / Trái",
+      "category": "từ vựng"
+    },
+    {
+      "id": "gn5up6e408mgb04qv4",
+      "type": "vocab",
+      "front": "● なか (中) / そと (外)",
+      "back": "Trong / Ngoài",
+      "category": "từ vựng"
+    },
+    {
+      "id": "3vaas6qbgxmgb04qv4",
+      "type": "vocab",
+      "front": "● となり (隣)",
+      "back": "Bên cạnh",
+      "category": "từ vựng"
+    },
+    {
+      "id": "me45iev7hdjmgb04qv4",
+      "type": "vocab",
+      "front": "● ちかく (近く)",
+      "back": "Gần",
+      "category": "từ vựng"
+    },
+    {
+      "id": "lzites6hw5qmgb04qv4",
+      "type": "vocab",
+      "front": "● これ / それ / あれ",
+      "back": "Cái này / đó / kia",
+      "category": "từ vựng"
+    },
+    {
+      "id": "4fa3g2w2b2umgb04qv4",
+      "type": "vocab",
+      "front": "● ほん (本)",
+      "back": "Sách",
+      "category": "từ vựng"
+    },
+    {
+      "id": "u1l08ynl53gmgb04qv4",
+      "type": "vocab",
+      "front": "● じしょ (辞書)",
+      "back": "Từ điển",
+      "category": "từ vựng"
+    },
+    {
+      "id": "8rzpvw71hytmgb04qv4",
+      "type": "vocab",
+      "front": "● ざっし (雑誌)",
+      "back": "Tạp chí",
+      "category": "từ vựng"
+    },
+    {
+      "id": "ccfmdzmids9mgb04qv4",
+      "type": "vocab",
+      "front": "● しんぶん (新聞)",
+      "back": "Báo",
+      "category": "từ vựng"
+    },
+    {
+      "id": "awrvk2sdcinmgb04qv4",
+      "type": "vocab",
+      "front": "● ノート / てちょう (手帳)",
+      "back": "Vở / Sổ tay",
+      "category": "từ vựng"
+    },
+    {
+      "id": "08sgvdiqhnz3mgb04qv4",
+      "type": "vocab",
+      "front": "● めいし (名刺)",
+      "back": "Danh thiếp",
+      "category": "từ vựng"
+    },
+    {
+      "id": "j3iubxzpb8mgb04qv4",
+      "type": "vocab",
+      "front": "● カード",
+      "back": "Thẻ",
+      "category": "từ vựng"
+    },
+    {
+      "id": "z8oirj8ei7mgb04qv4",
+      "type": "vocab",
+      "front": "● えんぴつ (鉛筆) / ボールペン",
+      "back": "Bút chì / Bút bi",
+      "category": "từ vựng"
+    },
+    {
+      "id": "n644thue4mmgb04qv4",
+      "type": "vocab",
+      "front": "● かぎ",
+      "back": "Chìa khóa",
+      "category": "từ vựng"
+    },
+    {
+      "id": "e1qmavaqyr4mgb04qv4",
+      "type": "vocab",
+      "front": "● とけい (時計)",
+      "back": "Đồng hồ",
+      "category": "từ vựng"
+    },
+    {
+      "id": "gx8phuj0tw6mgb04qv4",
+      "type": "vocab",
+      "front": "● かさ (傘)",
+      "back": "Ô, dù",
+      "category": "từ vựng"
+    },
+    {
+      "id": "8c302dqvqujmgb04qv4",
+      "type": "vocab",
+      "front": "● かばん",
+      "back": "Cặp, túi",
+      "category": "từ vựng"
+    },
+    {
+      "id": "gktets710p5mgb04qv4",
+      "type": "vocab",
+      "front": "● テレビ / ラジオ / カメラ",
+      "back": "Tivi / Radio / Máy ảnh",
+      "category": "từ vựng"
+    },
+    {
+      "id": "63nmyhbgoyumgb04qv4",
+      "type": "vocab",
+      "front": "● コンピューター / パソコン",
+      "back": "Máy tính / PC",
+      "category": "từ vựng"
+    },
+    {
+      "id": "o358x90k75mgb04qv4",
+      "type": "vocab",
+      "front": "● くるま (車)",
+      "back": "Ô tô",
+      "category": "từ vựng"
+    },
+    {
+      "id": "z47etjidlvpmgb04qv4",
+      "type": "vocab",
+      "front": "● つくえ (机) / いす",
+      "back": "Bàn / Ghế",
+      "category": "từ vựng"
+    },
+    {
+      "id": "ix4qe87gjbhmgb04qv4",
+      "type": "vocab",
+      "front": "● ふく (服)",
+      "back": "Quần áo",
+      "category": "từ vựng"
+    },
+    {
+      "id": "969stejxt9hmgb04qv4",
+      "type": "vocab",
+      "front": "● シャツ",
+      "back": "Áo sơ mi",
+      "category": "từ vựng"
+    },
+    {
+      "id": "auv6ncg9m1umgb04qv4",
+      "type": "vocab",
+      "front": "● くつ (靴)",
+      "back": "Giày",
+      "category": "từ vựng"
+    },
+    {
+      "id": "52f1h5lbdjmgb04qv4",
+      "type": "vocab",
+      "front": "● にもつ (荷物)",
+      "back": "Hành lý",
+      "category": "từ vựng"
+    },
+    {
+      "id": "12ffgidlwjrmgb04qv4",
+      "type": "vocab",
+      "front": "● おかね (お金)",
+      "back": "Tiền",
+      "category": "từ vựng"
+    },
+    {
+      "id": "zfnh0xhspumgb04qv4",
+      "type": "vocab",
+      "front": "● きっぷ (切符)",
+      "back": "Vé",
+      "category": "từ vựng"
+    },
+    {
+      "id": "n6gef024kamgb04qv4",
+      "type": "vocab",
+      "front": "● てがみ (手紙)",
+      "back": "Thư",
+      "category": "từ vựng"
+    },
+    {
+      "id": "tecsc773aimgb04qv4",
+      "type": "vocab",
+      "front": "● レポート",
+      "back": "Báo cáo",
+      "category": "từ vựng"
+    },
+    {
+      "id": "oiwucl5ry3jmgb04qv4",
+      "type": "vocab",
+      "front": "● しゃしん (写真)",
+      "back": "Ảnh",
+      "category": "từ vựng"
+    },
+    {
+      "id": "irdalnx2humgb04qv4",
+      "type": "vocab",
+      "front": "● どうぐ (道具)",
+      "back": "Dụng cụ, công cụ",
+      "category": "từ vựng"
+    },
+    {
+      "id": "g2qpu0fdminmgb04qv4",
+      "type": "vocab",
+      "front": "● しりょう (資料)",
+      "back": "Tài liệu",
+      "category": "từ vựng"
+    },
+    {
+      "id": "wy018fnohd9mgb04qv4",
+      "type": "vocab",
+      "front": "● しなもの (品物)",
+      "back": "Hàng hóa",
+      "category": "từ vựng"
+    },
+    {
+      "id": "aa9ozvkjpj7mgb04qv4",
+      "type": "vocab",
+      "front": "● ねだん (値段)",
+      "back": "Giá cả",
+      "category": "từ vựng"
+    },
+    {
+      "id": "nzi40j5tix9mgb04qv4",
+      "type": "vocab",
+      "front": "● きゅうりょう (給料)",
+      "back": "Lương",
+      "category": "từ vựng"
+    },
+    {
+      "id": "qbmd182am9dmgb04qv4",
+      "type": "vocab",
+      "front": "● ばんぐみ (番組)",
+      "back": "Chương trình (TV, radio)",
+      "category": "từ vựng"
+    },
+    {
+      "id": "c8o4lfn5k4mgb04qv4",
+      "type": "vocab",
+      "front": "● おさら (お皿)",
+      "back": "Cái đĩa",
+      "category": "từ vựng"
+    },
+    {
+      "id": "u14nrgeu3qsmgb04qv4",
+      "type": "vocab",
+      "front": "● おちゃわん",
+      "back": "Cái bát",
+      "category": "từ vựng"
+    },
+    {
+      "id": "4c87a94qv3umgb04qv4",
+      "type": "vocab",
+      "front": "● コップ",
+      "back": "Cái cốc",
+      "category": "từ vựng"
+    },
+    {
+      "id": "qgqwcmqg7snmgb04qv4",
+      "type": "vocab",
+      "front": "● ガラス",
+      "back": "Thủy tinh",
+      "category": "từ vựng"
+    },
+    {
+      "id": "qdhbawszsxsmgb04qv4",
+      "type": "vocab",
+      "front": "● ふくろ (袋)",
+      "back": "Cái túi",
+      "category": "từ vựng"
+    },
+    {
+      "id": "a3i2si4u0xmgb04qv4",
+      "type": "vocab",
+      "front": "● えだ (枝)",
+      "back": "Cành cây",
+      "category": "từ vựng"
+    },
+    {
+      "id": "x8oon432bsamgb04qv4",
+      "type": "vocab",
+      "front": "● はり (針)",
+      "back": "Kim đồng hồ",
+      "category": "từ vựng"
+    },
+    {
+      "id": "3zz06x0mwutmgb04qv4",
+      "type": "vocab",
+      "front": "● マーク",
+      "back": "Ký hiệu, dấu hiệu",
+      "category": "từ vựng"
+    },
+    {
+      "id": "0rqrqu0pxinmmgb04qv4",
+      "type": "vocab",
+      "front": "● たべもの (食べ物)",
+      "back": "Đồ ăn",
+      "category": "từ vựng"
+    },
+    {
+      "id": "jve9mpspaycmgb04qv4",
+      "type": "vocab",
+      "front": "● のみもの (飲み物)",
+      "back": "Đồ uống",
+      "category": "từ vựng"
+    },
+    {
+      "id": "spz58udlb7mgb04qv4",
+      "type": "vocab",
+      "front": "● ごはん (ご飯)",
+      "back": "Cơm",
+      "category": "từ vựng"
+    },
+    {
+      "id": "r1bemj0g269mgb04qv4",
+      "type": "vocab",
+      "front": "● パン",
+      "back": "Bánh mì",
+      "category": "từ vựng"
+    },
+    {
+      "id": "34ald43qsu7mgb04qv4",
+      "type": "vocab",
+      "front": "● にく (肉)",
+      "back": "Thịt",
+      "category": "từ vựng"
+    },
+    {
+      "id": "h7wwvpg3xmbmgb04qv4",
+      "type": "vocab",
+      "front": "● さかな (魚)",
+      "back": "Cá",
+      "category": "từ vựng"
+    },
+    {
+      "id": "3j5a58nnaegmgb04qv4",
+      "type": "vocab",
+      "front": "● やさい (野菜)",
+      "back": "Rau",
+      "category": "từ vựng"
+    },
+    {
+      "id": "r6a23suupuomgb04qv4",
+      "type": "vocab",
+      "front": "● くだもの (果物)",
+      "back": "Trái cây",
+      "category": "từ vựng"
+    },
+    {
+      "id": "7wpgxuflzsvmgb04qv4",
+      "type": "vocab",
+      "front": "● みず (水)",
+      "back": "Nước",
+      "category": "từ vựng"
+    },
+    {
+      "id": "uj3umcqg6remgb04qv4",
+      "type": "vocab",
+      "front": "● おちゃ (お茶)",
+      "back": "Trà",
+      "category": "từ vựng"
+    },
+    {
+      "id": "bs6a61d8ismgb04qv4",
+      "type": "vocab",
+      "front": "● コーヒー",
+      "back": "Cà phê",
+      "category": "từ vựng"
+    },
+    {
+      "id": "ga1ituq2kbwmgb04qv4",
+      "type": "vocab",
+      "front": "● ぎゅうにゅう (牛乳)",
+      "back": "Sữa",
+      "category": "từ vựng"
+    },
+    {
+      "id": "ls3yauusmupmgb04qv4",
+      "type": "vocab",
+      "front": "● チョコレート",
+      "back": "Sô cô la",
+      "category": "từ vựng"
+    },
+    {
+      "id": "dstzxzc3jqmgb04qv4",
+      "type": "vocab",
+      "front": "● あじ (味)",
+      "back": "Vị",
+      "category": "từ vựng"
+    },
+    {
+      "id": "yt4cj8a0demgb04qv4",
+      "type": "vocab",
+      "front": "[お]みやげ (お土産)",
+      "back": "Quà lưu niệm",
+      "category": "từ vựng"
+    },
+    {
+      "id": "3jbm7ye2sremgb04qv4",
+      "type": "vocab",
+      "front": "● こえ (声)",
+      "back": "Tiếng, giọng nói",
+      "category": "từ vựng"
+    },
+    {
+      "id": "wpr32q09bdmgb04qv4",
+      "type": "vocab",
+      "front": "● なみ (波)",
+      "back": "Sóng",
+      "category": "từ vựng"
+    },
+    {
+      "id": "jgsnovjav3bmgb04qv4",
+      "type": "vocab",
+      "front": "● はなび (花火)",
+      "back": "Pháo hoa",
+      "category": "từ vựng"
+    },
+    {
+      "id": "e99ro3ena9nmgb04qv4",
+      "type": "vocab",
+      "front": "● けしき (景色)",
+      "back": "Phong cảnh",
+      "category": "từ vựng"
+    },
+    {
+      "id": "nqhhokasvrfmgb04qv4",
+      "type": "vocab",
+      "front": "● じしん (地震)",
+      "back": "Động đất",
+      "category": "từ vựng"
+    },
+    {
+      "id": "clsmfvb8y1mgb04qv4",
+      "type": "vocab",
+      "front": "● いけん (意見)",
+      "back": "Ý kiến",
+      "category": "từ vựng"
+    },
+    {
+      "id": "5bq0eujqwnrmgb04qv4",
+      "type": "vocab",
+      "front": "● しゅうかん (習慣)",
+      "back": "Tập quán",
+      "category": "từ vựng"
+    },
+    {
+      "id": "0sjpf96ktchmgb04qv4",
+      "type": "vocab",
+      "front": "● けいけん (経験)",
+      "back": "Kinh nghiệm",
+      "category": "từ vựng"
+    },
+    {
+      "id": "34nqipl8jaamgb04qv4",
+      "type": "vocab",
+      "front": "● ちから (力)",
+      "back": "Sức lực, năng lực",
+      "category": "từ vựng"
+    },
+    {
+      "id": "crjmzka7uasmgb04qv4",
+      "type": "vocab",
+      "front": "● にんき (人気)",
+      "back": "Sự hâm mộ, yêu thích",
+      "category": "từ vựng"
+    },
+    {
+      "id": "2gk9bt85ysymgb04qv4",
+      "type": "vocab",
+      "front": "● かたち (形)",
+      "back": "Hình dạng",
+      "category": "từ vựng"
+    },
+    {
+      "id": "k95neftaf5mgb04qv4",
+      "type": "vocab",
+      "front": "● いきます (行きます)",
+      "back": "Đi",
+      "category": "từ vựng"
+    },
+    {
+      "id": "364njly98urmgb04qv4",
+      "type": "vocab",
+      "front": "● きます (来ます)",
+      "back": "Đến",
+      "category": "từ vựng"
+    },
+    {
+      "id": "23bx7xjco29mgb04qv4",
+      "type": "vocab",
+      "front": "● かえります (帰ります)",
+      "back": "Về",
+      "category": "từ vựng"
+    },
+    {
+      "id": "e5lj6w8pnewmgb04qv4",
+      "type": "vocab",
+      "front": "● たべます (食べます)",
+      "back": "Ăn",
+      "category": "từ vựng"
+    },
+    {
+      "id": "hq6z2y0fum6mgb04qv4",
+      "type": "vocab",
+      "front": "● のみます (飲みます)",
+      "back": "Uống",
+      "category": "từ vựng"
+    },
+    {
+      "id": "gfekrcge3bbmgb04qv4",
+      "type": "vocab",
+      "front": "● みます (見します)",
+      "back": "Xem",
+      "category": "từ vựng"
+    },
+    {
+      "id": "oti47dm838smgb04qv4",
+      "type": "vocab",
+      "front": "● ききます (聞きます)",
+      "back": "Nghe, hỏi",
+      "category": "từ vựng"
+    },
+    {
+      "id": "utr2zbju6pmgb04qv4",
+      "type": "vocab",
+      "front": "● よみます (読みます)",
+      "back": "Đọc",
+      "category": "từ vựng"
+    },
+    {
+      "id": "6496eiymhirmgb04qv4",
+      "type": "vocab",
+      "front": "● かきます (書きます)",
+      "back": "Viết, vẽ",
+      "category": "từ vựng"
+    },
+    {
+      "id": "uo3vxtcx6emgb04qv4",
+      "type": "vocab",
+      "front": "● かいます (買います)",
+      "back": "Mua",
+      "category": "từ vựng"
+    },
+    {
+      "id": "j0e8oyd478mgb04qv4",
+      "type": "vocab",
+      "front": "● とります (撮ります)",
+      "back": "Chụp (ảnh)",
+      "category": "từ vựng"
+    },
+    {
+      "id": "y4369o624qfmgb04qv4",
+      "type": "vocab",
+      "front": "● あいます (会います)",
+      "back": "Gặp",
+      "category": "từ vựng"
+    },
+    {
+      "id": "xjsfs5n9n3qmgb04qv4",
+      "type": "vocab",
+      "front": "● おきます (起きます)",
+      "back": "Thức dậy",
+      "category": "từ vựng"
+    },
+    {
+      "id": "wehkhfo9jqmgb04qv4",
+      "type": "vocab",
+      "front": "● ねます (寝ます)",
+      "back": "Ngủ",
+      "category": "từ vựng"
+    },
+    {
+      "id": "swufscsfdmmgb04qv4",
+      "type": "vocab",
+      "front": "● はたらきます (働きます)",
+      "back": "Làm việc",
+      "category": "từ vựng"
+    },
+    {
+      "id": "snxp6oam9qcmgb04qv4",
+      "type": "vocab",
+      "front": "● べんきょうします (勉強します)",
+      "back": "Học",
+      "category": "từ vựng"
+    },
+    {
+      "id": "m8e49wecwgkmgb04qv4",
+      "type": "vocab",
+      "front": "● かいものします (買い物します)",
+      "back": "Mua sắm",
+      "category": "từ vựng"
+    },
+    {
+      "id": "2o4yds141komgb04qv4",
+      "type": "vocab",
+      "front": "● します",
+      "back": "Làm",
+      "category": "từ vựng"
+    },
+    {
+      "id": "lbdhwy2ji1mgb04qv4",
+      "type": "vocab",
+      "front": "● あげます / くれます",
+      "back": "Cho, tặng",
+      "category": "từ vựng"
+    },
+    {
+      "id": "nbym7yjxfdcmgb04qv4",
+      "type": "vocab",
+      "front": "● もらいます",
+      "back": "Nhận",
+      "category": "từ vựng"
+    },
+    {
+      "id": "wfvjhf8hqkdmgb04qv4",
+      "type": "vocab",
+      "front": "● おしえます (教えます)",
+      "back": "Dạy, cho biết",
+      "category": "từ vựng"
+    },
+    {
+      "id": "2koo56pxif5mgb04qv4",
+      "type": "vocab",
+      "front": "● ならいます (習います)",
+      "back": "Học",
+      "category": "từ vựng"
+    },
+    {
+      "id": "6sti7okbjp7mgb04qv4",
+      "type": "vocab",
+      "front": "● かけます",
+      "back": "Gọi (điện), Mặc (áo)",
+      "category": "từ vựng"
+    },
+    {
+      "id": "v8jvsc11x9gmgb04qv4",
+      "type": "vocab",
+      "front": "● きります (切ります)",
+      "back": "Cắt",
+      "category": "từ vựng"
+    },
+    {
+      "id": "1n0x9bq5r6phmgb04qv4",
+      "type": "vocab",
+      "front": "● おくります (送ります)",
+      "back": "Gửi",
+      "category": "từ vựng"
+    },
+    {
+      "id": "ar84jepddswmgb04qv4",
+      "type": "vocab",
+      "front": "● もちます (持ちます)",
+      "back": "Cầm, mang",
+      "category": "từ vựng"
+    },
+    {
+      "id": "ch0fcvtzubrmgb04qv4",
+      "type": "vocab",
+      "front": "● てつだいます (手伝います)",
+      "back": "Giúp đỡ",
+      "category": "từ vựng"
+    },
+    {
+      "id": "49hys5rskb4mgb04qv4",
+      "type": "vocab",
+      "front": "● わかります",
+      "back": "Hiểu",
+      "category": "từ vựng"
+    },
+    {
+      "id": "gtjpdu8p1uumgb04qv4",
+      "type": "vocab",
+      "front": "● あります / います",
+      "back": "Có",
+      "category": "từ vựng"
+    },
+    {
+      "id": "kp0be9w9wfqmgb04qv4",
+      "type": "vocab",
+      "front": "● できます",
+      "back": "Có thể, được hoàn thành",
+      "category": "từ vựng"
+    },
+    {
+      "id": "gy1affmgqbtmgb04qv4",
+      "type": "vocab",
+      "front": "● つけます / けします (消します)",
+      "back": "Bật / Tắt",
+      "category": "từ vựng"
+    },
+    {
+      "id": "vz16pd38hgmgb04qv4",
+      "type": "vocab",
+      "front": "● いそぎます (急ぎます)",
+      "back": "Vội",
+      "category": "từ vựng"
+    },
+    {
+      "id": "v8ja0q4nf5omgb04qv4",
+      "type": "vocab",
+      "front": "● まちます (待ちます)",
+      "back": "Đợi",
+      "category": "từ vựng"
+    },
+    {
+      "id": "m1mfl5ug2f9mgb04qv4",
+      "type": "vocab",
+      "front": "● よびます (呼びます)",
+      "back": "Gọi",
+      "category": "từ vựng"
+    },
+    {
+      "id": "yg3k8a7fb9mgb04qv4",
+      "type": "vocab",
+      "front": "● はなします (話します)",
+      "back": "Nói chuyện",
+      "category": "từ vựng"
+    },
+    {
+      "id": "6270e6k1gkkmgb04qv4",
+      "type": "vocab",
+      "front": "● つかいます (使います)",
+      "back": "Dùng",
+      "category": "từ vựng"
+    },
+    {
+      "id": "uuwx9blfdimgb04qv4",
+      "type": "vocab",
+      "front": "● とめます (止めます)",
+      "back": "Dừng, đỗ",
+      "category": "từ vựng"
+    },
+    {
+      "id": "qmy36hdko5mgb04qv4",
+      "type": "vocab",
+      "front": "● みせます (見せます)",
+      "back": "Cho xem",
+      "category": "từ vựng"
+    },
+    {
+      "id": "f6lddrhmnpvmgb04qv4",
+      "type": "vocab",
+      "front": "● すみます (住みます)",
+      "back": "Sống",
+      "category": "từ vựng"
+    },
+    {
+      "id": "8tjgxu1wfgqmgb04qv4",
+      "type": "vocab",
+      "front": "● しります (知ります)",
+      "back": "Biết",
+      "category": "từ vựng"
+    },
+    {
+      "id": "ddqf67ao9x7mgb04qv4",
+      "type": "vocab",
+      "front": "● つくります (作ります)",
+      "back": "Làm, chế tạo",
+      "category": "từ vựng"
+    },
+    {
+      "id": "b5yxt3q9slrmgb04qv4",
+      "type": "vocab",
+      "front": "[ドアが] あきます / [ドアを] あけます",
+      "back": "[Cửa] mở / Mở [cửa]",
+      "category": "từ vựng"
+    },
+    {
+      "id": "e751u7zg9hmmgb04qv4",
+      "type": "vocab",
+      "front": "[ドアが] しまります / [ドアを] しめます",
+      "back": "[Cửa] đóng / Đóng [cửa]",
+      "category": "từ vựng"
+    },
+    {
+      "id": "gaqcif85xchmgb04qv4",
+      "type": "vocab",
+      "front": "[あめが] やみます ([雨が] 止みます)",
+      "back": "Tạnh [mưa]",
+      "category": "từ vựng"
+    },
+    {
+      "id": "48v51ybgklmgb04qv4",
+      "type": "vocab",
+      "front": "[かぜを] ひきます",
+      "back": "Bị [cảm]",
+      "category": "từ vựng"
+    },
+    {
+      "id": "kvf4d7rl2mmgb04qv4",
+      "type": "vocab",
+      "front": "● うります (売ります)",
+      "back": "Bán",
+      "category": "từ vựng"
+    },
+    {
+      "id": "1gasciwj79qhmgb04qv4",
+      "type": "vocab",
+      "front": "● おもいます (思います)",
+      "back": "Nghĩ",
+      "category": "từ vựng"
+    },
+    {
+      "id": "3ijn2wf42tpmgb04qv4",
+      "type": "vocab",
+      "front": "● いいます (言います)",
+      "back": "Nói",
+      "category": "từ vựng"
+    },
+    {
+      "id": "n3t3tk0f0xmgb04qv4",
+      "type": "vocab",
+      "front": "● こまります (困ります)",
+      "back": "Khó khăn, khổ",
+      "category": "từ vựng"
+    },
+    {
+      "id": "3sbh6vm5wsomgb04qv4",
+      "type": "vocab",
+      "front": "● こわれます (壊れます)",
+      "back": "Bị hỏng",
+      "category": "từ vựng"
+    },
+    {
+      "id": "rhvatg7hrzmgb04qv4",
+      "type": "vocab",
+      "front": "● われます (割れます)",
+      "back": "Bị vỡ",
+      "category": "từ vựng"
+    },
+    {
+      "id": "onathg6ft7imgb04qv4",
+      "type": "vocab",
+      "front": "● おれます (折れます)",
+      "back": "Bị gãy",
+      "category": "từ vựng"
+    },
+    {
+      "id": "5tq40klkbzjmgb04qv4",
+      "type": "vocab",
+      "front": "● やぶれます (破れます)",
+      "back": "Bị rách",
+      "category": "từ vựng"
+    },
+    {
+      "id": "dt7jypb6pg5mgb04qv4",
+      "type": "vocab",
+      "front": "● よごれます (汚れます)",
+      "back": "Bị bẩn",
+      "category": "từ vựng"
+    },
+    {
+      "id": "6y72v7wowgmgb04qv4",
+      "type": "vocab",
+      "front": "● つきます (付きます)",
+      "back": "Có dính, có kèm theo",
+      "category": "từ vựng"
+    },
+    {
+      "id": "5wn2g4753qxmgb04qv4",
+      "type": "vocab",
+      "front": "● おとします (落とします)",
+      "back": "Đánh rơi",
+      "category": "từ vựng"
+    },
+    {
+      "id": "zl8ksvyluvmgb04qv4",
+      "type": "vocab",
+      "front": "● かかります (掛かります)",
+      "back": "Được khóa",
+      "category": "từ vựng"
+    },
+    {
+      "id": "xqu0sv19qppmgb04qv4",
+      "type": "vocab",
+      "front": "● まちがえます (間違えます)",
+      "back": "Nhầm, sai",
+      "category": "từ vựng"
+    },
+    {
+      "id": "poa0de28ovhmgb04qv4",
+      "type": "vocab",
+      "front": "● うんどうします (運動します)",
+      "back": "Vận động",
+      "category": "từ vựng"
+    },
+    {
+      "id": "d3ia0pdgrpfmgb04qv4",
+      "type": "vocab",
+      "front": "● せいこうします (成功します)",
+      "back": "Thành công",
+      "category": "từ vựng"
+    },
+    {
+      "id": "um3rezrza3jmgb04qv4",
+      "type": "vocab",
+      "front": "● しっぱいします (失敗します)",
+      "back": "Thất bại",
+      "category": "từ vựng"
+    },
+    {
+      "id": "p5ienjloxzmgb04qv4",
+      "type": "vocab",
+      "front": "● ごうかくします (合格します)",
+      "back": "Đỗ, qua",
+      "category": "từ vựng"
+    },
+    {
+      "id": "e9z1i1gs8jpmgb04qv4",
+      "type": "vocab",
+      "front": "● ひやします (冷やします)",
+      "back": "Làm lạnh",
+      "category": "từ vựng"
+    },
+    {
+      "id": "lwixo568jmgb04qv4",
+      "type": "vocab",
+      "front": "● にげます (逃げます)",
+      "back": "Chạy trốn",
+      "category": "từ vựng"
+    },
+    {
+      "id": "y1mcc11fismgb04qv4",
+      "type": "vocab",
+      "front": "● さわぎます (騒ぎます)",
+      "back": "Làm ồn",
+      "category": "từ vựng"
+    },
+    {
+      "id": "6rxgtum0hzjmgb04qv4",
+      "type": "vocab",
+      "front": "● あきらめます",
+      "back": "Từ bỏ",
+      "category": "từ vựng"
+    },
+    {
+      "id": "0ynm7m6427wlmgb04qv4",
+      "type": "vocab",
+      "front": "● なげます (投げます)",
+      "back": "Ném",
+      "category": "từ vựng"
+    },
+    {
+      "id": "rhmir7bkl2nmgb04qv4",
+      "type": "vocab",
+      "front": "● まもります (守ります)",
+      "back": "Bảo vệ, tuân thủ",
+      "category": "từ vựng"
+    },
+    {
+      "id": "n1iae8js9vjmgb04qv4",
+      "type": "vocab",
+      "front": "● つたえます (伝えます)",
+      "back": "Truyền đạt",
+      "category": "từ vựng"
+    },
+    {
+      "id": "dt4vog74okmgb04qv4",
+      "type": "vocab",
+      "front": "● ちゅういします (注意します)",
+      "back": "Chú ý",
+      "category": "từ vựng"
+    },
+    {
+      "id": "9f4bsy2dq3nmgb04qv4",
+      "type": "vocab",
+      "front": "● こみます (込みます)",
+      "back": "Đông, đông đúc",
+      "category": "từ vựng"
+    },
+    {
+      "id": "q0olp35op9mmgb04qv4",
+      "type": "vocab",
+      "front": "● すきます",
+      "back": "Vắng, thưa",
+      "category": "từ vựng"
+    },
+    {
+      "id": "q1cfe9o7u5kmgb04qv4",
+      "type": "vocab",
+      "front": "● こしょうします (故障します)",
+      "back": "Hỏng",
+      "category": "từ vựng"
+    },
+    {
+      "id": "1j0pfkb7oymmgb04qv4",
+      "type": "vocab",
+      "front": "● うれます (売れます)",
+      "back": "Bán chạy",
+      "category": "từ vựng"
+    },
+    {
+      "id": "3vuzdb7zakrmgb04qv4",
+      "type": "vocab",
+      "front": "● おどります (踊ります)",
+      "back": "Nhảy, múa",
+      "category": "từ vựng"
+    },
+    {
+      "id": "zbr7qtbxskmmgb04qv4",
+      "type": "vocab",
+      "front": "● かみます",
+      "back": "Nhai, cắn",
+      "category": "từ vựng"
+    },
+    {
+      "id": "tr2ogjv7rumgb04qv4",
+      "type": "vocab",
+      "front": "● えらびます (選びます)",
+      "back": "Lựa chọn",
+      "category": "từ vựng"
+    },
+    {
+      "id": "wyo9chs5xsmgb04qv4",
+      "type": "vocab",
+      "front": "● かよいます (通います)",
+      "back": "Đi đi về về",
+      "category": "từ vựng"
+    },
+    {
+      "id": "7m1jzlvqcqlmgb04qv4",
+      "type": "vocab",
+      "front": "[せきを] はずします ([席を] 外します)",
+      "back": "Rời [chỗ ngồi]",
+      "category": "từ vựng"
+    },
+    {
+      "id": "iv0rm5hvuu9mgb04qv4",
+      "type": "vocab",
+      "front": "[おゆが] わきます ([お湯が] 沸きます)",
+      "back": "[Nước nóng] sôi",
+      "category": "từ vựng"
+    },
+    {
+      "id": "az33i90hshnmgb04qv4",
+      "type": "vocab",
+      "front": "● あたらしい ⇔ ふるい",
+      "back": "Mới ⇔ Cũ",
+      "category": "từ vựng"
+    },
+    {
+      "id": "5gkipvdx2prmgb04qv4",
+      "type": "vocab",
+      "front": "● いい (よい) ⇔ わるい",
+      "back": "Tốt ⇔ Xấu",
+      "category": "từ vựng"
+    },
+    {
+      "id": "9lqdsvw0rwhmgb04qv4",
+      "type": "vocab",
+      "front": "● たかい ⇔ やすい",
+      "back": "Đắt ⇔ Rẻ",
+      "category": "từ vựng"
+    },
+    {
+      "id": "uqh1b21pilimgb04qv4",
+      "type": "vocab",
+      "front": "● たかい ⇔ ひくい",
+      "back": "Cao ⇔ Thấp",
+      "category": "từ vựng"
+    },
+    {
+      "id": "br2c5zos6v8mgb04qv4",
+      "type": "vocab",
+      "front": "● おおきい ⇔ ちいさい",
+      "back": "To ⇔ Nhỏ",
+      "category": "từ vựng"
+    },
+    {
+      "id": "defn5lr0397mgb04qv4",
+      "type": "vocab",
+      "front": "● おもしろい ⇔ つまらない",
+      "back": "Thú vị ⇔ Chán",
+      "category": "từ vựng"
+    },
+    {
+      "id": "ktu26a4ummgb04qv4",
+      "type": "vocab",
+      "front": "● おいしい ⇔ まずい",
+      "back": "Ngon ⇔ Dở",
+      "category": "từ vựng"
+    },
+    {
+      "id": "4rapdfxzjvlmgb04qv4",
+      "type": "vocab",
+      "front": "● いそがしい (忙しい)",
+      "back": "Bận",
+      "category": "từ vựng"
+    },
+    {
+      "id": "2a9uzowy9oamgb04qv4",
+      "type": "vocab",
+      "front": "● たのしい (楽しい)",
+      "back": "Vui",
+      "category": "từ vựng"
+    },
+    {
+      "id": "aftbu2yfwn6mgb04qv4",
+      "type": "vocab",
+      "front": "● しろい / くろい / あかい / あおい",
+      "back": "Trắng / Đen / Đỏ / Xanh",
+      "category": "từ vựng"
+    },
+    {
+      "id": "fs0mbinw2t5mgb04qv4",
+      "type": "vocab",
+      "front": "● むずかしい ⇔ やさしい",
+      "back": "Khó ⇔ Dễ",
+      "category": "từ vựng"
+    },
+    {
+      "id": "vcchwz1kodmgb04qv4",
+      "type": "vocab",
+      "front": "● ちかい ⇔ とおい",
+      "back": "Gần ⇔ Xa",
+      "category": "từ vựng"
+    },
+    {
+      "id": "ivl4lq133cdmgb04qv4",
+      "type": "vocab",
+      "front": "● おもい ⇔ かるい",
+      "back": "Nặng ⇔ Nhẹ",
+      "category": "từ vựng"
+    },
+    {
+      "id": "ic40vi179bmgb04qv4",
+      "type": "vocab",
+      "front": "● やさしい (優しい)",
+      "back": "Tốt bụng, hiền lành",
+      "category": "từ vựng"
+    },
+    {
+      "id": "wcj60903e2bmgb04qv4",
+      "type": "vocab",
+      "front": "● えらい (偉い)",
+      "back": "Vĩ đại, đáng nể",
+      "category": "từ vựng"
+    },
+    {
+      "id": "2e39qe5b1g7mgb04qv4",
+      "type": "vocab",
+      "front": "● ちょうどいい",
+      "back": "Vừa vặn",
+      "category": "từ vựng"
+    },
+    {
+      "id": "8e2swyqx64jmgb04qv4",
+      "type": "vocab",
+      "front": "● ハンサム[な] / きれい[な]",
+      "back": "Đẹp trai / Đẹp, sạch",
+      "category": "từ vựng"
+    },
+    {
+      "id": "yyc946d62yomgb04qv4",
+      "type": "vocab",
+      "front": "● しずか[な] ⇔ にぎやか[な]",
+      "back": "Yên tĩnh ⇔ Náo nhiệt",
+      "category": "từ vựng"
+    },
+    {
+      "id": "dvio34dxiumgb04qv4",
+      "type": "vocab",
+      "front": "● しんせつ[な] (親切)",
+      "back": "Tốt bụng",
+      "category": "từ vựng"
+    },
+    {
+      "id": "t5kh91sgn7omgb04qv4",
+      "type": "vocab",
+      "front": "● げんき[な] (元気)",
+      "back": "Khỏe",
+      "category": "từ vựng"
+    },
+    {
+      "id": "r79c3gfd9o9mgb04qv4",
+      "type": "vocab",
+      "front": "● ひま[な] (暇)",
+      "back": "Rảnh rỗi",
+      "category": "từ vựng"
+    },
+    {
+      "id": "7fq7zpv8cb9mgb04qv4",
+      "type": "vocab",
+      "front": "● べんり[な] (便利)",
+      "back": "Tiện lợi",
+      "category": "từ vựng"
+    },
+    {
+      "id": "6i50tir6db4mgb04qv4",
+      "type": "vocab",
+      "front": "● すき[な] ⇔ きらい[な]",
+      "back": "Thích ⇔ Ghét",
+      "category": "từ vựng"
+    },
+    {
+      "id": "uyfc5664ieimgb04qv4",
+      "type": "vocab",
+      "front": "● じょうず[な] ⇔ へた[な]",
+      "back": "Giỏi ⇔ Kém",
+      "category": "từ vựng"
+    },
+    {
+      "id": "m99zqgcg1amgb04qv4",
+      "type": "vocab",
+      "front": "● かんたん[な] (簡単)",
+      "back": "Đơn giản",
+      "category": "từ vựng"
+    },
+    {
+      "id": "rc0b94oojedmgb04qv4",
+      "type": "vocab",
+      "front": "● たいせつ[な] (大切)",
+      "back": "Quan trọng",
+      "category": "từ vựng"
+    },
+    {
+      "id": "dobsp3i8hu9mgb04qv4",
+      "type": "vocab",
+      "front": "● あんぜん[な] (安全)",
+      "back": "An toàn",
+      "category": "từ vựng"
+    },
+    {
+      "id": "9elqitrjd47mgb04qv4",
+      "type": "vocab",
+      "front": "● だめ[な]",
+      "back": "Không được",
+      "category": "từ vựng"
+    },
+    {
+      "id": "41apu2m292dmgb04qv4",
+      "type": "vocab",
+      "front": "● おなじ (同じ)",
+      "back": "Giống",
+      "category": "từ vựng"
+    },
+    {
+      "id": "nt6j5qmp16mgb04qv4",
+      "type": "vocab",
+      "front": "● まじめ[な]",
+      "back": "Chăm chỉ, nghiêm túc",
+      "category": "từ vựng"
+    },
+    {
+      "id": "2oy7g0w1r39mgb04qv4",
+      "type": "vocab",
+      "front": "● ねっしん[な] (熱心[な])",
+      "back": "Nhiệt tình",
+      "category": "từ vựng"
+    },
+    {
+      "id": "9ocplh6pgmtmgb04qv4",
+      "type": "vocab",
+      "front": "● とても / あまり / ぜんぜん",
+      "back": "Rất / Không ~ lắm / Hoàn toàn không",
+      "category": "từ vựng"
+    },
+    {
+      "id": "tu0uu0xd0ubmgb04qv4",
+      "type": "vocab",
+      "front": "● よく",
+      "back": "Thường, rõ",
+      "category": "từ vựng"
+    },
+    {
+      "id": "q2595apzqucmgb04qv4",
+      "type": "vocab",
+      "front": "● すこし / ちょっと",
+      "back": "Một chút",
+      "category": "từ vựng"
+    },
+    {
+      "id": "tmjdc76c1fmmgb04qv4",
+      "type": "vocab",
+      "front": "● もう / まだ",
+      "back": "Đã / Vẫn, chưa",
+      "category": "từ vựng"
+    },
+    {
+      "id": "id71vd0inomgb04qv4",
+      "type": "vocab",
+      "front": "● ゆっくり",
+      "back": "Chậm, thong thả",
+      "category": "từ vựng"
+    },
+    {
+      "id": "j2ii2crxtjqmgb04qv4",
+      "type": "vocab",
+      "front": "● すぐ",
+      "back": "Ngay lập tức",
+      "category": "từ vựng"
+    },
+    {
+      "id": "yepeu95dgzmgb04qv4",
+      "type": "vocab",
+      "front": "● どうして",
+      "back": "Tại sao",
+      "category": "từ vựng"
+    },
+    {
+      "id": "kfzagh9nsujmgb04qv4",
+      "type": "vocab",
+      "front": "● もちろん",
+      "back": "Dĩ nhiên",
+      "category": "từ vựng"
+    },
+    {
+      "id": "rr5ye8gdk7smgb07wh8",
+      "type": "grammar",
+      "front": "○ Đặc biệt",
+      "back": "Một vài động từ kết thúc bằng cột「い」nhưng vẫn thuộc nhóm II. Các",
+      "category": "ngữ pháp",
+      "related_rules": []
+    },
+    {
+      "id": "hg3gd70rakmgb07wh8",
+      "type": "grammar",
+      "front": "động từ thường gặp là",
+      "back": "みます (xem), います (ở), おきます (thức dậy), かります",
+      "category": "ngữ pháp",
+      "related_rules": []
+    },
+    {
+      "id": "hao0x8tqz5mgb07wh8",
+      "type": "grammar",
+      "front": "(mượn), おります (xuống xe), あびます (tắm).",
+      "back": "● Nhóm III (Bất quy tắc):",
+      "category": "ngữ pháp",
+      "related_rules": []
+    },
+    {
+      "id": "9h7pezwz3vlmgb07wh8",
+      "type": "grammar",
+      "front": "○ Chỉ có 2 động từ gốc: 来ます (きます",
+      "back": "đến) và します (します - làm).",
+      "category": "ngữ pháp",
+      "related_rules": []
+    },
+    {
+      "id": "nk2xdyxt3vmgb07wh8",
+      "type": "grammar",
+      "front": "きょうします",
+      "back": "học), 買い物します (かいものします - mua sắm).",
+      "category": "ngữ pháp",
+      "related_rules": []
+    },
+    {
+      "id": "x2a7hey9thmgb07wh8",
+      "type": "grammar",
+      "front": "1. Thể て (V-te)",
+      "back": "Đây là thể đa dụng nhất, dùng để kết nối và tạo ra rất nhiều mẫu câu.",
+      "category": "ngữ pháp",
+      "related_rules": []
+    },
+    {
+      "id": "p61tljuotu7mgb07wh8",
+      "type": "grammar",
+      "front": "■ Đặc biệt",
+      "back": "行きます → 行って (いって)",
+      "category": "ngữ pháp",
+      "related_rules": []
+    },
+    {
+      "id": "u2svvekrtmmgb07wh8",
+      "type": "grammar",
+      "front": "○ Nhóm III",
+      "back": "します → して, きます → きて",
+      "category": "ngữ pháp",
+      "related_rules": []
+    },
+    {
+      "id": "o0ip1x2buudmgb07wh8",
+      "type": "grammar",
+      "front": "○ Vてください",
+      "back": "Yêu cầu, nhờ vả. (Bài 14)",
+      "category": "ngữ pháp",
+      "related_rules": []
+    },
+    {
+      "id": "3afwt7nomcpmgb07wh8",
+      "type": "grammar",
+      "front": "○ Vています",
+      "back": "Đang diễn ra một hành động. (Bài 14)",
+      "category": "ngữ pháp",
+      "related_rules": []
+    },
+    {
+      "id": "x5zbqs3houkmgb07wh8",
+      "type": "grammar",
+      "front": "○ Vてもいいです",
+      "back": "Xin phép làm gì đó. (Bài 15)",
+      "category": "ngữ pháp",
+      "related_rules": []
+    },
+    {
+      "id": "iun8ah2301rmgb07wh8",
+      "type": "grammar",
+      "front": "○ Vてはいけません",
+      "back": "Cấm đoán làm gì đó. (Bài 15)",
+      "category": "ngữ pháp",
+      "related_rules": []
+    },
+    {
+      "id": "6g5d6supbl8mgb07wh8",
+      "type": "grammar",
+      "front": "○ Vてから",
+      "back": "Sau khi làm V... (Bài 16)",
+      "category": "ngữ pháp",
+      "related_rules": []
+    },
+    {
+      "id": "41b2qrqr3g8mgb07wh8",
+      "type": "grammar",
+      "front": "○ Vてあげる/くれる/もらう",
+      "back": "Cho/nhận hành động. (Bài 24)",
+      "category": "ngữ pháp",
+      "related_rules": []
+    },
+    {
+      "id": "5vqsxkb83ihmgb07wh8",
+      "type": "grammar",
+      "front": "2. Thể ない (V-nai)",
+      "back": "Dạng phủ định dạng thông thường của động từ.",
+      "category": "ngữ pháp",
+      "related_rules": []
+    },
+    {
+      "id": "49lncuysxeomgb07wh8",
+      "type": "grammar",
+      "front": "○ Nhóm I",
+      "back": "Chuyển đuôi cột い trước ます sang cột あ rồi + ない.",
+      "category": "ngữ pháp",
+      "related_rules": []
+    },
+    {
+      "id": "4enfxq508jomgb07wh8",
+      "type": "grammar",
+      "front": "(Lưu ý",
+      "back": "い → わ)",
+      "category": "ngữ pháp",
+      "related_rules": []
+    },
+    {
+      "id": "z407mlcfqigmgb07wh8",
+      "type": "grammar",
+      "front": "○ Nhóm III",
+      "back": "します → しない, きます → こない (Lưu ý cách đọc 来ない là konai)",
+      "category": "ngữ pháp",
+      "related_rules": []
+    },
+    {
+      "id": "gtzji2ztlw6mgb07wh8",
+      "type": "grammar",
+      "front": "○ Vないでください",
+      "back": "Yêu cầu ai đó không làm gì. (Bài 17)",
+      "category": "ngữ pháp",
+      "related_rules": []
+    },
+    {
+      "id": "8nqq0tlksobmgb07wh8",
+      "type": "grammar",
+      "front": "○ Vなければなりません",
+      "back": "Phải làm gì đó. (Bài 17)",
+      "category": "ngữ pháp",
+      "related_rules": []
+    },
+    {
+      "id": "10553a4r0kmmgb07wh8",
+      "type": "grammar",
+      "front": "○ Vなくてもいいです",
+      "back": "Không cần làm gì đó. (Bài 17)",
+      "category": "ngữ pháp",
+      "related_rules": []
+    },
+    {
+      "id": "kgmp35b8jlimgb07wh8",
+      "type": "grammar",
+      "front": "○ Vないほうがいいです",
+      "back": "Lời khuyên không nên làm gì. (Bài 33)",
+      "category": "ngữ pháp",
+      "related_rules": []
+    },
+    {
+      "id": "9r3w6uqq7memgb07wh8",
+      "type": "grammar",
+      "front": "3. Thể た (V-ta)",
+      "back": "Dạng quá khứ dạng thông thường của động từ.",
+      "category": "ngữ pháp",
+      "related_rules": []
+    },
+    {
+      "id": "zq7v3kcm319mgb07wh8",
+      "type": "grammar",
+      "front": "● Cách chia",
+      "back": "Giống hệt thể て, chỉ cần thay て → た và で → だ.",
+      "category": "ngữ pháp",
+      "related_rules": []
+    },
+    {
+      "id": "jzraq1jybfmgb07wh8",
+      "type": "grammar",
+      "front": "○ Vたことがあります",
+      "back": "Đã từng làm gì đó (kinh nghiệm). (Bài 19)",
+      "category": "ngữ pháp",
+      "related_rules": []
+    },
+    {
+      "id": "b98lrvsx7n9mgb07wh8",
+      "type": "grammar",
+      "front": "○ Vたり Vたりします",
+      "back": "Liệt kê hành động không theo thứ tự. (Bài 19)",
+      "category": "ngữ pháp",
+      "related_rules": []
+    },
+    {
+      "id": "a0dxb25jm26mgb07wh8",
+      "type": "grammar",
+      "front": "○ Vたほうがいいです",
+      "back": "Lời khuyên nên làm gì. (Bài 33)",
+      "category": "ngữ pháp",
+      "related_rules": []
+    },
+    {
+      "id": "78ef29wt9rtmgb07wh8",
+      "type": "grammar",
+      "front": "○ Vたあとで",
+      "back": "Sau khi... (Bài 18)",
+      "category": "ngữ pháp",
+      "related_rules": []
+    },
+    {
+      "id": "4tuvllkcctmgb07wh8",
+      "type": "grammar",
+      "front": "4. Thể từ điển (V-ru / 辞書形)",
+      "back": "Dạng nguyên mẫu của động từ.",
+      "category": "ngữ pháp",
+      "related_rules": []
+    },
+    {
+      "id": "di2lslcmqy7mgb07wh8",
+      "type": "grammar",
+      "front": "○ Nhóm I",
+      "back": "Chuyển đuôi cột い trước ます sang cột う.",
+      "category": "ngữ pháp",
+      "related_rules": []
+    },
+    {
+      "id": "apo15hodrklmgb07wh8",
+      "type": "grammar",
+      "front": "○ Nhóm III",
+      "back": "します → する, きます → くる (Lưu ý cách đọc 来る là kuru)",
+      "category": "ngữ pháp",
+      "related_rules": []
+    },
+    {
+      "id": "nb1nrjg2paamgb07wh8",
+      "type": "grammar",
+      "front": "○ Vることができます",
+      "back": "Có thể làm gì. (Bài 18)",
+      "category": "ngữ pháp",
+      "related_rules": []
+    },
+    {
+      "id": "g0liy5jcbfimgb07wh8",
+      "type": "grammar",
+      "front": "○ 趣味はVることです",
+      "back": "Sở thích là... (Bài 18)",
+      "category": "ngữ pháp",
+      "related_rules": []
+    },
+    {
+      "id": "qgfe2laim9mgb07wh8",
+      "type": "grammar",
+      "front": "○ Vるまえに",
+      "back": "Trước khi làm V... (Bài 18)",
+      "category": "ngữ pháp",
+      "related_rules": []
+    },
+    {
+      "id": "xc7blhqy6s8mgb07wh8",
+      "type": "grammar",
+      "front": "5. Thể khả năng (可能形)",
+      "back": "Diễn tả năng lực, khả năng \"có thể làm\" một việc gì đó.",
+      "category": "ngữ pháp",
+      "related_rules": []
+    },
+    {
+      "id": "idj1c9n5nymgb07wh8",
+      "type": "grammar",
+      "front": "○ Nhóm I",
+      "back": "Chuyển đuôi cột い trước ます sang cột え rồi + ます.",
+      "category": "ngữ pháp",
+      "related_rules": []
+    },
+    {
+      "id": "v18kfs5h7brmgb07wh8",
+      "type": "grammar",
+      "front": "○ Nhóm III",
+      "back": "します → できます, きます → こられます",
+      "category": "ngữ pháp",
+      "related_rules": []
+    },
+    {
+      "id": "rrgxobrkq0jmgb07wh8",
+      "type": "grammar",
+      "front": "● Mẫu câu",
+      "back": "[Chủ ngữ] は/が [Danh từ] が [V khả năng] (Bài 27)",
+      "category": "ngữ pháp",
+      "related_rules": []
+    },
+    {
+      "id": "l4qxpwgdzimgb07wh8",
+      "type": "grammar",
+      "front": "Dạng \"rủ rê\" thân mật của Vましょう hoặc thể hiện ý định.",
+      "back": "● Cách chia:",
+      "category": "ngữ pháp",
+      "related_rules": []
+    },
+    {
+      "id": "6ewumoz1i5mmgb07wh8",
+      "type": "grammar",
+      "front": "○ Nhóm I",
+      "back": "Chuyển đuôi cột い trước ます sang cột お rồi + う.",
+      "category": "ngữ pháp",
+      "related_rules": []
+    },
+    {
+      "id": "c07758b2icimgb07wh8",
+      "type": "grammar",
+      "front": "○ Nhóm III",
+      "back": "します → しよう, きます → こよう",
+      "category": "ngữ pháp",
+      "related_rules": []
+    },
+    {
+      "id": "2437wyp7rfjmgb07wh8",
+      "type": "grammar",
+      "front": "● Mẫu câu",
+      "back": "Vようと思っています: Diễn tả ý định đã có từ trước. (Bài 31)",
+      "category": "ngữ pháp",
+      "related_rules": []
+    },
+    {
+      "id": "68d71zihelumgb07wh8",
+      "type": "grammar",
+      "front": "7. Thể mệnh lệnh (命令形) và Cấm đoán (禁止形)",
+      "back": "● Cách chia Thể mệnh lệnh:",
+      "category": "ngữ pháp",
+      "related_rules": []
+    },
+    {
+      "id": "s8300sqgrkmgb07wh8",
+      "type": "grammar",
+      "front": "○ Nhóm III",
+      "back": "します → しろ, きます → こい",
+      "category": "ngữ pháp",
+      "related_rules": []
+    },
+    {
+      "id": "c477cg4ofl5mgb07wh8",
+      "type": "grammar",
+      "front": "1. Mẫu câu Cho",
+      "back": "Nhận (授受表現)",
+      "category": "ngữ pháp",
+      "related_rules": []
+    },
+    {
+      "id": "zyn83fppg6emgb07wh8",
+      "type": "grammar",
+      "front": "● あげます",
+      "back": "(Ai đó) cho (ai đó). Dùng khi người nói/người thuộc phía người nói cho người",
+      "category": "ngữ pháp",
+      "related_rules": []
+    },
+    {
+      "id": "h3cv8xgv548mgb07wh8",
+      "type": "grammar",
+      "front": "● もらいます",
+      "back": "(Ai đó) nhận từ (ai đó).",
+      "category": "ngữ pháp",
+      "related_rules": []
+    },
+    {
+      "id": "wdavtwg3cimgb07wh8",
+      "type": "grammar",
+      "front": "● くれます",
+      "back": "(Ai đó) cho tôi/người trong gia đình tôi.",
+      "category": "ngữ pháp",
+      "related_rules": []
+    },
+    {
+      "id": "pb6w5d92t27mgb07wh8",
+      "type": "grammar",
+      "front": "● Vてあげます",
+      "back": "Làm gì cho ai đó.",
+      "category": "ngữ pháp",
+      "related_rules": []
+    },
+    {
+      "id": "c9xp6xl1e27mgb07wh8",
+      "type": "grammar",
+      "front": "● Vてもらいます",
+      "back": "Nhận được hành động từ ai đó (được ai làm cho).",
+      "category": "ngữ pháp",
+      "related_rules": []
+    },
+    {
+      "id": "ad4py972llemgb07wh8",
+      "type": "grammar",
+      "front": "● Vてくれます",
+      "back": "Ai đó làm gì cho mình.",
+      "category": "ngữ pháp",
+      "related_rules": []
+    },
+    {
+      "id": "jjm8m3cetlmgb07wh8",
+      "type": "grammar",
+      "front": "● So sánh hơn",
+      "back": "A は B より + [Tính từ] です (A thì ... hơn B)",
+      "category": "ngữ pháp",
+      "related_rules": []
+    },
+    {
+      "id": "2p5brlsf722mgb07wh8",
+      "type": "grammar",
+      "front": "● So sánh nhất",
+      "back": "[Phạm vi] で/のなかで + A が いちばん + [Tính từ] です (Trong [phạm vi], A",
+      "category": "ngữ pháp",
+      "related_rules": []
+    },
+    {
+      "id": "d0enfrj307qmgb07wh8",
+      "type": "grammar",
+      "front": "● Hỏi và trả lời lựa chọn",
+      "back": "A と B と どちらが (Giữa A và B, cái nào hơn?)",
+      "category": "ngữ pháp",
+      "related_rules": []
+    },
+    {
+      "id": "3ebmgyt53s2mgb07wh8",
+      "type": "grammar",
+      "front": "■ A",
+      "back": "サッカーと野球と、どちらがおもしろいですか。(Bóng đá và bóng chày, môn",
+      "category": "ngữ pháp",
+      "related_rules": []
+    },
+    {
+      "id": "x1hgu9bpv1omgb07wh8",
+      "type": "grammar",
+      "front": "■ B",
+      "back": "サッカーのほうがおもしろいです。(Bóng đá thú vị hơn.)",
+      "category": "ngữ pháp",
+      "related_rules": []
+    },
+    {
+      "id": "mkka7lyrbnkmgb07wh8",
+      "type": "grammar",
+      "front": "● Xin phép",
+      "back": "Vてもいいですか (Tôi làm ... có được không?)",
+      "category": "ngữ pháp",
+      "related_rules": []
+    },
+    {
+      "id": "dp8v84nulk6mgb07wh8",
+      "type": "grammar",
+      "front": "● Đề nghị giúp đỡ",
+      "back": "Vましょうか (Để tôi làm ... cho bạn nhé?)",
+      "category": "ngữ pháp",
+      "related_rules": []
+    },
+    {
+      "id": "u1mp9kr9ejfmgb07wh8",
+      "type": "grammar",
+      "front": "● Nói về dự định",
+      "back": "Vる/Vない + つもりです (Dự định làm/không làm gì)",
+      "category": "ngữ pháp",
+      "related_rules": []
+    },
+    {
+      "id": "myizz6tn8bamgb07wh8",
+      "type": "grammar",
+      "front": "● Thể hiện suy nghĩ, ý kiến",
+      "back": "[Thể thường] + と思います (Tôi nghĩ là...)",
+      "category": "ngữ pháp",
+      "related_rules": []
+    },
+    {
+      "id": "1ci5sspmygeimgb07wh8",
+      "type": "grammar",
+      "front": "● Trích dẫn",
+      "back": "[Câu nói] + と言います (Nói là...)",
+      "category": "ngữ pháp",
+      "related_rules": []
+    },
+    {
+      "id": "xos1093wupmgb07wh8",
+      "type": "grammar",
+      "front": "○ ～から (Bởi vì...",
+      "back": "mang tính chủ quan)",
+      "category": "ngữ pháp",
+      "related_rules": []
+    },
+    {
+      "id": "vkyxqwbg7wrmgb07wh8",
+      "type": "grammar",
+      "front": "○ ～ので (Bởi vì...",
+      "back": "mang tính khách quan, lịch sự hơn から)",
+      "category": "ngữ pháp",
+      "related_rules": []
+    },
+    {
+      "id": "mlyeip71g6mgb08j7v",
+      "type": "particle",
+      "front": "は",
+      "back": "Đánh dấu chủ đề của câu. \"Nói về... thì...\".",
+      "category": "trợ từ"
+    },
+    {
+      "id": "quwtretongmgb08j7v",
+      "type": "particle",
+      "front": "が",
+      "back": "Đánh dấu chủ ngữ của hành động hoặc trạng thái.",
+      "category": "trợ từ"
+    },
+    {
+      "id": "a99jmsk2olimgb08j7v",
+      "type": "particle",
+      "front": "を",
+      "back": "Đánh dấu tân ngữ trực tiếp của ngoại động từ (hành động tác động trực tiếp lên một vật).",
+      "category": "trợ từ"
+    },
+    {
+      "id": "sghuzcxmr6mgb08j7v",
+      "type": "particle",
+      "front": "Hướng",
+      "back": "Chỉ phương hướng của hành động di chuyển. Gần giống に nhưng nhấn mạnh vào \"hướng đi\" hơn là \"đích đến\".",
+      "category": "trợ từ"
+    }
+  ],
+  "reviews": [
+    {
+      "id": 1,
+      "card_id": "0idtd11ckfbcmgb04qv4",
+      "quality": 0,
+      "reviewed_at": "2025-10-03T15:31:47.855Z"
+    },
+    {
+      "id": 2,
+      "card_id": "0idtd11ckfbcmgb04qv4",
+      "quality": 2,
+      "reviewed_at": "2025-10-03T15:32:09.354Z"
+    },
+    {
+      "id": 3,
+      "card_id": "3u9jzneuab4mgb04qv4",
+      "quality": 2,
+      "reviewed_at": "2025-10-03T15:32:12.701Z"
+    },
+    {
+      "id": 4,
+      "card_id": "9k1a5oikbmmmgb04qv4",
+      "quality": 1,
+      "reviewed_at": "2025-10-03T15:32:15.047Z"
+    },
+    {
+      "id": 5,
+      "card_id": "rzt9vgj2yqfmgb04qv4",
+      "quality": 1,
+      "reviewed_at": "2025-10-03T15:32:20.225Z"
+    },
+    {
+      "id": 6,
+      "card_id": "1t2r13hxo0hjmgb04qv4",
+      "quality": 4,
+      "reviewed_at": "2025-10-03T15:32:27.362Z"
+    },
+    {
+      "id": 7,
+      "card_id": "qgrwe413pwimgb04qv4",
+      "quality": 2,
+      "reviewed_at": "2025-10-03T15:32:30.019Z"
+    },
+    {
+      "id": 8,
+      "card_id": "c8dzb321fv4mgb04qv4",
+      "quality": 3,
+      "reviewed_at": "2025-10-03T15:32:32.312Z"
+    },
+    {
+      "id": 9,
+      "card_id": "grw9ut0mnm9mgb04qv4",
+      "quality": 5,
+      "reviewed_at": "2025-10-03T15:32:34.676Z"
+    },
+    {
+      "id": 10,
+      "card_id": "tbxxotx4dfamgb04qv4",
+      "quality": 3,
+      "reviewed_at": "2025-10-03T15:32:37.591Z"
+    },
+    {
+      "id": 11,
+      "card_id": "v0csayjwk1hmgb04qv4",
+      "quality": 1,
+      "reviewed_at": "2025-10-03T15:32:40.188Z"
+    },
+    {
+      "id": 12,
+      "card_id": "a61i3up495dmgb04qv4",
+      "quality": 1,
+      "reviewed_at": "2025-10-03T15:32:42.895Z"
+    },
+    {
+      "id": 13,
+      "card_id": "ot3vwr7lrhmgb04qv4",
+      "quality": 1,
+      "reviewed_at": "2025-10-03T15:32:45.994Z"
+    },
+    {
+      "id": 14,
+      "card_id": "8w2ft2rabhqmgb04qv4",
+      "quality": 3,
+      "reviewed_at": "2025-10-03T15:32:48.221Z"
+    },
+    {
+      "id": 15,
+      "card_id": "gq9my33smymgb04qv4",
+      "quality": 1,
+      "reviewed_at": "2025-10-03T15:32:50.479Z"
+    },
+    {
+      "id": 16,
+      "card_id": "3vjt1ra6w4lmgb04qv4",
+      "quality": 3,
+      "reviewed_at": "2025-10-03T15:32:53.301Z"
+    },
+    {
+      "id": 17,
+      "card_id": "7hauwxne9cmgb04qv4",
+      "quality": 3,
+      "reviewed_at": "2025-10-03T15:32:55.889Z"
+    },
+    {
+      "id": 18,
+      "card_id": "hwwdbxdkvemgb04qv4",
+      "quality": 0,
+      "reviewed_at": "2025-10-03T15:32:58.876Z"
+    },
+    {
+      "id": 19,
+      "card_id": "4pn699fjq8lmgb04qv4",
+      "quality": 3,
+      "reviewed_at": "2025-10-03T15:33:01.388Z"
+    },
+    {
+      "id": 20,
+      "card_id": "5qnhynfmabpmgb04qv4",
+      "quality": 3,
+      "reviewed_at": "2025-10-03T15:33:03.496Z"
+    },
+    {
+      "id": 21,
+      "card_id": "o4kqy7100ucmgb04qv4",
+      "quality": 1,
+      "reviewed_at": "2025-10-03T15:33:06.070Z"
+    },
+    {
+      "id": 22,
+      "card_id": "0idtd11ckfbcmgb04qv4",
+      "quality": 1,
+      "reviewed_at": "2025-10-03T16:33:07.268Z"
+    },
+    {
+      "id": 23,
+      "card_id": "3u9jzneuab4mgb04qv4",
+      "quality": 1,
+      "reviewed_at": "2025-10-03T16:33:39.128Z"
+    },
+    {
+      "id": 24,
+      "card_id": "9k1a5oikbmmmgb04qv4",
+      "quality": 1,
+      "reviewed_at": "2025-10-03T16:36:23.306Z"
+    },
+    {
+      "id": 25,
+      "card_id": "rzt9vgj2yqfmgb04qv4",
+      "quality": 3,
+      "reviewed_at": "2025-10-03T16:40:16.661Z"
+    },
+    {
+      "id": 26,
+      "card_id": "1t2r13hxo0hjmgb04qv4",
+      "quality": 2,
+      "reviewed_at": "2025-10-03T16:40:18.709Z"
+    },
+    {
+      "id": 27,
+      "card_id": "qgrwe413pwimgb04qv4",
+      "quality": 1,
+      "reviewed_at": "2025-10-03T16:40:20.672Z"
+    },
+    {
+      "id": 28,
+      "card_id": "c8dzb321fv4mgb04qv4",
+      "quality": 4,
+      "reviewed_at": "2025-10-03T16:40:51.676Z"
+    },
+    {
+      "id": 29,
+      "card_id": "grw9ut0mnm9mgb04qv4",
+      "quality": 1,
+      "reviewed_at": "2025-10-03T16:40:53.324Z"
+    },
+    {
+      "id": 30,
+      "card_id": "tbxxotx4dfamgb04qv4",
+      "quality": 1,
+      "reviewed_at": "2025-10-03T16:40:55.207Z"
+    },
+    {
+      "id": 31,
+      "card_id": "v0csayjwk1hmgb04qv4",
+      "quality": 2,
+      "reviewed_at": "2025-10-03T16:40:57.419Z"
+    },
+    {
+      "id": 32,
+      "card_id": "a61i3up495dmgb04qv4",
+      "quality": 2,
+      "reviewed_at": "2025-10-03T16:40:59.085Z"
+    },
+    {
+      "id": 33,
+      "card_id": "ot3vwr7lrhmgb04qv4",
+      "quality": 3,
+      "reviewed_at": "2025-10-03T16:41:01.197Z"
+    },
+    {
+      "id": 34,
+      "card_id": "8w2ft2rabhqmgb04qv4",
+      "quality": 0,
+      "reviewed_at": "2025-10-03T16:41:03.891Z"
+    },
+    {
+      "id": 35,
+      "card_id": "gq9my33smymgb04qv4",
+      "quality": 0,
+      "reviewed_at": "2025-10-03T16:41:05.341Z"
+    },
+    {
+      "id": 36,
+      "card_id": "3vjt1ra6w4lmgb04qv4",
+      "quality": 1,
+      "reviewed_at": "2025-10-03T16:41:08.155Z"
+    },
+    {
+      "id": 37,
+      "card_id": "7hauwxne9cmgb04qv4",
+      "quality": 0,
+      "reviewed_at": "2025-10-03T16:41:10.560Z"
+    },
+    {
+      "id": 38,
+      "card_id": "hwwdbxdkvemgb04qv4",
+      "quality": 1,
+      "reviewed_at": "2025-10-03T16:41:13.267Z"
+    },
+    {
+      "id": 39,
+      "card_id": "4pn699fjq8lmgb04qv4",
+      "quality": 1,
+      "reviewed_at": "2025-10-03T16:41:16.058Z"
+    },
+    {
+      "id": 40,
+      "card_id": "5qnhynfmabpmgb04qv4",
+      "quality": 0,
+      "reviewed_at": "2025-10-03T16:41:18.819Z"
+    },
+    {
+      "id": 41,
+      "card_id": "o4kqy7100ucmgb04qv4",
+      "quality": 0,
+      "reviewed_at": "2025-10-03T16:41:21.548Z"
+    },
+    {
+      "id": 42,
+      "card_id": "0idtd11ckfbcmgb04qv4",
+      "quality": 4,
+      "reviewed_at": "2025-10-03T17:07:05.342Z"
+    },
+    {
+      "id": 43,
+      "card_id": "3u9jzneuab4mgb04qv4",
+      "quality": 4,
+      "reviewed_at": "2025-10-03T17:07:12.529Z"
+    },
+    {
+      "id": 44,
+      "card_id": "3u9jzneuab4mgb04qv4",
+      "quality": 0,
+      "reviewed_at": "2025-10-03T17:07:14.310Z"
+    },
+    {
+      "id": 45,
+      "card_id": "3u9jzneuab4mgb04qv4",
+      "quality": 3,
+      "reviewed_at": "2025-10-03T17:07:16.401Z"
+    },
+    {
+      "id": 46,
+      "card_id": "9k1a5oikbmmmgb04qv4",
+      "quality": 3,
+      "reviewed_at": "2025-10-03T17:07:23.137Z"
+    },
+    {
+      "id": 47,
+      "card_id": "rzt9vgj2yqfmgb04qv4",
+      "quality": 4,
+      "reviewed_at": "2025-10-03T17:07:27.873Z"
+    },
+    {
+      "id": 48,
+      "card_id": "1t2r13hxo0hjmgb04qv4",
+      "quality": 3,
+      "reviewed_at": "2025-10-03T17:07:37.241Z"
+    },
+    {
+      "id": 49,
+      "card_id": "qgrwe413pwimgb04qv4",
+      "quality": 4,
+      "reviewed_at": "2025-10-03T17:07:42.147Z"
+    },
+    {
+      "id": 50,
+      "card_id": "c8dzb321fv4mgb04qv4",
+      "quality": 2,
+      "reviewed_at": "2025-10-03T17:07:55.385Z"
+    },
+    {
+      "id": 51,
+      "card_id": "grw9ut0mnm9mgb04qv4",
+      "quality": 4,
+      "reviewed_at": "2025-10-03T17:07:59.084Z"
+    },
+    {
+      "id": 52,
+      "card_id": "tbxxotx4dfamgb04qv4",
+      "quality": 4,
+      "reviewed_at": "2025-10-03T17:08:03.870Z"
+    },
+    {
+      "id": 53,
+      "card_id": "v0csayjwk1hmgb04qv4",
+      "quality": 3,
+      "reviewed_at": "2025-10-03T17:08:11.700Z"
+    },
+    {
+      "id": 54,
+      "card_id": "0idtd11ckfbcmgb04qv4",
+      "quality": 5,
+      "reviewed_at": "2025-10-03T17:08:26.437Z"
+    },
+    {
+      "id": 55,
+      "card_id": "3u9jzneuab4mgb04qv4",
+      "quality": 5,
+      "reviewed_at": "2025-10-03T17:08:32.440Z"
+    },
+    {
+      "id": 56,
+      "card_id": "9k1a5oikbmmmgb04qv4",
+      "quality": 4,
+      "reviewed_at": "2025-10-03T17:08:42.103Z"
+    },
+    {
+      "id": 57,
+      "card_id": "rzt9vgj2yqfmgb04qv4",
+      "quality": 5,
+      "reviewed_at": "2025-10-03T17:08:51.426Z"
+    },
+    {
+      "id": 58,
+      "card_id": "1t2r13hxo0hjmgb04qv4",
+      "quality": 0,
+      "reviewed_at": "2025-10-03T17:08:57.619Z"
+    },
+    {
+      "id": 59,
+      "card_id": "qgrwe413pwimgb04qv4",
+      "quality": 5,
+      "reviewed_at": "2025-10-03T17:09:18.545Z"
+    },
+    {
+      "id": 60,
+      "card_id": "c8dzb321fv4mgb04qv4",
+      "quality": 0,
+      "reviewed_at": "2025-10-03T17:09:23.933Z"
+    },
+    {
+      "id": 61,
+      "card_id": "grw9ut0mnm9mgb04qv4",
+      "quality": 0,
+      "reviewed_at": "2025-10-03T17:09:30.347Z"
+    },
+    {
+      "id": 62,
+      "card_id": "tbxxotx4dfamgb04qv4",
+      "quality": 0,
+      "reviewed_at": "2025-10-03T17:09:32.169Z"
+    },
+    {
+      "id": 63,
+      "card_id": "v0csayjwk1hmgb04qv4",
+      "quality": 0,
+      "reviewed_at": "2025-10-03T17:09:34.434Z"
+    },
+    {
+      "id": 64,
+      "card_id": "0idtd11ckfbcmgb04qv4",
+      "quality": 0,
+      "reviewed_at": "2025-10-03T17:27:03.987Z"
+    },
+    {
+      "id": 65,
+      "card_id": "3u9jzneuab4mgb04qv4",
+      "quality": 0,
+      "reviewed_at": "2025-10-03T17:27:05.073Z"
+    },
+    {
+      "id": 66,
+      "card_id": "9k1a5oikbmmmgb04qv4",
+      "quality": 0,
+      "reviewed_at": "2025-10-03T17:27:07.285Z"
+    },
+    {
+      "id": 67,
+      "card_id": "rzt9vgj2yqfmgb04qv4",
+      "quality": 0,
+      "reviewed_at": "2025-10-03T17:27:08.458Z"
+    },
+    {
+      "id": 68,
+      "card_id": "1t2r13hxo0hjmgb04qv4",
+      "quality": 0,
+      "reviewed_at": "2025-10-03T17:27:09.793Z"
+    },
+    {
+      "id": 69,
+      "card_id": "qgrwe413pwimgb04qv4",
+      "quality": 0,
+      "reviewed_at": "2025-10-03T17:27:11.006Z"
+    },
+    {
+      "id": 70,
+      "card_id": "c8dzb321fv4mgb04qv4",
+      "quality": 0,
+      "reviewed_at": "2025-10-03T17:27:12.252Z"
+    },
+    {
+      "id": 71,
+      "card_id": "grw9ut0mnm9mgb04qv4",
+      "quality": 0,
+      "reviewed_at": "2025-10-03T17:27:13.474Z"
+    },
+    {
+      "id": 72,
+      "card_id": "tbxxotx4dfamgb04qv4",
+      "quality": 0,
+      "reviewed_at": "2025-10-03T17:27:14.785Z"
+    },
+    {
+      "id": 73,
+      "card_id": "v0csayjwk1hmgb04qv4",
+      "quality": 0,
+      "reviewed_at": "2025-10-03T17:27:15.986Z"
+    },
+    {
+      "id": 74,
+      "card_id": "0idtd11ckfbcmgb04qv4",
+      "quality": 0,
+      "reviewed_at": "2025-10-03T17:40:48.781Z"
+    },
+    {
+      "id": 75,
+      "card_id": "3u9jzneuab4mgb04qv4",
+      "quality": 0,
+      "reviewed_at": "2025-10-03T17:40:48.858Z"
+    },
+    {
+      "id": 76,
+      "card_id": "9k1a5oikbmmmgb04qv4",
+      "quality": 0,
+      "reviewed_at": "2025-10-03T17:40:49.021Z"
+    },
+    {
+      "id": 77,
+      "card_id": "rzt9vgj2yqfmgb04qv4",
+      "quality": 0,
+      "reviewed_at": "2025-10-03T17:40:49.177Z"
+    },
+    {
+      "id": 78,
+      "card_id": "1t2r13hxo0hjmgb04qv4",
+      "quality": 0,
+      "reviewed_at": "2025-10-03T17:40:49.332Z"
+    },
+    {
+      "id": 79,
+      "card_id": "qgrwe413pwimgb04qv4",
+      "quality": 0,
+      "reviewed_at": "2025-10-03T17:40:49.487Z"
+    },
+    {
+      "id": 80,
+      "card_id": "c8dzb321fv4mgb04qv4",
+      "quality": 0,
+      "reviewed_at": "2025-10-03T17:40:49.646Z"
+    },
+    {
+      "id": 81,
+      "card_id": "grw9ut0mnm9mgb04qv4",
+      "quality": 0,
+      "reviewed_at": "2025-10-03T17:40:49.796Z"
+    },
+    {
+      "id": 82,
+      "card_id": "tbxxotx4dfamgb04qv4",
+      "quality": 0,
+      "reviewed_at": "2025-10-03T17:40:49.946Z"
+    },
+    {
+      "id": 83,
+      "card_id": "v0csayjwk1hmgb04qv4",
+      "quality": 0,
+      "reviewed_at": "2025-10-03T17:40:50.118Z"
+    },
+    {
+      "id": 84,
+      "card_id": "v0csayjwk1hmgb04qv4",
+      "quality": 0,
+      "reviewed_at": "2025-10-03T17:40:56.102Z"
+    },
+    {
+      "id": 85,
+      "card_id": "0idtd11ckfbcmgb04qv4",
+      "quality": 0,
+      "reviewed_at": "2025-10-03T17:41:09.227Z"
+    },
+    {
+      "id": 86,
+      "card_id": "0idtd11ckfbcmgb04qv4",
+      "quality": 0,
+      "reviewed_at": "2025-10-03T17:41:09.395Z"
+    },
+    {
+      "id": 87,
+      "card_id": "0idtd11ckfbcmgb04qv4",
+      "quality": 0,
+      "reviewed_at": "2025-10-03T17:41:09.566Z"
+    },
+    {
+      "id": 88,
+      "card_id": "0idtd11ckfbcmgb04qv4",
+      "quality": 0,
+      "reviewed_at": "2025-10-03T17:41:09.724Z"
+    },
+    {
+      "id": 89,
+      "card_id": "0idtd11ckfbcmgb04qv4",
+      "quality": 0,
+      "reviewed_at": "2025-10-03T17:41:09.874Z"
+    },
+    {
+      "id": 90,
+      "card_id": "3u9jzneuab4mgb04qv4",
+      "quality": 0,
+      "reviewed_at": "2025-10-03T17:41:11.312Z"
+    },
+    {
+      "id": 91,
+      "card_id": "9k1a5oikbmmmgb04qv4",
+      "quality": 0,
+      "reviewed_at": "2025-10-03T17:41:11.473Z"
+    },
+    {
+      "id": 92,
+      "card_id": "rzt9vgj2yqfmgb04qv4",
+      "quality": 0,
+      "reviewed_at": "2025-10-03T17:41:11.630Z"
+    },
+    {
+      "id": 93,
+      "card_id": "1t2r13hxo0hjmgb04qv4",
+      "quality": 0,
+      "reviewed_at": "2025-10-03T17:41:11.790Z"
+    },
+    {
+      "id": 94,
+      "card_id": "qgrwe413pwimgb04qv4",
+      "quality": 0,
+      "reviewed_at": "2025-10-03T17:41:11.958Z"
+    },
+    {
+      "id": 95,
+      "card_id": "c8dzb321fv4mgb04qv4",
+      "quality": 0,
+      "reviewed_at": "2025-10-03T17:41:12.120Z"
+    },
+    {
+      "id": 96,
+      "card_id": "grw9ut0mnm9mgb04qv4",
+      "quality": 0,
+      "reviewed_at": "2025-10-03T17:41:12.281Z"
+    },
+    {
+      "id": 97,
+      "card_id": "tbxxotx4dfamgb04qv4",
+      "quality": 0,
+      "reviewed_at": "2025-10-03T17:41:12.524Z"
+    },
+    {
+      "id": 98,
+      "card_id": "v0csayjwk1hmgb04qv4",
+      "quality": 0,
+      "reviewed_at": "2025-10-03T17:41:12.726Z"
+    },
+    {
+      "id": 99,
+      "card_id": "v0csayjwk1hmgb04qv4",
+      "quality": 1,
+      "reviewed_at": "2025-10-03T17:41:21.408Z"
+    },
+    {
+      "id": 100,
+      "card_id": "iczo6uzhrqamgb04qv4",
+      "quality": 4,
+      "reviewed_at": "2025-10-03T17:41:30.477Z"
+    },
+    {
+      "id": 101,
+      "card_id": "iczo6uzhrqamgb04qv4",
+      "quality": 4,
+      "reviewed_at": "2025-10-03T17:41:30.633Z"
+    },
+    {
+      "id": 102,
+      "card_id": "3p4pn349r6tmgb04qv4",
+      "quality": 0,
+      "reviewed_at": "2025-10-03T17:41:31.441Z"
+    },
+    {
+      "id": 103,
+      "card_id": "kz7hx4o2x0fmgb04qv4",
+      "quality": 0,
+      "reviewed_at": "2025-10-03T17:41:31.794Z"
+    },
+    {
+      "id": 104,
+      "card_id": "e8t6deup7kemgb04qv4",
+      "quality": 0,
+      "reviewed_at": "2025-10-03T17:41:31.963Z"
+    },
+    {
+      "id": 105,
+      "card_id": "dbjn3o8y0k4mgb04qv4",
+      "quality": 0,
+      "reviewed_at": "2025-10-03T17:41:32.129Z"
+    },
+    {
+      "id": 106,
+      "card_id": "yen54dc7vvimgb04qv4",
+      "quality": 0,
+      "reviewed_at": "2025-10-03T17:41:32.303Z"
+    },
+    {
+      "id": 107,
+      "card_id": "je6yspf1kebmgb04qv4",
+      "quality": 0,
+      "reviewed_at": "2025-10-03T17:41:32.481Z"
+    },
+    {
+      "id": 108,
+      "card_id": "xocgfnjco9mgb04qv4",
+      "quality": 0,
+      "reviewed_at": "2025-10-03T17:41:32.663Z"
+    },
+    {
+      "id": 109,
+      "card_id": "1u9or1ubr78mgb04qv4",
+      "quality": 0,
+      "reviewed_at": "2025-10-03T17:41:32.841Z"
+    },
+    {
+      "id": 110,
+      "card_id": "d4v9cr6q4uvmgb04qv4",
+      "quality": 0,
+      "reviewed_at": "2025-10-03T17:41:33.210Z"
+    },
+    {
+      "id": 111,
+      "card_id": "d4v9cr6q4uvmgb04qv4",
+      "quality": 0,
+      "reviewed_at": "2025-10-03T17:41:36.506Z"
+    },
+    {
+      "id": 112,
+      "card_id": "qxhzbyrkl1kmgb04qv4",
+      "quality": 0,
+      "reviewed_at": "2025-10-03T17:42:22.072Z"
+    },
+    {
+      "id": 113,
+      "card_id": "kpy0220828hmgb04qv4",
+      "quality": 0,
+      "reviewed_at": "2025-10-03T17:42:22.287Z"
+    },
+    {
+      "id": 114,
+      "card_id": "5e4qdivp0ugmgb04qv4",
+      "quality": 0,
+      "reviewed_at": "2025-10-03T17:42:22.703Z"
+    },
+    {
+      "id": 115,
+      "card_id": "f8nejp9o13mgb04qv4",
+      "quality": 0,
+      "reviewed_at": "2025-10-03T17:42:22.861Z"
+    },
+    {
+      "id": 116,
+      "card_id": "0c9adh6z3u09mgb04qv4",
+      "quality": 0,
+      "reviewed_at": "2025-10-03T17:42:23.029Z"
+    },
+    {
+      "id": 117,
+      "card_id": "nylug7o2yqemgb04qv4",
+      "quality": 0,
+      "reviewed_at": "2025-10-03T17:42:23.194Z"
+    },
+    {
+      "id": 118,
+      "card_id": "4snjvqdrkvmgb04qv4",
+      "quality": 0,
+      "reviewed_at": "2025-10-03T17:42:23.341Z"
+    },
+    {
+      "id": 119,
+      "card_id": "b2lulz1wukdmgb04qv4",
+      "quality": 0,
+      "reviewed_at": "2025-10-03T17:42:23.518Z"
+    },
+    {
+      "id": 120,
+      "card_id": "vdoimkpx93nmgb04qv4",
+      "quality": 0,
+      "reviewed_at": "2025-10-03T17:42:23.677Z"
+    },
+    {
+      "id": 121,
+      "card_id": "hhve35lnkjmgb04qv4",
+      "quality": 0,
+      "reviewed_at": "2025-10-03T17:42:23.848Z"
+    },
+    {
+      "id": 122,
+      "card_id": "hhve35lnkjmgb04qv4",
+      "quality": 0,
+      "reviewed_at": "2025-10-03T17:42:26.495Z"
+    }
+  ]
+}
