@@ -86,6 +86,14 @@ export default function ProgressPage() {
     })();
   }, [typeFilter]);
 
+  const memCardMap = React.useMemo(() => {
+    const map = new Map();
+    toArray(mem.rows).forEach((r) => {
+      if (r?.card_id) map.set(r.card_id, r);
+    });
+    return map;
+  }, [mem.rows]);
+
 
 
   // Tổng kết hôm nay
@@ -109,23 +117,19 @@ export default function ProgressPage() {
   );
   const latest = sessionsOfType[0] || null;
 
-  // Đếm phân bố mức nhớ hiện tại cho 1 tập thẻ
-  const countDistForCards = React.useCallback((cardIds) => {
-    const levelMap = new Map(mem.rows.map(r => [r.card_id, r.level]));
-    const dist = [0,0,0,0,0,0];
-    cardIds.forEach(id => {
-      const lvl = levelMap.get(id);
-      if (Number.isFinite(lvl) && lvl >= 0 && lvl <= 5) dist[lvl] += 1;
+  // Phân bố theo điểm session cho “Session gần nhất”
+  const latestSessionDist = React.useMemo(() => {
+    if (!latest) return [0, 0, 0, 0, 0, 0];
+    const dist = [0, 0, 0, 0, 0, 0];
+    toArray(latest.cards).forEach((c) => {
+      const finalScore = Number.isFinite(Number(c?.final)) ? Number(c.final) : null;
+      const cardId = c?.card_id ?? c?.cardId ?? c?.id ?? null;
+      const fallbackLevel = cardId ? currentLevelOf(cardId) : null;
+      const level = finalScore ?? (Number.isFinite(fallbackLevel) ? fallbackLevel : null);
+      if (level != null && level >= 0 && level <= 5) dist[level] += 1;
     });
     return dist;
-  }, [mem.rows]);
-
-// Phân bố live cho “Session gần nhất”
-  const latestDistLive = React.useMemo(() => {
-    if (!latest) return [0,0,0,0,0,0];
-    const ids = toArray(latest.cards).map(c => c.card_id);
-    return countDistForCards(ids);
-  }, [latest, countDistForCards]);
+  }, [latest, currentLevelOf]);
 
 
   // Số liệu chính (memory_levels)
@@ -476,19 +480,31 @@ export default function ProgressPage() {
                   Từ & mức nhớ:
                 </Typography>
                 <Stack direction="row" spacing={1} flexWrap="wrap">
-                  {toArray(latest.cards).map((c) => (
-                      <Chip
-                          key={c.id}
-                          label={c.front + ' (' + currentLevelOf(c.card_id, c.final) + ')' }
-                          sx={{ mr: 1, mb: 1 }}
-                      />
-                  ))}
+                  {toArray(latest.cards).map((c, idx) => {
+                    const cardId = c.card_id ?? c.cardId ?? c.id ?? null;
+                    const memoRow = cardId ? memCardMap.get(cardId) : null;
+                    const front = c.front ?? memoRow?.front ?? null;
+                    const back = c.back ?? memoRow?.back ?? null;
+                    const labelText = front && back
+                        ? `${front} · ${back}`
+                        : (front || back || cardId || 'Thẻ');
+                    const level = Number.isFinite(Number(c?.final))
+                        ? Number(c.final)
+                        : currentLevelOf(cardId, memoRow?.level ?? null);
+                    return (
+                        <Chip
+                            key={c.id || cardId || `latest-card-${idx}`}
+                            label={`${labelText} (${level})`}
+                            sx={{ mr: 1, mb: 1 }}
+                        />
+                    );
+                  })}
                 </Stack>
 
                 <Divider sx={{ my: 2 }} />
                 <Typography variant="subtitle2">Phân bố mức nhớ:</Typography>
                 <Stack direction="row" spacing={1} flexWrap="wrap">
-                  {liveStats.dist.map((n, i)=> (
+                  {latestSessionDist.map((n, i)=> (
                       <Chip key={i} label={`Mức ${i}: ${n}`} />
                   ))}
                 </Stack>
