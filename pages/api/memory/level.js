@@ -104,28 +104,8 @@ export default async function handler(req, res) {
             .single();
         if (mlErr) throw mlErr;
 
-        // 4) Ghi đè điểm của session gần nhất (nếu có) để UI phản ánh đúng
-        const { data: sessionCard, error: sessionLookupErr } = await supabase
-            .from('session_cards')
-            .select('session_id, card_id')
-            .eq('card_id', card_id)
-            .order('created_at', { ascending: false })
-            .limit(1)
-            .maybeSingle();
-        if (!sessionLookupErr && sessionCard?.session_id) {
-            const { error: sessionUpdateErr } = await supabase
-                .from('session_cards')
-                .update({ final: lvl })
-                .eq('session_id', sessionCard.session_id)
-                .eq('card_id', card_id);
-            if (sessionUpdateErr) {
-                // eslint-disable-next-line no-console
-                console.error('[api/memory/level] failed to update session card', sessionUpdateErr);
-            }
-        } else if (sessionLookupErr) {
-            // eslint-disable-next-line no-console
-            console.error('[api/memory/level] failed to locate session card', sessionLookupErr);
-        }
+        // 4) Session cards are left untouched here so the DB trigger from review_logs
+        //     remains the single source of truth for updating memory levels.
 
         return res.status(200).json({ ok: true, quality, memory });
     } catch (e) {
