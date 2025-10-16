@@ -12,14 +12,14 @@ export default function PomodoroPage() {
         Pomodoro · 2 giờ
       </Typography>
       <Typography sx={{ mb: 2, color: 'text.secondary' }}>
-        Chu kỳ chuẩn: <b>25’ tập trung</b> + <b>5’ nghỉ</b> × 4
+        Chu kỳ chuẩn: <b>50’ tập trung</b> + <b>10’ nghỉ</b> × 2
       </Typography>
 
       <Card sx={{ borderRadius: 4, border: '1px solid #ffdddd', background: '#fff' }}>
         <CardContent>
           <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 2 }}>
             <Typography variant="h5" sx={{ fontWeight: 700, color: current.type === 'focus' ? '#c33' : '#888' }}>
-              {current.type === 'focus' ? `Tập trung · Chu kỳ ${current.cycle}/4` : `Nghỉ · Chu kỳ ${current.cycle}/4`}
+              {current.type === 'focus' ? `Tập trung · Chu kỳ ${current.cycle}/2` : `Nghỉ · Chu kỳ ${current.cycle}/2`}
             </Typography>
             <Stack direction="row" spacing={1}>
               {paused ? (
@@ -49,7 +49,7 @@ export default function PomodoroPage() {
             sx={{ height: 10, borderRadius: 20, backgroundColor: '#ffe9e9' }}
           />
 
-          {/* timeline 4 chu kỳ (focus/break) */}
+          {/* timeline 2 chu kỳ (focus/break) */}
           <Stack direction="row" spacing={2} justifyContent="center" sx={{ mt: 3 }}>
             {cycles.map((c) => (
               <Stack key={c.index} spacing={1} alignItems="center">
@@ -70,7 +70,7 @@ export default function PomodoroPage() {
           </Stack>
 
           <Typography sx={{ mt: 2, color: 'text.secondary', textAlign: 'center' }}>
-            Mỗi chu kỳ = 25’ tập trung + 5’ nghỉ · Tổng 4 chu kỳ = 2 giờ.
+            Mỗi chu kỳ = 50’ tập trung + 10’ nghỉ · Tổng 2 chu kỳ = 2 giờ.
           </Typography>
         </CardContent>
       </Card>
