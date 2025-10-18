@@ -270,8 +270,15 @@ create or replace function public.trg_on_review_insert()
 returns trigger language plpgsql as $$
 declare
   meta_final int;
+  raw_final text;
 begin
-  meta_final := coalesce((new.meta->>'final')::int, (new.meta->>'new_level')::int);
+  raw_final := btrim(coalesce(new.meta->>'final', new.meta->>'new_level'));
+  if raw_final ~ '^-?[0-9]+$' then
+    meta_final := raw_final::int;
+  else
+    meta_final := null;
+  end if;
+
   perform public.update_memory_after_review(new.card_id, new.quality, meta_final);
   return new;
 end$$;
