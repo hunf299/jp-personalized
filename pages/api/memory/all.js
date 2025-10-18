@@ -9,7 +9,7 @@ export default async function handler(req, res) {
         const type = String(req.query.type || '');
         const { data, error } = await supa
             .from('memory_levels')
-            .select('card_id, type, level, stability, difficulty, last_reviewed_at, due, cards:card_id(id,type,front,back)')
+            .select('card_id, type, level, stability, difficulty, last_reviewed_at, due, leech_count, is_leech, cards:card_id(id,type,front,back)')
             .order('updated_at', { ascending: false });
         if (error) throw error;
 
@@ -23,6 +23,8 @@ export default async function handler(req, res) {
             due: r.due || null,
             front: r.cards?.front ?? null,
             back: r.cards?.back ?? null,
+            leech_count: Number.isFinite(Number(r.leech_count)) ? Number(r.leech_count) : 0,
+            is_leech: !!r.is_leech,
         }));
 
         if (type) rows = rows.filter(r => r.type === type);

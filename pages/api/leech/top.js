@@ -16,9 +16,9 @@ export default async function handler(req, res) {
         // 🎯 Lấy các thẻ ở mức 0 hoặc 1 (yếu nhất)
         const { data, error } = await supa
             .from('memory_levels')
-            .select('card_id, level, leech_count, cards(front, back)')
+            .select('card_id, level, leech_count, is_leech, cards(front, back)')
             .eq('type', type)
-            .eq('is_leech', true)
+            .gte('leech_count', 1)
             .order('leech_count', { ascending: false })
             .limit(50);
 
@@ -30,8 +30,9 @@ export default async function handler(req, res) {
                 card_id: r.card_id,
                 front: r.cards?.front,
                 back: r.cards?.back,
-                level: r.level,
-                leech_count: r.leech_count || 0,
+                level: Number.isFinite(Number(r.level)) ? Number(r.level) : null,
+                leech_count: Number.isFinite(Number(r.leech_count)) ? Number(r.leech_count) : 0,
+                is_leech: !!r.is_leech,
             }))
             .filter((r) => r.front && (r.level === 0 || r.level === 1));
 

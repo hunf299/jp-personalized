@@ -21,6 +21,7 @@ const useSettings = _useSettings || (() => ({
 
 // Helpers
 function toArray(x) { return Array.isArray(x) ? x : []; }
+const safeArray = (x) => (Array.isArray(x) ? x : []);
 async function getJSON(url) {
   try { const r = await fetch(url); return await r.json(); }
   catch { return null; }
@@ -221,7 +222,7 @@ export default function ProgressPage() {
             back: x.back || x.card_back || '',
             leech_count: Number.isFinite(Number(x.leech_count)) ? Number(x.leech_count) : 0,
             is_leech: !!x.is_leech,
-            level: Number.isFinite(Number(x.level)) ? Number(x.level) : (x.level==null?null:Number(x.level))
+            level: Number.isFinite(Number(x.level)) ? Number(x.level) : null,
           }));
           norm.sort((a,b)=> (b.leech_count||0) - (a.leech_count||0));
           if(!cancelled) setLeechRows(norm);
@@ -260,15 +261,60 @@ export default function ProgressPage() {
 
     // build liveLeech = intersection leechRows ∩ memRows with liveLevel 0/1
     const liveLeech = React.useMemo(()=>{
-      if (!Array.isArray(leechRows) || !Array.isArray(memRows)) return [];
-      const memMap = new Map(memRows.map(r => [String(r.card_id), r]));
-      return leechRows
-          .map(r => {
-            const m = memMap.get(String(r.card_id));
-            const liveLevel = m && Number.isFinite(Number(m.level)) ? Number(m.level) : (Number.isFinite(Number(r.level)) ? Number(r.level) : null);
-            return { ...r, liveLevel, memRow: m || null };
-          })
-          .filter(x => x.liveLevel === 0 || x.liveLevel === 1);
+      const memList = Array.isArray(memRows) ? memRows : [];
+      const memMap = new Map(memList.map(r => [String(r.card_id), r]));
+      const merged = [];
+      const seen = new Set();
+
+      const normalizeLevel = (v) => (Number.isFinite(Number(v)) ? Number(v) : null);
+      const normalizeCount = (v) => (Number.isFinite(Number(v)) ? Number(v) : 0);
+
+      toArray(leechRows).forEach((row) => {
+        const cardId = String(row.card_id);
+        const memRow = memMap.get(cardId) || null;
+        const level = memRow ? normalizeLevel(memRow.level) : normalizeLevel(row.level);
+        const leechCount = memRow ? normalizeCount(memRow.leech_count) : normalizeCount(row.leech_count);
+        const shouldShow = level === 0 || level === 1;
+        if (!shouldShow) return;
+        merged.push({
+          card_id: cardId,
+          front: row.front || memRow?.front || '',
+          back: row.back || memRow?.back || '',
+          leech_count: leechCount,
+          is_leech: row.is_leech || !!memRow?.is_leech || false,
+          liveLevel: level,
+          memRow,
+        });
+        seen.add(cardId);
+      });
+
+      memList.forEach((memRow) => {
+        const cardId = String(memRow.card_id);
+        if (seen.has(cardId)) return;
+        const level = normalizeLevel(memRow.level);
+        const leechCount = normalizeCount(memRow.leech_count);
+        const shouldShow = level === 0 || level === 1;
+        const flagged = leechCount > 0 || !!memRow.is_leech;
+        if (shouldShow && flagged) {
+          merged.push({
+            card_id: cardId,
+            front: memRow.front || '',
+            back: memRow.back || '',
+            leech_count: leechCount,
+            is_leech: !!memRow.is_leech,
+            liveLevel: level,
+            memRow,
+          });
+        }
+      });
+
+      merged.sort((a, b) => {
+        const diff = (b.leech_count || 0) - (a.leech_count || 0);
+        if (diff !== 0) return diff;
+        return (a.front || '').localeCompare(b.front || '');
+      });
+
+      return merged;
     }, [leechRows, memRows]);
 
     const has0 = ( (mem?.dist && mem.dist[0]) || (Array.isArray(memRows) && memRows.some(r=>Number(r.level)===0)) ) > 0;
