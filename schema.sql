@@ -211,12 +211,13 @@ after insert on public.session_cards
 for each row execute function public.ensure_memory_level_exists();
 
 -- Hàm cập nhật level/stability/leech theo quality (0..5)
-create or replace function public.update_memory_after_review(p_card_id uuid, p_quality int)
+create or replace function public.update_memory_after_review(p_card_id uuid, p_quality int, p_new_level int default null)
 returns void language plpgsql as $$
 declare
   card_type text;
   prior_leech int;
   inc_leech int;
+  target_level int;
 begin
   select c.type into card_type from public.cards c where c.id = p_card_id;
   if card_type is null then card_type := 'vocab'; end if;
@@ -226,11 +227,18 @@ begin
 
   inc_leech := case when p_quality <= 1 then 1 else 0 end;
 
+  if p_new_level is not null then
+    target_level := greatest(0, least(5, p_new_level));
+  else
+    target_level := null;
+  end if;
+
   if found then
     update public.memory_levels
     set
       type = coalesce(type, card_type),
-      level = greatest(0, least(5, level + case when p_quality >= 4 then 1 when p_quality = 3 then 0 else -1 end)),
+      level = coalesce(target_level,
+                       greatest(0, least(5, level + case when p_quality >= 4 then 1 when p_quality = 3 then 0 else -1 end))),
       stability = case
                     when p_quality >= 4 then coalesce(stability,0) + 1.0
                     when p_quality = 3 then coalesce(stability,0)
@@ -246,7 +254,7 @@ begin
     insert into public.memory_levels(card_id, type, level, stability, difficulty, leech_count, is_leech, last_reviewed_at, updated_at)
     values (
       p_card_id, card_type,
-      case when p_quality >= 4 then 1 else 0 end,
+      coalesce(target_level, case when p_quality >= 4 then 1 else 0 end),
       case when p_quality >= 4 then 1 else 0 end,
       5,
       inc_leech,
@@ -260,8 +268,11 @@ end$$;
 -- Tự động cập nhật khi ghi log review hoặc khi sửa final của session_cards
 create or replace function public.trg_on_review_insert()
 returns trigger language plpgsql as $$
+declare
+  meta_final int;
 begin
-  perform public.update_memory_after_review(new.card_id, new.quality);
+  meta_final := coalesce((new.meta->>'final')::int, (new.meta->>'new_level')::int);
+  perform public.update_memory_after_review(new.card_id, new.quality, meta_final);
   return new;
 end$$;
 drop trigger if exists trg_review_logs_insert on public.review_logs;
@@ -273,7 +284,7 @@ create or replace function public.trg_session_cards_update()
 returns trigger language plpgsql as $$
 begin
   if new.final is not null and (old.final is distinct from new.final) then
-    perform public.update_memory_after_review(new.card_id, new.final);
+    perform public.update_memory_after_review(new.card_id, new.final, new.final);
   end if;
   return new;
 end$$;
