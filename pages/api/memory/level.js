@@ -80,7 +80,7 @@ export default async function handler(req, res) {
             .eq('card_id', card_id)
             .lte('quality', 1);
         if (countErr) throw countErr;
-        const leechCount = Math.max(0, (lowCount || 0) - 1);
+        const leechCount = Math.max(0, lowCount || 0);
         const isLeech = leechCount >= 3;
 
         // 3) Upsert memory_levels với mức nhớ mới + leech metadata chính xác
@@ -113,14 +113,52 @@ export default async function handler(req, res) {
             .limit(1)
             .maybeSingle();
         if (!sessionLookupErr && sessionCard?.session_id) {
+            const sessionId = sessionCard.session_id;
             const { error: sessionUpdateErr } = await supabase
                 .from('session_cards')
                 .update({ final: lvl })
-                .eq('session_id', sessionCard.session_id)
+                .eq('session_id', sessionId)
                 .eq('card_id', card_id);
             if (sessionUpdateErr) {
                 // eslint-disable-next-line no-console
                 console.error('[api/memory/level] failed to update session card', sessionUpdateErr);
+            }
+
+            // attempt to refresh summary so UI reflects latest levels immediately
+            try {
+                const { data: sessionCards, error: cardsErr } = await supabase
+                    .from('session_cards')
+                    .select('final')
+                    .eq('session_id', sessionId);
+                if (cardsErr) throw cardsErr;
+
+                const dist = [0, 0, 0, 0, 0, 0];
+                let learned = 0;
+                const total = Array.isArray(sessionCards) ? sessionCards.length : 0;
+
+                (sessionCards || []).forEach((row) => {
+                    const value = Number.isFinite(Number(row?.final)) ? Number(row.final) : 0;
+                    if (value >= 0 && value <= 5) {
+                        dist[value] += 1;
+                        if (value >= 3) learned += 1;
+                    }
+                });
+
+                const summaryUpdate = {
+                    total,
+                    learned,
+                    left: Math.max(0, total - learned),
+                    agg: dist,
+                };
+
+                const { error: summaryErr } = await supabase
+                    .from('sessions')
+                    .update({ summary: summaryUpdate })
+                    .eq('id', sessionId);
+                if (summaryErr) throw summaryErr;
+            } catch (summaryError) {
+                // eslint-disable-next-line no-console
+                console.error('[api/memory/level] failed to refresh session summary', summaryError);
             }
         } else if (sessionLookupErr) {
             // eslint-disable-next-line no-console
