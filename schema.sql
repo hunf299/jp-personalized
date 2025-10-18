@@ -25,9 +25,65 @@ as $fn$
                'cCnNaAeEiIoOuUaAoOaeAE'
              )
            ),
-           '\s+',' ','g'
-         )
+         '\s+',' ','g'
+        )
 $fn$;
+
+drop function if exists public.parse_review_level(jsonb);
+create or replace function public.parse_review_level(value jsonb)
+returns int
+language plpgsql
+immutable
+as $$
+declare
+  txt text;
+  num numeric;
+begin
+  if value is null or value = 'null'::jsonb then
+    return null;
+  end if;
+
+  txt := trim(both '"' from value::text);
+  txt := btrim(txt);
+
+  if txt ~ '^-?[0-9]+(\.[0-9]+)?$' then
+    num := txt::numeric;
+    num := trunc(num);
+    if num < 0 then
+      num := 0;
+    elsif num > 5 then
+      num := 5;
+    end if;
+    return num::int;
+  end if;
+
+  return null;
+end$$;
+
+drop function if exists public.extract_final_level(jsonb);
+create or replace function public.extract_final_level(meta jsonb)
+returns int
+language plpgsql
+immutable
+as $$
+declare
+  key text;
+  candidate int;
+  keys text[] := array['final', 'new_level', 'final_level', 'level', 'score'];
+begin
+  if meta is null or jsonb_typeof(meta) <> 'object' then
+    return null;
+  end if;
+
+  foreach key in array keys loop
+    candidate := public.parse_review_level(meta -> key);
+    if candidate is not null then
+      return candidate;
+    end if;
+  end loop;
+
+  return null;
+end$$;
 
 -- ===== Core tables =====
 create table if not exists public.cards (
@@ -270,14 +326,8 @@ create or replace function public.trg_on_review_insert()
 returns trigger language plpgsql as $$
 declare
   meta_final int;
-  raw_final text;
 begin
-  raw_final := btrim(coalesce(new.meta->>'final', new.meta->>'new_level'));
-  if raw_final ~ '^-?[0-9]+$' then
-    meta_final := raw_final::int;
-  else
-    meta_final := null;
-  end if;
+  meta_final := public.extract_final_level(new.meta);
 
   perform public.update_memory_after_review(new.card_id, new.quality, meta_final);
   return new;
