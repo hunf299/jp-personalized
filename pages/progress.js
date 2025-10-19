@@ -457,7 +457,7 @@ export default function ProgressPage() {
                   gridTemplateColumns: {
                     xs: 'repeat(1, minmax(0, 1fr))',
                     sm: 'repeat(3, minmax(0, 1fr))',
-                    md: 'repeat(5, minmax(0, 1fr))',
+                    md: 'repeat(6, minmax(0, 1fr))',
                   },
                 }}
             >
@@ -476,6 +476,10 @@ export default function ProgressPage() {
                           sx={{
                             justifyContent: 'space-between',
                             gridColumn: { xs: '1 / -1', sm: 'auto' },
+                            px: 1.25,
+                            py: 0.5,
+                            minHeight: 34,
+                            fontSize: '0.75rem',
                           }}
                       >
                         Mức {lvl}: {count}
