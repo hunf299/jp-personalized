@@ -7,10 +7,25 @@ const supa = createClient(url, key, { auth: { persistSession: false } });
 export default async function handler(req, res) {
     try {
         const type = String(req.query.type || '');
-        const { data, error } = await supa
+        const sinceDaysRaw = req.query.since_days != null ? Number(req.query.since_days) : null;
+        const dueOnly = ['1', 'true', 'yes'].includes(String(req.query.due_only || '').toLowerCase());
+
+        let query = supa
             .from('memory_levels')
             .select('card_id, type, level, stability, difficulty, last_reviewed_at, due, leech_count, is_leech, cards:card_id(id,type,front,back)')
+            .order('due', { ascending: true })
             .order('updated_at', { ascending: false });
+
+        if (type) query = query.eq('type', type);
+        if (Number.isFinite(sinceDaysRaw) && sinceDaysRaw >= 0) {
+            const threshold = new Date(Date.now() - sinceDaysRaw * 86400000).toISOString();
+            query = query.gte('last_reviewed_at', threshold);
+        }
+        if (dueOnly) {
+            query = query.lte('due', new Date().toISOString());
+        }
+
+        const { data, error } = await query;
         if (error) throw error;
 
         let rows = (data||[]).map(r => ({

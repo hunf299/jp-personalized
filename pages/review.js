@@ -14,13 +14,24 @@ const useBusy = _useBusy || (() => ({ start(){}, finish(){} }));
 // Settings (fallback)
 import { useSettings as _useSettings } from '../lib/useSettings';
 const useSettings = _useSettings || (() => ({
-  settings: { review_mode:'FSRS', auto_flip:'off', cards_per_session:10, card_orientation:'normal', recency_days:null },
+  settings: { review_mode:'FSRS', auto_flip:'off', cards_per_session:10, card_orientation:'normal', recency_days:null, due_mode:'due-priority' },
 }));
 
 // ---------- utils ----------
 const safeArray = (x) => Array.isArray(x) ? x : [];
 const getJSON = async (u) => { const r = await fetch(u); try { return await r.json(); } catch { return null; } };
 const msToSec = (ms) => Math.max(0, Math.round(ms/100)/10);
+const DAY_MS = 86400000;
+const DUE_SOON_DAYS = 3;
+
+function shuffle(arr) {
+  const copy = Array.isArray(arr) ? [...arr] : [];
+  for (let i = copy.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [copy[i], copy[j]] = [copy[j], copy[i]];
+  }
+  return copy;
+}
 
 // MCQ -> level (mode=level) theo thời gian trả lời
 function timeToScoreSec(t){
@@ -124,6 +135,7 @@ export default function ReviewPage(){
   const orientation = ((settings?.card_orientation || 'normal') + '').toLowerCase(); // normal|reversed
   const recencyDays = qp?.since_days!=null ? Number(qp.since_days) :
       (settings?.recency_days!=null ? Number(settings.recency_days) : null);
+  const dueMode = String(settings?.due_mode || 'due-priority');
 
   const isLevelMode = mode === 'level';
 
@@ -190,17 +202,27 @@ export default function ReviewPage(){
         if (!isLevelMode && Number.isFinite(recencyDays) && recencyDays>=0) {
           url.searchParams.set('since_days', String(recencyDays));
         }
+        if (!isLevelMode && dueMode === 'due-only') {
+          url.searchParams.set('due_only', '1');
+        }
         const j = await getJSON(url.toString());
         const items = safeArray(j?.rows || j?.items || [])
             .filter(it => it && it.card_id)
-            .map(it => ({
-              id: String(it.card_id),
-              idLower: String(it.card_id).toLowerCase(),
-              type,
-              front: typeof it.front === 'object' ? it.front?.front ?? '' : (it.front ?? ''),
-              back:  typeof it.back  === 'object' ? it.back?.back  ?? '' : (it.back  ?? ''),
-              baseLv: Number.isFinite(it.level) ? Number(it.level) : -1,
-            }));
+            .map(it => {
+              const dueStr = it.due || null;
+              const dueTsRaw = dueStr ? Date.parse(dueStr) : NaN;
+              const dueTs = Number.isFinite(dueTsRaw) ? dueTsRaw : null;
+              return {
+                id: String(it.card_id),
+                idLower: String(it.card_id).toLowerCase(),
+                type,
+                front: typeof it.front === 'object' ? it.front?.front ?? '' : (it.front ?? ''),
+                back:  typeof it.back  === 'object' ? it.back?.back  ?? '' : (it.back  ?? ''),
+                baseLv: Number.isFinite(it.level) ? Number(it.level) : -1,
+                due: dueStr,
+                dueTs,
+              };
+            });
 
         // Debug quick: uncomment if needed
         // console.log('items loaded', items.length, 'multiLevels', multiLevels, 'cardIdsParam', cardIdsParam);
@@ -209,7 +231,7 @@ export default function ReviewPage(){
         let pool = items;
         if (Array.isArray(cardIdsParam) && cardIdsParam.length) {
           const idSet = new Set(cardIdsParam.map(x => x.toLowerCase()));
-          pool = items.filter(c => idSet.has(String(c.idLower).toLowerCase()));
+          pool = items.filter(c => idSet.has(c.idLower));
         } else if (isLevelMode && multiLevels.length) {
           // Dùng trực tiếp baseLv từ items để lọc
           pool = items.filter((c) => Number.isFinite(c.baseLv) && multiLevels.includes(Number(c.baseLv)));
@@ -221,14 +243,50 @@ export default function ReviewPage(){
         // Lọc những thẻ có đủ 2 mặt để hiển thị
         pool = pool.filter(x => (x.front && x.back));
 
+        const targetCount = Number.isFinite(count) ? count : 10;
+
         // Bốc ngẫu nhiên tối đa count (nếu cardIdsParam đã chỉ định 1 thẻ, giữ nguyên thứ tự)
         let pick;
         if (Array.isArray(cardIdsParam) && cardIdsParam.length) {
           // duy trì order theo cardIdsParam
           const idSet = new Set(cardIdsParam.map(x => x.toLowerCase()));
-          pick = items.filter(c => idSet.has(c.idLower)).slice(0, Number.isFinite(count)?count:10);
+          pick = items.filter(c => idSet.has(c.idLower)).slice(0, targetCount);
         } else {
-          pick = [...pool].sort(()=>Math.random()-0.5).slice(0, Number.isFinite(count)?count:10);
+          let candidate = pool;
+          if (!isLevelMode) {
+            if (dueMode === 'due-only') {
+              const nowTs = Date.now();
+              candidate = shuffle(pool.filter((c) => Number.isFinite(c.dueTs) && c.dueTs <= nowTs));
+            } else if (dueMode === 'due-priority') {
+              const nowTs = Date.now();
+              const soonThreshold = nowTs + DUE_SOON_DAYS * DAY_MS;
+              const dueList = [];
+              const soonList = [];
+              const futureList = [];
+              const noDueList = [];
+              pool.forEach((c) => {
+                if (Number.isFinite(c.dueTs)) {
+                  if (c.dueTs <= nowTs) dueList.push(c);
+                  else if (c.dueTs <= soonThreshold) soonList.push(c);
+                  else futureList.push(c);
+                } else {
+                  noDueList.push(c);
+                }
+              });
+              candidate = [
+                ...shuffle(dueList),
+                ...shuffle(soonList),
+                ...shuffle(futureList),
+                ...shuffle(noDueList),
+              ];
+              if (!candidate.length) candidate = shuffle(pool);
+            } else {
+              candidate = shuffle(pool);
+            }
+          } else {
+            candidate = shuffle(pool);
+          }
+          pick = candidate.slice(0, targetCount);
         }
 
         if (cancelled) return;
@@ -239,7 +297,7 @@ export default function ReviewPage(){
         setBaseLevels(base);
 
         // Reset trạng thái
-        setDeck(pick.map(p => ({ id: p.id, type: p.type, front: p.front, back: p.back, baseLv: p.baseLv })));
+        setDeck(pick.map(p => ({ id: p.id, type: p.type, front: p.front, back: p.back, baseLv: p.baseLv, due: p.due ?? null })));
         setIdx(0);
         setStage(pick.length ? 'mcq' : 'done');
         setSelected(null);
@@ -260,7 +318,7 @@ export default function ReviewPage(){
     })();
     return ()=> { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ready, type, isLevelMode, levelParam, count, settings?.recency_days, router.query?.since_days, orientation, qp?.levels, qp?.card_ids]);
+  }, [ready, type, isLevelMode, levelParam, count, settings?.recency_days, router.query?.since_days, orientation, dueMode, qp?.levels, qp?.card_ids]);
 
   const card = deck[idx] || null;
 

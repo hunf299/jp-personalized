@@ -10,12 +10,13 @@ import { useRouter } from 'next/router';
 
 export default function OmniReviewPage() {
     const router = useRouter();
-    const { settings } = useSettings();
+    const { settings, saveSettings } = useSettings();
     const [open, setOpen] = React.useState(false);
 
     const [type, setType] = React.useState('vocab');   // vocab | kanji | particle | grammar
     const [level, setLevel] = React.useState(0);       // 0..5
     const [count, setCount] = React.useState(settings.cards_per_session || 10);
+    const dueMode = settings?.due_mode || 'due-priority';
 
     React.useEffect(()=>{ setCount(settings.cards_per_session || 10); }, [settings.cards_per_session]);
 
@@ -57,6 +58,15 @@ export default function OmniReviewPage() {
                         <Stack spacing={1} sx={{ minWidth: 260 }}>
                             <Typography variant="subtitle2">Cards per Session: {count}</Typography>
                             <Slider min={5} max={100} step={5} value={count} onChange={(e,v)=>setCount(v)} />
+                            <Typography variant="caption" sx={{ opacity: 0.7 }}>
+                                Ưu tiên thẻ: {
+                                    dueMode === 'due-only'
+                                        ? 'Chỉ ôn thẻ đến hạn'
+                                        : dueMode === 'due-priority'
+                                            ? 'Ưu tiên thẻ quá hạn/đến hạn trước'
+                                            : 'Ngẫu nhiên mọi thẻ đã học'
+                                }
+                            </Typography>
                         </Stack>
                     </Stack>
 
@@ -67,7 +77,17 @@ export default function OmniReviewPage() {
                 </CardContent>
             </Card>
 
-            <ReviewSettings open={open} onClose={()=>setOpen(false)} />
+            <ReviewSettings
+                open={open}
+                onClose={()=>setOpen(false)}
+                value={settings}
+                onChange={(next)=>{
+                    saveSettings?.(next);
+                    if (typeof next?.cards_per_session === 'number') {
+                        setCount(next.cards_per_session);
+                    }
+                }}
+            />
         </Container>
     );
 }

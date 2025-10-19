@@ -34,6 +34,7 @@ function isTodayUTC(iso) {
 
 export default function ProgressPage() {
   const { settings, saveSettings } = useSettings();
+  const dueMode = settings?.due_mode || 'due-priority';
 
   const [typeFilter, setTypeFilter] = React.useState('vocab');
   const [stats, setStats] = React.useState({});
@@ -519,6 +520,15 @@ export default function ProgressPage() {
                     value={omniCount}
                     onChange={(e, v) => setOmniCount(v)}
                 />
+                <Typography variant="caption" sx={{ opacity: 0.7 }}>
+                  Ưu tiên thẻ: {
+                    dueMode === 'due-only'
+                      ? 'Chỉ ôn thẻ đến hạn'
+                      : dueMode === 'due-priority'
+                        ? 'Ưu tiên thẻ quá hạn/đến hạn trước'
+                        : 'Ngẫu nhiên mọi thẻ đã học'
+                  }
+                </Typography>
               </Stack>
               <Stack direction="row" spacing={1}>
                 <Button variant="contained" onClick={() => goOmni(typeFilter, omniCount)}>
