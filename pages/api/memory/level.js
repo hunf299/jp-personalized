@@ -1,5 +1,6 @@
 // pages/api/memory/level.js
 import { createClient } from '@supabase/supabase-js';
+import { planNext } from '../../../lib/fsrs';
 
 const url = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
 const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -61,7 +62,9 @@ export default async function handler(req, res) {
         // Lấy thông tin hiện tại (nếu có) để giữ type/last_learned_at
         const { data: current, error: currentErr } = await supabase
             .from('memory_levels')
-            .select('card_id, type, level, leech_count, is_leech, last_learned_at')
+            .select(
+                'card_id, type, level, stability, difficulty, due, last_reviewed_at, leech_count, is_leech, last_learned_at'
+            )
             .eq('card_id', card_id)
             .maybeSingle();
         if (currentErr) throw currentErr;
@@ -140,13 +143,34 @@ export default async function handler(req, res) {
         const isLeech = leechCount >= 3;
 
         // 3) Upsert memory_levels với mức nhớ mới + leech metadata chính xác
+        const normalizeLevel = (value) => {
+            const n = Number(value);
+            return Number.isFinite(n) && n >= 0 ? n : 0;
+        };
+        const normalizePositive = (value) => {
+            const n = Number(value);
+            return Number.isFinite(n) && n > 0 ? n : undefined;
+        };
+
+        const baseCardState = {
+            level: normalizeLevel(current?.level),
+            stability: normalizePositive(current?.stability),
+            difficulty: normalizePositive(current?.difficulty),
+            last_reviewed_at: current?.last_reviewed_at || undefined,
+        };
+
+        const nextState = planNext(baseCardState, quality);
+
         const upsertRow = {
             card_id: String(card_id),
             type: resolvedType,
-            level: lvl,
+            level: nextState.level,
+            stability: nextState.stability,
+            difficulty: nextState.difficulty,
+            due: nextState.due,
+            last_reviewed_at: nextState.last_reviewed_at,
             leech_count: leechCount,
             is_leech: isLeech,
-            last_reviewed_at: now,
             updated_at: now,
         };
         if (!current?.last_learned_at) {
