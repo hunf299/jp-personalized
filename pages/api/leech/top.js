@@ -6,6 +6,18 @@ const url =
 const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const supa = createClient(url, key, { auth: { persistSession: false } });
 
+const normalizeBoolean = (value) => {
+    if (value === true || value === false) return value;
+    if (value === 1 || value === '1') return true;
+    if (value === 0 || value === '0') return false;
+    if (typeof value === 'string') {
+        const lower = value.toLowerCase();
+        if (['t', 'true', 'yes', 'y'].includes(lower)) return true;
+        if (['f', 'false', 'no', 'n'].includes(lower)) return false;
+    }
+    return Boolean(value);
+};
+
 export default async function handler(req, res) {
     try {
         const { type } = req.query || {};
@@ -32,7 +44,7 @@ export default async function handler(req, res) {
                 back: r.cards?.back,
                 level: Number.isFinite(Number(r.level)) ? Number(r.level) : null,
                 leech_count: Number.isFinite(Number(r.leech_count)) ? Number(r.leech_count) : 0,
-                is_leech: !!r.is_leech,
+                is_leech: normalizeBoolean(r.is_leech),
             }))
             .filter((r) => r.front && (r.level === 0 || r.level === 1));
 
