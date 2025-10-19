@@ -115,7 +115,7 @@ export default function Layout({ children }) {
                         <Container maxWidth="lg" sx={{ display: 'flex', alignItems: 'center', gap: 2, py: 1 }}>
                             {/* Logo */}
                             <Typography variant="h6" sx={{ fontWeight: 800, color: '#a43a3a', mr: 1, whiteSpace: 'nowrap' }}>
-                                Learn일본어です
+                                일본어를Learnします
                             </Typography>
                             {/* Desktop nav */}
                             {isMdUp && <NavButtons />}
