@@ -14,6 +14,12 @@ const RECENCY_OPTIONS = [
   { label: '≥ 1 tháng', value: 30 },
 ];
 
+const DUE_MODE_OPTIONS = [
+  { value: 'due-priority', label: 'Ưu tiên thẻ đến hạn' },
+  { value: 'due-only', label: 'Chỉ thẻ đến hạn' },
+  { value: 'all', label: 'Ngẫu nhiên (mọi thẻ đã học)' },
+];
+
 export default function ReviewSettings({ open, onClose, value, onChange }) {
   // defaults
   const v = value || {};
@@ -30,6 +36,7 @@ export default function ReviewSettings({ open, onClose, value, onChange }) {
   const [recencyDays, setRecencyDays]         = React.useState(
       Number.isFinite(v.recency_days) ? v.recency_days : -1
   );
+  const [dueMode, setDueMode]                 = React.useState(v.due_mode || 'due-priority');
 
   React.useEffect(() => {
     if (!open) return;
@@ -40,6 +47,7 @@ export default function ReviewSettings({ open, onClose, value, onChange }) {
     setOrientation(v.card_orientation ?? 'normal');
     setFlipStab(v.flip_stabilize == null ? true : !!v.flip_stabilize);
     setRecencyDays(Number.isFinite(v.recency_days) ? v.recency_days : -1);
+    setDueMode(v.due_mode || 'due-priority');
   }, [open]); // eslint-disable-line
 
   const handleSave = () => {
@@ -53,6 +61,7 @@ export default function ReviewSettings({ open, onClose, value, onChange }) {
       flip_stabilize: flipStab,
       // 🆕 gom vào settings
       recency_days: recencyDays,
+      due_mode: dueMode,
     });
     onClose?.();
   };
@@ -84,6 +93,15 @@ export default function ReviewSettings({ open, onClose, value, onChange }) {
               <InputLabel>Khoảng ngày (OmniReview)</InputLabel>
               <Select value={recencyDays} label="Khoảng ngày (OmniReview)" onChange={e=>setRecencyDays(Number(e.target.value))}>
                 {RECENCY_OPTIONS.map(o => <MenuItem key={o.value} value={o.value}>{o.label}</MenuItem>)}
+              </Select>
+            </FormControl>
+
+            <FormControl size="small">
+              <InputLabel>Ưu tiên thẻ (OmniReview)</InputLabel>
+              <Select value={dueMode} label="Ưu tiên thẻ (OmniReview)" onChange={e=>setDueMode(e.target.value)}>
+                {DUE_MODE_OPTIONS.map((o) => (
+                  <MenuItem key={o.value} value={o.value}>{o.label}</MenuItem>
+                ))}
               </Select>
             </FormControl>
 
