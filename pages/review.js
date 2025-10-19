@@ -143,10 +143,9 @@ export default function ReviewPage(){
   const total = deck.length, cur = Math.min(idx+1, total);
 
   // input mode
-  const [modeInput, setModeInput] = React.useState('typing');
+  const [modeInput, setModeInput] = React.useState(type === 'kanji' ? 'handwrite' : 'typing');
   React.useEffect(()=>{
-    // kanji: chỉ "gõ" và "viết tay"
-    setModeInput('typing');
+    setModeInput(type === 'kanji' ? 'handwrite' : 'typing');
   }, [type]);
 
   // Khi viết tay (kanji) → bỏ auto-flip
@@ -159,6 +158,11 @@ export default function ReviewPage(){
   const [selected, setSelected] = React.useState(null); // MCQ đã chọn
   const [answer, setAnswer] = React.useState('');       // recall (typing)
   const [showAns, setShowAns] = React.useState(false);
+  React.useEffect(()=>{
+    if (type === 'kanji') {
+      setAnswer('');
+    }
+  }, [type]);
 
   // Level hiện tại (base) & đề xuất/điểm
   const [baseLevels, setBaseLevels] = React.useState({}); // id -> base (lowercase id keys)
@@ -464,13 +468,17 @@ export default function ReviewPage(){
                   {qaForRecall(card).q}
                 </Typography>
 
-                <ToggleButtonGroup size="small" exclusive value={modeInput} onChange={(e,v)=> v && setModeInput(v)}>
-                  <ToggleButton value="typing">Gõ</ToggleButton>
+                <ToggleButtonGroup size="small" exclusive value={modeInput} onChange={(e,v)=>{
+                  if (!v) return;
+                  if (type === 'kanji' && v === 'typing') return;
+                  setModeInput(v);
+                }}>
+                  <ToggleButton value="typing" disabled={type==='kanji'}>Gõ</ToggleButton>
                   {/* Kanji chỉ để lại Gõ & Viết tay */}
                   <ToggleButton value="handwrite" disabled={type!=='kanji'}>Viết tay</ToggleButton>
                 </ToggleButtonGroup>
 
-                {modeInput==='handwrite' ? (
+                {(modeInput==='handwrite' || type==='kanji') ? (
                     <Stack spacing={1} sx={{ mt:1 }}>
                       <HandwritingCanvas width={260} height={180} />
                       {showAns && <Typography>Đáp án đúng: <b>{qaForRecall(card).a}</b></Typography>}
@@ -482,7 +490,7 @@ export default function ReviewPage(){
                           value={answer}
                           onChange={(e)=> setAnswer(e.target.value)}
                           onKeyDown={(e)=>{ if((!autoCfg || disableAuto || isLevelMode) && e.key==='Enter') setShowAns(true); }}
-                          disabled={!!parseAuto(auto) && !disableAuto && showAns}
+                          disabled={type==='kanji' || (!!parseAuto(auto) && !disableAuto && showAns)}
                       />
                       {showAns && (
                           <Typography>Đáp án đúng: <b>{qaForRecall(card).a}</b></Typography>

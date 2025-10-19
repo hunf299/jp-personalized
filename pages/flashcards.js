@@ -135,8 +135,10 @@ export default function FlashcardsPage() {
   const [index, setIndex] = useState(0);
 
   // recall input
-  const [mode, setMode] = useState('typing'); // typing | handwrite (only kanji)
-  useEffect(() => { if (!isKanji && mode==='handwrite') setMode('typing'); }, [isKanji, mode]);
+  const [mode, setMode] = useState(isKanji ? 'handwrite' : 'typing'); // typing | handwrite (only kanji)
+  useEffect(() => {
+    setMode(isKanji ? 'handwrite' : 'typing');
+  }, [isKanji]);
   const [answer, setAnswer] = useState('');
 
   // scoring
@@ -180,7 +182,7 @@ export default function FlashcardsPage() {
     setPhase('idle'); setBatch([]); setIndex(0);
     setWarmupScores({}); setRecallScores({});
     setAnswer('');
-    if (!isKanji && mode === 'handwrite') setMode('typing');
+    setMode(isKanji ? 'handwrite' : 'typing');
   }, [typeFilter]); // eslint-disable-line
 
   // pool theo loại
@@ -400,13 +402,17 @@ export default function FlashcardsPage() {
                             <Typography variant="h6" sx={{ color:'#a33b3b' }}>{batch[index].front}</Typography>
                         )}
 
-                        <ToggleButtonGroup size="small" exclusive value={mode} onChange={(e,v)=> v && setMode(v)}>
-                          <ToggleButton value="typing">Gõ</ToggleButton>
+                        <ToggleButtonGroup size="small" exclusive value={mode} onChange={(e,v)=>{
+                          if (!v) return;
+                          if (isKanji && v === 'typing') return;
+                          setMode(v);
+                        }}>
+                          <ToggleButton value="typing" disabled={isKanji}>Gõ</ToggleButton>
                           {isKanji && <ToggleButton value="handwrite">Viết tay</ToggleButton>}
                         </ToggleButtonGroup>
                       </Stack>
 
-                      {mode==='typing' ? (
+                      {(mode==='typing' && !isKanji) ? (
                           <Stack spacing={1}>
                             <TextField
                                 label={isKanji ? 'Nhập chữ Kanji' : 'Đáp án của bạn'}
