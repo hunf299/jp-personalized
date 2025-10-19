@@ -92,15 +92,51 @@ export default async function handler(req, res) {
         const { error: logErr } = await supabase.from('review_logs').insert(logPayload);
         if (logErr) throw logErr;
 
-        // 2) Tính lại leech_count (bỏ qua lần trượt đầu tiên)
-        const { count: lowCount, error: countErr } = await supabase
-            .from('review_logs')
-            .select('*', { count: 'exact', head: true })
-            .eq('card_id', card_id)
-            .lte('quality', 1);
-        if (countErr) throw countErr;
-        // Bỏ qua lần trượt đầu tiên: nếu đây là lần đầu chất lượng <=1 thì không tăng leech_count
-        const leechCount = Math.max(0, (lowCount || 0) - 1);
+        // 2) Tính lại leech_count dựa trên số lần trượt LIÊN TIẾP (bỏ qua lần trượt đầu tiên)
+        const pageSize = 100;
+        let offset = 0;
+        let failStreak = 0;
+        let shouldStop = false;
+
+        while (!shouldStop) {
+            const { data: logBatch, error: logsErr } = await supabase
+                .from('review_logs')
+                .select('quality')
+                .eq('card_id', card_id)
+                .order('created_at', { ascending: false })
+                .range(offset, offset + pageSize - 1);
+            if (logsErr) throw logsErr;
+
+            if (!Array.isArray(logBatch) || logBatch.length === 0) {
+                break;
+            }
+
+            for (const row of logBatch) {
+                const value = Number.isFinite(Number(row?.quality))
+                    ? Number(row.quality)
+                    : null;
+
+                if (value === null) {
+                    shouldStop = true;
+                    break;
+                }
+
+                if (value <= 1) {
+                    failStreak += 1;
+                } else {
+                    shouldStop = true;
+                    break;
+                }
+            }
+
+            if (shouldStop || logBatch.length < pageSize) {
+                break;
+            }
+
+            offset += pageSize;
+        }
+
+        const leechCount = Math.max(0, failStreak - 1);
         const isLeech = leechCount >= 3;
 
         // 3) Upsert memory_levels với mức nhớ mới + leech metadata chính xác
