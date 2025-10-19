@@ -36,6 +36,30 @@ function computeDist(rows = []) {
   });
   return dist;
 }
+
+function recomputeSessionSummary(cards = [], prevSummary = {}) {
+  const normalized = safeArray(cards);
+  const agg = [0, 0, 0, 0, 0, 0];
+  let learned = 0;
+  normalized.forEach((card) => {
+    const finalScore = Number.isFinite(Number(card?.final)) ? Number(card.final) : null;
+    const recallScore = Number.isFinite(Number(card?.recall)) ? Number(card.recall) : null;
+    const warmupScore = Number.isFinite(Number(card?.warmup)) ? Number(card.warmup) : null;
+    const score = finalScore ?? recallScore ?? warmupScore ?? 0;
+    const numeric = Number.isFinite(Number(score)) ? Math.max(0, Math.min(5, Number(score))) : 0;
+    agg[numeric] += 1;
+    if (numeric >= 3) learned += 1;
+  });
+
+  const total = normalized.length;
+  return {
+    ...prevSummary,
+    total,
+    learned,
+    left: Math.max(0, total - learned),
+    agg,
+  };
+}
 function isTodayUTC(iso) {
   const d = new Date(iso);
   const now = new Date();
@@ -174,15 +198,25 @@ export default function ProgressPage() {
         };
       });
       setMemRows((prev) => (Array.isArray(prev) ? prev.filter((r) => r.card_id !== cardId) : prev));
-      setSessions((prev) => (Array.isArray(prev)
-        ? prev.map((session) => ({
-          ...session,
-          cards: safeArray(session.cards).filter((c) => {
+      setSessions((prev) => {
+        if (!Array.isArray(prev)) return prev;
+        let mutated = false;
+        const nextSessions = prev.map((session) => {
+          const cards = safeArray(session.cards);
+          const filtered = cards.filter((c) => {
             const id = c?.card_id ?? c?.cardId ?? c?.id ?? null;
             return id !== cardId;
-          }),
-        }))
-        : prev));
+          });
+          if (filtered.length === cards.length) return session;
+          mutated = true;
+          return {
+            ...session,
+            cards: filtered,
+            summary: recomputeSessionSummary(filtered, session?.summary || {}),
+          };
+        });
+        return mutated ? nextSessions : prev;
+      });
       if (cardType) {
         setStats((prev) => {
           if (!prev || typeof prev !== 'object') return prev;
