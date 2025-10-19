@@ -271,17 +271,20 @@ create or replace function public.update_memory_after_review(p_card_id uuid, p_q
 returns void language plpgsql as $$
 declare
   card_type text;
-  prior_leech int;
-  inc_leech int;
+  fail_count int;
   target_level int;
+  leech_value int;
 begin
   select c.type into card_type from public.cards c where c.id = p_card_id;
   if card_type is null then card_type := 'vocab'; end if;
 
-  select coalesce(leech_count,0) into prior_leech
-  from public.memory_levels where card_id = p_card_id;
+  select count(*)
+    into fail_count
+  from public.review_logs
+  where card_id = p_card_id
+    and quality <= 1;
 
-  inc_leech := case when p_quality <= 1 then 1 else 0 end;
+  leech_value := greatest(0, coalesce(fail_count, 0) - 1);
 
   if p_new_level is not null then
     target_level := greatest(0, least(5, p_new_level));
@@ -289,7 +292,7 @@ begin
     target_level := null;
   end if;
 
-  if found then
+  if exists (select 1 from public.memory_levels where card_id = p_card_id) then
     update public.memory_levels
     set
       type = coalesce(type, card_type),
@@ -301,8 +304,8 @@ begin
                     else greatest(0, coalesce(stability,0) * 0.7)
                   end,
       difficulty = case when p_quality <= 1 then coalesce(difficulty,5) + 0.5 else greatest(1, coalesce(difficulty,5) - 0.1) end,
-      leech_count = prior_leech + inc_leech,
-      is_leech = (prior_leech + inc_leech) >= 3,
+      leech_count = leech_value,
+      is_leech = leech_value >= 3,
       last_reviewed_at = now(),
       updated_at = now()
     where card_id = p_card_id;
@@ -313,8 +316,8 @@ begin
       coalesce(target_level, case when p_quality >= 4 then 1 else 0 end),
       case when p_quality >= 4 then 1 else 0 end,
       5,
-      inc_leech,
-      inc_leech >= 3,
+      leech_value,
+      leech_value >= 3,
       now(),
       now()
     );
