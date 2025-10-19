@@ -449,24 +449,43 @@ export default function ProgressPage() {
         </Typography>
         <Card sx={{ borderRadius: 3, border: '1px solid #ffe0e0' }}>
           <CardContent>
-            <Stack spacing={1} sx={{ mb: 2 }}>
+            <Box
+                sx={{
+                  display: 'grid',
+                  gap: 1,
+                  mb: 2,
+                  gridTemplateColumns: {
+                    xs: 'repeat(1, minmax(0, 1fr))',
+                    sm: 'repeat(3, minmax(0, 1fr))',
+                    md: 'repeat(5, minmax(0, 1fr))',
+                  },
+                }}
+            >
               {[0, 1, 2, 3, 4, 5].map((lvl) => {
                 const list = wordsByLevelOmni(lvl);
                 const isOpen = !!openLevelsOmni[lvl];
                 const count = globalDistOmni?.[lvl] || 0;
                 return (
-                    <Box key={lvl} sx={{ width: '100%' }}>
+                    <React.Fragment key={lvl}>
                       <Button
-                          fullWidth
                           variant="outlined"
                           onClick={() => toggleLevelOmni(lvl)}
                           endIcon={isOpen ? <ExpandLessIcon /> : <ExpandMoreIcon />}
                           disabled={list.length === 0}
-                          sx={{ justifyContent: 'space-between' }}
+                          size="small"
+                          sx={{
+                            justifyContent: 'space-between',
+                            gridColumn: { xs: '1 / -1', sm: 'auto' },
+                          }}
                       >
                         Mức {lvl}: {count}
                       </Button>
-                      <Collapse in={isOpen && list.length > 0} timeout="auto" unmountOnExit>
+                      <Collapse
+                          in={isOpen && list.length > 0}
+                          timeout="auto"
+                          unmountOnExit
+                          sx={{ gridColumn: '1 / -1' }}
+                      >
                         <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap', mt: 1 }}>
                           {list.map((item, idx) => {
                             const label = (item.front && item.front.trim())
@@ -479,10 +498,10 @@ export default function ProgressPage() {
                           })}
                         </Stack>
                       </Collapse>
-                    </Box>
+                    </React.Fragment>
                 );
               })}
-            </Stack>
+            </Box>
 
             <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} alignItems="center">
               <Stack spacing={1} sx={{ minWidth: 260 }}>
