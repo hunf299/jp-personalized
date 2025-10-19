@@ -170,9 +170,9 @@ export default function ReviewPage(){
   const [mcqStartTs, setMcqStartTs] = React.useState(null);
 
   const autoVal = String(router?.query?.auto || settings?.auto_flip || 'off');
-  // autoNoDowngrade vẫn có thể dùng nếu bạn muốn tính năng này sau này,
-  // nhưng hiện tại ta cho phép auto cũng được hạ mức -> không dùng block.
-  const autoNoDowngrade = (autoVal !== 'off') && !disableAuto && isLevelMode;
+  // autoNoDowngrade chỉ áp dụng cho auto-flip ở omni-review.
+  // Manual mode (review theo mức) vẫn cho phép giảm mức nhớ như bình thường.
+  const autoNoDowngrade = (autoVal !== 'off') && !disableAuto && !isLevelMode;
 
   // ----- Load deck (từ /api/memory/all – nguồn sự thật) -----
   React.useEffect(()=>{
@@ -557,7 +557,9 @@ export default function ReviewPage(){
                         : (hasProposed ? toNum(proposed[c.id], base) : base);
 
                     // Truyền hasProposed để calcFinal biết đây có phải là recall "explicit" hay không
-                    const fin  = calcFinal(isLevelMode ? 'level' : 'omni', base, mcq, rec, hasProposed);
+                    const source = proposedSource[c.id]; // 'auto' | 'manual' | undefined
+                    let fin  = calcFinal(isLevelMode ? 'level' : 'omni', base, mcq, rec, hasProposed);
+                    if (autoNoDowngrade && source === 'auto' && fin < base) fin = base;
 
                     return (
                         <Stack key={c.id} direction={{ xs:'column', md:'row' }} spacing={1} alignItems="center"
@@ -594,11 +596,9 @@ export default function ReviewPage(){
                             // Final level shown to user
                             let lvl = calcFinal(isLevelMode ? 'level' : 'omni', base, mcq, rec, hasProposed);
 
-                            // If you still want to preserve previous auto-no-downgrade behavior, keep this:
-                            if (autoNoDowngrade && lvl < base) lvl = base;
-
-                            // decide source (auto/manual/undefined)
+                            // Chỉ giữ mức cũ nếu auto-flip (omni) đề xuất mức thấp hơn.
                             const source = proposedSource[c.id]; // 'auto' | 'manual' | undefined
+                            if (autoNoDowngrade && source === 'auto' && lvl < base) lvl = base;
 
                             // If backend expects 'final' or 'quality' use both to be safe.
                             const final = Number(lvl);
