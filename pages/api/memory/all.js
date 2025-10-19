@@ -42,7 +42,7 @@ export default async function handler(req, res) {
         if (error) throw error;
 
         let rows = (data||[])
-            .filter(r => !r?.cards?.deleted)
+            .filter(r => r?.cards && !r.cards.deleted)
             .map(r => ({
             card_id: r.card_id,
             type: r.type || r.cards?.type || null,
