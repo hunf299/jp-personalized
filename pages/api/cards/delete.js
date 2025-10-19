@@ -27,7 +27,13 @@ export default async function handler(req, res) {
       .eq('card_id', id)
       .maybeSingle();
     if (memoryError) throw memoryError;
-    if (memoryRow?.is_leech) {
+    const rawIsLeech = memoryRow?.is_leech;
+    const isLeech = rawIsLeech === true
+      || rawIsLeech === 't'
+      || rawIsLeech === 'true'
+      || rawIsLeech === 1
+      || rawIsLeech === '1';
+    if (isLeech) {
       return res.status(400).json({ error: 'Không thể xoá leech card' });
     }
 

@@ -319,6 +319,17 @@ export default function ProgressPage() {
     // helper
     const shuffle = (arr) => { const a=[...arr]; for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]];} return a; };
     const interleave = (a,b,n) => { const out=[]; const aa=[...a]; const bb=[...b]; while((aa.length||bb.length) && out.length<n){ if(aa.length) out.push(aa.shift()); if(out.length>=n) break; if(bb.length) out.push(bb.shift()); } while(out.length<n && aa.length) out.push(aa.shift()); while(out.length<n && bb.length) out.push(bb.shift()); return out.slice(0,n); };
+    const normalizeBoolean = (value) => {
+      if (value === true || value === false) return value;
+      if (value === 1 || value === '1') return true;
+      if (value === 0 || value === '0') return false;
+      if (typeof value === 'string') {
+        const lower = value.toLowerCase();
+        if (['t', 'true', 'yes', 'y'].includes(lower)) return true;
+        if (['f', 'false', 'no', 'n'].includes(lower)) return false;
+      }
+      return Boolean(value);
+    };
 
     // load leech/top (server-side leech metadata)
     React.useEffect(()=>{
@@ -333,7 +344,7 @@ export default function ProgressPage() {
             front: x.front || x.card_front || '',
             back: x.back || x.card_back || '',
             leech_count: Number.isFinite(Number(x.leech_count)) ? Number(x.leech_count) : 0,
-            is_leech: !!x.is_leech,
+            is_leech: normalizeBoolean(x.is_leech),
             level: Number.isFinite(Number(x.level)) ? Number(x.level) : null,
           }));
           norm.sort((a,b)=> (b.leech_count||0) - (a.leech_count||0));
