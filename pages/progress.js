@@ -140,11 +140,18 @@ export default function ProgressPage() {
     }
   }, []);
 
-  const handleDeleteCard = React.useCallback(async (cardId) => {
+  const handleDeleteCard = React.useCallback(async (cardId, levelHint = null) => {
     if (!cardId) return;
+    const currentRow = memCardMap.get(cardId) || null;
+    const levelFromRow = Number.isFinite(Number(currentRow?.level)) ? Number(currentRow.level) : null;
+    const levelFromHint = Number.isFinite(Number(levelHint)) ? Number(levelHint) : null;
+    const effectiveLevel = levelFromRow ?? levelFromHint;
+    if (effectiveLevel === 0 || effectiveLevel === 1) {
+      alert('Không thể xoá thẻ mức nhớ 0 hoặc 1');
+      return;
+    }
     if (!window.confirm('Bạn có chắc muốn xoá thẻ này?')) return;
     setDeletingCards((prev) => ({ ...prev, [cardId]: true }));
-    const currentRow = memCardMap.get(cardId) || null;
     const cardType = currentRow?.type || null;
     try {
       const resp = await fetch('/api/cards/delete', {
@@ -597,6 +604,8 @@ export default function ProgressPage() {
                             const cardId = item?.card_id || item?.id || null;
                             const isLeech = !!item?.is_leech;
                             const deleting = cardId ? !!deletingCards[cardId] : false;
+                            const isLowLevel = lvl === 0 || lvl === 1;
+                            const canDelete = !isLeech && !isLowLevel && !!cardId;
                             const label = (item.front && item.front.trim())
                               || (item.back && item.back.trim())
                               || cardId
@@ -606,16 +615,22 @@ export default function ProgressPage() {
                                     key={cardId || `${lvl}-${idx}`}
                                     label={label}
                                     sx={{ mb: 1 }}
-                                    onDelete={!isLeech && cardId ? () => handleDeleteCard(cardId) : undefined}
-                                    deleteIcon={!isLeech && cardId
+                                    onDelete={canDelete ? () => handleDeleteCard(cardId, lvl) : undefined}
+                                    deleteIcon={canDelete
                                       ? (deleting ? <CircularProgress size={16} color="inherit" /> : <DeleteIcon />)
                                       : undefined}
                                     disabled={deleting}
                                 />
                             );
-                            return isLeech
+                            if (canDelete) return chip;
+                            const title = isLeech
+                              ? 'Không thể xoá leech card'
+                              : isLowLevel
+                                ? 'Không thể xoá thẻ mức nhớ 0 hoặc 1'
+                                : '';
+                            return title
                               ? (
-                                  <Tooltip key={cardId || `${lvl}-${idx}`} title="Không thể xoá leech card">
+                                  <Tooltip key={cardId || `${lvl}-${idx}`} title={title}>
                                     <Box component="span">{chip}</Box>
                                   </Tooltip>
                               )
@@ -740,23 +755,32 @@ export default function ProgressPage() {
                     const warmupScore = Number.isFinite(Number(c?.warmup)) ? Number(c.warmup) : null;
                     const fallbackLevel = cardId ? currentLevelOf(cardId, memoRow?.level ?? null) : null;
                     const level = finalScore ?? recallScore ?? warmupScore ?? fallbackLevel ?? 0;
+                    const numericLevel = Number.isFinite(Number(level)) ? Number(level) : null;
                     const isLeech = !!memoRow?.is_leech;
                     const deleting = cardId ? !!deletingCards[cardId] : false;
+                    const isLowLevel = numericLevel != null && numericLevel <= 1;
+                    const canDelete = !isLeech && !isLowLevel && !!cardId;
                     const chip = (
                         <Chip
                             key={c.id || cardId || `latest-card-${idx}`}
                             label={`${labelText} (${level})`}
                             sx={{ mr: 1, mb: 1 }}
-                            onDelete={!isLeech && cardId ? () => handleDeleteCard(cardId) : undefined}
-                            deleteIcon={!isLeech && cardId
+                            onDelete={canDelete ? () => handleDeleteCard(cardId, numericLevel) : undefined}
+                            deleteIcon={canDelete
                               ? (deleting ? <CircularProgress size={16} color="inherit" /> : <DeleteIcon />)
                               : undefined}
                             disabled={deleting}
                         />
                     );
-                    return isLeech
+                    if (canDelete) return chip;
+                    const title = isLeech
+                      ? 'Không thể xoá leech card'
+                      : isLowLevel
+                        ? 'Không thể xoá thẻ mức nhớ 0 hoặc 1'
+                        : '';
+                    return title
                       ? (
-                          <Tooltip key={`tooltip-latest-${cardId || idx}`} title="Không thể xoá leech card">
+                          <Tooltip key={`tooltip-latest-${cardId || idx}`} title={title}>
                             <Box component="span">{chip}</Box>
                           </Tooltip>
                       )
@@ -838,25 +862,34 @@ export default function ProgressPage() {
                                 const warmupScore = Number.isFinite(Number(c?.warmup)) ? Number(c.warmup) : null;
                                 const fallbackLevel = cardId ? currentLevelOf(cardId, memoRow?.level ?? null) : null;
                                 const level = finalScore ?? recallScore ?? warmupScore ?? fallbackLevel ?? 0;
+                                const numericLevel = Number.isFinite(Number(level)) ? Number(level) : null;
                                 const labelFront = front || memoRow?.front || cardId || 'Thẻ';
                                 const labelBack = back ? ` · ${back}` : '';
                                 const isLeech = !!memoRow?.is_leech;
                                 const deleting = cardId ? !!deletingCards[cardId] : false;
+                                const isLowLevel = numericLevel != null && numericLevel <= 1;
+                                const canDelete = !isLeech && !isLowLevel && !!cardId;
                                 const chip = (
                                     <Chip
                                         key={c.id || cardId || `prev-card-${cIdx}`}
                                         label={`${labelFront}${labelBack} (${level})`}
                                         sx={{ mr: 1, mb: 1 }}
-                                        onDelete={!isLeech && cardId ? () => handleDeleteCard(cardId) : undefined}
-                                        deleteIcon={!isLeech && cardId
+                                        onDelete={canDelete ? () => handleDeleteCard(cardId, numericLevel) : undefined}
+                                        deleteIcon={canDelete
                                           ? (deleting ? <CircularProgress size={16} color="inherit" /> : <DeleteIcon />)
                                           : undefined}
                                         disabled={deleting}
                                     />
                                 );
-                                return isLeech
+                                if (canDelete) return chip;
+                                const title = isLeech
+                                  ? 'Không thể xoá leech card'
+                                  : isLowLevel
+                                    ? 'Không thể xoá thẻ mức nhớ 0 hoặc 1'
+                                    : '';
+                                return title
                                   ? (
-                                      <Tooltip key={`tooltip-prev-${cardId || cIdx}`} title="Không thể xoá leech card">
+                                      <Tooltip key={`tooltip-prev-${cardId || cIdx}`} title={title}>
                                         <Box component="span">{chip}</Box>
                                       </Tooltip>
                                   )

@@ -23,12 +23,19 @@ export default async function handler(req, res) {
 
     const { data: memoryRow, error: memoryError } = await supa
       .from('memory_levels')
-      .select('is_leech')
+      .select('is_leech, level')
       .eq('card_id', id)
       .maybeSingle();
     if (memoryError) throw memoryError;
     if (memoryRow?.is_leech) {
       return res.status(400).json({ error: 'Không thể xoá leech card' });
+    }
+
+    const levelValue = Number.isFinite(Number(memoryRow?.level))
+      ? Number(memoryRow.level)
+      : (memoryRow == null ? 0 : null);
+    if (levelValue === 0 || levelValue === 1) {
+      return res.status(400).json({ error: 'Không thể xoá thẻ mức nhớ 0 hoặc 1' });
     }
 
     const { error: updateError } = await supa
