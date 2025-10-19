@@ -12,7 +12,8 @@ export default async function handler(req, res) {
 
         let query = supa
             .from('memory_levels')
-            .select('card_id, type, level, stability, difficulty, last_reviewed_at, due, leech_count, is_leech, cards:card_id(id,type,front,back)')
+            .select('card_id, type, level, stability, difficulty, last_reviewed_at, due, leech_count, is_leech, cards:card_id(id,type,front,back,deleted)')
+            .eq('cards.deleted', false)
             .order('due', { ascending: true })
             .order('updated_at', { ascending: false });
 
@@ -28,7 +29,9 @@ export default async function handler(req, res) {
         const { data, error } = await query;
         if (error) throw error;
 
-        let rows = (data||[]).map(r => ({
+        let rows = (data||[])
+            .filter(r => !r?.cards?.deleted)
+            .map(r => ({
             card_id: r.card_id,
             type: r.type || r.cards?.type || null,
             level: Number(r.level ?? 0),
