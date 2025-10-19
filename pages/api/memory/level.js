@@ -139,8 +139,8 @@ export default async function handler(req, res) {
             offset += pageSize;
         }
 
-        const leechCount = Math.max(0, failStreak - 1);
-        const isLeech = leechCount >= 3;
+        let leechCount = Math.max(0, failStreak - 1);
+        let isLeech = leechCount >= 3;
 
         // 3) Upsert memory_levels với mức nhớ mới + leech metadata chính xác
         const normalizeLevel = (value) => {
@@ -160,6 +160,42 @@ export default async function handler(req, res) {
         };
 
         const nextState = planNext(baseCardState, quality);
+
+        const normalizeNumber = (value) => {
+            const num = Number(value);
+            return Number.isFinite(num) ? num : null;
+        };
+        const normalizeBoolean = (value) => {
+            if (typeof value === 'boolean') return value;
+            if (typeof value === 'string') {
+                const lowered = value.toLowerCase();
+                return lowered === 'true' || lowered === 't' || lowered === '1';
+            }
+            if (typeof value === 'number') return value !== 0;
+            return false;
+        };
+
+        const previousLevel = normalizeNumber(current?.level ?? base);
+        const previousLeechCount = normalizeNumber(current?.leech_count);
+        const previousIsLeech = normalizeBoolean(current?.is_leech);
+        const nextLevel = normalizeNumber(nextState.level);
+
+        const movedOutOfLowLevels = nextLevel !== null && nextLevel > 1;
+        const jumpedStraightToHigh =
+            (previousLevel === 0 || previousLevel === 1) && nextLevel !== null && nextLevel >= 3;
+        const wasLeech = !!previousIsLeech;
+
+        if (jumpedStraightToHigh && wasLeech) {
+            if (previousLeechCount !== null) leechCount = previousLeechCount;
+            isLeech = true;
+
+            const tomorrow = new Date();
+            tomorrow.setDate(tomorrow.getDate() + 1);
+            nextState.due = tomorrow.toISOString();
+        } else if (movedOutOfLowLevels) {
+            leechCount = 0;
+            isLeech = false;
+        }
 
         const upsertRow = {
             card_id: String(card_id),
