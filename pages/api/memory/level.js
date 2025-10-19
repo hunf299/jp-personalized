@@ -99,7 +99,8 @@ export default async function handler(req, res) {
             .eq('card_id', card_id)
             .lte('quality', 1);
         if (countErr) throw countErr;
-        const leechCount = Math.max(0, lowCount || 0);
+        // Bỏ qua lần trượt đầu tiên: nếu đây là lần đầu chất lượng <=1 thì không tăng leech_count
+        const leechCount = Math.max(0, (lowCount || 0) - 1);
         const isLeech = leechCount >= 3;
 
         // 3) Upsert memory_levels với mức nhớ mới + leech metadata chính xác
