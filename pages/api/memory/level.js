@@ -26,15 +26,25 @@ export default async function handler(req, res) {
 
         const base = Number.isFinite(Number(base_level)) ? Number(base_level) : null;
 
-        const numericCandidates = [new_level, final, qualityFromClient]
-            .map((value) => (Number.isFinite(Number(value)) ? Number(value) : null))
-            .filter((value) => value != null);
+        const candidateOrder = [
+            { key: 'final', value: final },
+            { key: 'new_level', value: new_level },
+            { key: 'quality', value: qualityFromClient },
+        ];
+
+        const numericCandidates = candidateOrder
+            .map(({ key, value }) => {
+                if (!Number.isFinite(Number(value))) return null;
+                const num = Math.max(0, Math.min(5, Math.round(Number(value))));
+                return { key, value: num };
+            })
+            .filter(Boolean);
 
         if (!numericCandidates.length) {
             return res.status(400).json({ ok: false, error: 'Missing level/final/quality number' });
         }
 
-        const lvl = Math.max(0, Math.min(5, Math.round(numericCandidates[0])));
+        const lvl = numericCandidates[0].value;
 
         // Chọn quality: ưu tiên client gửi lên, nếu thiếu thì suy ra từ base -> lvl
         let quality = Number(qualityFromClient);
@@ -44,9 +54,7 @@ export default async function handler(req, res) {
         }
         quality = Math.max(0, Math.min(5, Math.round(quality)));
 
-        const resolvedFinal = Number.isFinite(Number(final))
-            ? Math.max(0, Math.min(5, Math.round(Number(final))))
-            : lvl;
+        const resolvedFinal = numericCandidates.find((c) => c.key === 'final')?.value ?? lvl;
 
         const now = new Date().toISOString();
 
