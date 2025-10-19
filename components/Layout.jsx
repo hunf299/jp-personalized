@@ -95,8 +95,8 @@ export default function Layout({ children }) {
             border: '1px solid #eee', borderRadius: 999, px: 1, py: 0.5, background: '#fff'
         }}>
             <Button component={Link} href="/" color="inherit">Cập nhật dữ liệu</Button>
-            <Button component={Link} href="/menu" color="inherit">Menu</Button>
-            <Button component={Link} href="/progress" color="inherit">Progress</Button>
+            <Button component={Link} href="/menu" color="inherit">Chức năng</Button>
+            <Button component={Link} href="/progress" color="inherit">Quá trình học</Button>
             <Button component={Link} href="/pomodoro" color="inherit">Pomodoro</Button>
         </Stack>
     );
@@ -115,9 +115,8 @@ export default function Layout({ children }) {
                         <Container maxWidth="lg" sx={{ display: 'flex', alignItems: 'center', gap: 2, py: 1 }}>
                             {/* Logo */}
                             <Typography variant="h6" sx={{ fontWeight: 800, color: '#a43a3a', mr: 1, whiteSpace: 'nowrap' }}>
-                                Personalized Learning
+                                Learn일본어です
                             </Typography>
-
                             {/* Desktop nav */}
                             {isMdUp && <NavButtons />}
 
@@ -154,8 +153,8 @@ export default function Layout({ children }) {
                     <Divider />
                     <List>
                         <ListItemButton component={Link} href="/"><ListItemText primary="Cập nhật dữ liệu" /></ListItemButton>
-                        <ListItemButton component={Link} href="/menu"><ListItemText primary="Menu" /></ListItemButton>
-                        <ListItemButton component={Link} href="/progress"><ListItemText primary="Progress" /></ListItemButton>
+                        <ListItemButton component={Link} href="/menu"><ListItemText primary="Chức năng" /></ListItemButton>
+                        <ListItemButton component={Link} href="/progress"><ListItemText primary="Quá tình học" /></ListItemButton>
                         <ListItemButton component={Link} href="/pomodoro"><ListItemText primary="Pomodoro" /></ListItemButton>
                     </List>
                 </Box>

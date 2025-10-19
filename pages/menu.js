@@ -15,7 +15,7 @@ const items = [
   { href: '/kanji', title: 'Kanji', desc: 'Bộ thủ, luyện nét', color: '#ff8a80' },
   { href: '/grammar', title: 'Ngữ pháp', desc: 'Sơ đồ base-form', color: '#ffa4a2' },
   { href: '/particles', title: 'Trợ từ', desc: 'Tra cứu & so sánh', color: '#ffb3ae' },
-  { href: '/progress', title: 'Progress', desc: 'Tổng hợp, session, ôn theo mức', color: '#ffc5c2' },
+  { href: '/progress', title: 'Quá trình học', desc: 'Tổng hợp, session, ôn theo mức', color: '#ffc5c2' },
   { href: '/pomodoro', title: 'Pomodoro', desc: 'Đồng hồ 2h toàn site', color: '#ffd6d6' },
 ];
 
