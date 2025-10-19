@@ -499,7 +499,7 @@ export default function ProgressPage() {
             variant="h5"
             sx={{ fontWeight: 700, mb: 2, color: '#d94b4b' }}
         >
-          Progress
+          Quá trình học
         </Typography>
 
         {/* Bộ lọc loại thẻ */}
