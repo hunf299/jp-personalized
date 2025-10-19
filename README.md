@@ -18,7 +18,6 @@ DATA_DIR=.data
 
 ## Import CSV
 - Headers: `front,back,category`
-- Riêng `kanji` có thể thêm cột `radicals` (ví dụ: `人 木`)
 - Riêng `grammar` có thể thêm `related_rules` (ví dụ: `Vて`)
 
 Upload ở trang **Home** theo từng loại.
