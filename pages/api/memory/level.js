@@ -178,6 +178,8 @@ export default async function handler(req, res) {
         const previousLevel = normalizeNumber(current?.level ?? base);
         const previousLeechCount = normalizeNumber(current?.leech_count);
         const previousIsLeech = normalizeBoolean(current?.is_leech);
+        const hadLeechState =
+            (previousLeechCount !== null && previousLeechCount >= 3) || previousIsLeech;
         const nextLevel = normalizeNumber(nextState.level);
         const resolvedFinalLevel = normalizeNumber(resolvedFinal);
 
@@ -188,7 +190,7 @@ export default async function handler(req, res) {
         })();
 
         const movedOutOfLowLevels = effectiveNextLevel !== null && effectiveNextLevel > 1;
-        const wasLeech = !!previousIsLeech;
+        const wasLeech = !!hadLeechState;
         const reachedHighLevelForFirstTime =
             wasLeech &&
             effectiveNextLevel !== null &&
@@ -198,6 +200,8 @@ export default async function handler(req, res) {
         if (reachedHighLevelForFirstTime) {
             if (previousLeechCount !== null) {
                 leechCount = previousLeechCount;
+            } else {
+                leechCount = Math.max(leechCount, 3);
             }
             isLeech = true;
 
