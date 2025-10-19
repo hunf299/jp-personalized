@@ -183,10 +183,11 @@ export default async function handler(req, res) {
         const movedOutOfLowLevels = nextLevel !== null && nextLevel > 1;
         const jumpedStraightToHigh =
             (previousLevel === 0 || previousLevel === 1) && nextLevel !== null && nextLevel >= 3;
+        const wasLeech = !!previousIsLeech;
 
-        if (jumpedStraightToHigh) {
+        if (jumpedStraightToHigh && wasLeech) {
             if (previousLeechCount !== null) leechCount = previousLeechCount;
-            if (previousIsLeech) isLeech = true;
+            isLeech = true;
 
             const tomorrow = new Date();
             tomorrow.setDate(tomorrow.getDate() + 1);
