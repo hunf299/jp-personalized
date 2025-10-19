@@ -268,33 +268,71 @@ export default function ProgressPage() {
     return () => { cancelled = true; };
   }, [typeFilter, /* add dependencies when you want auto-refresh e.g. a 'refreshKey' */]);
 
-// Compute stats from memRows
-  const liveStats = React.useMemo(() => {
-    if (!Array.isArray(memRows)) return { totalCards: null, learnedUnique: 0, dist:[0,0,0,0,0,0] };
+  const normalizedMemRows = React.useMemo(() => {
+    const source = Array.isArray(memRows) && memRows.length
+      ? memRows
+      : safeArray(mem.rows);
 
-    const dist = [0,0,0,0,0,0];
-    let learnedUnique = 0;
-    memRows.forEach(r=>{
-      const lv = Number.isFinite(Number(r.level)) ? Number(r.level) : null;
-      if (lv !== null && lv >= 0) {
-        learnedUnique += 1;
-        if (lv >=0 && lv <=5) dist[lv] += 1;
+    if (!source.length) return [];
+
+    const map = new Map();
+    source.forEach((row) => {
+      if (!row) return;
+      const cardId = row.card_id != null ? String(row.card_id) : null;
+      if (!cardId) return;
+
+      const level = Number.isFinite(Number(row.level)) ? Number(row.level) : null;
+      if (level == null || level < 0) return;
+
+      const normalized = {
+        ...row,
+        card_id: cardId,
+        level,
+        front: row.front ?? row.cards?.front ?? '',
+        back: row.back ?? row.cards?.back ?? '',
+      };
+
+      if (!map.has(cardId)) {
+        map.set(cardId, normalized);
+        return;
+      }
+
+      const prev = map.get(cardId);
+      const prevReviewed = prev?.last_reviewed_at ? new Date(prev.last_reviewed_at).getTime() : -Infinity;
+      const nextReviewed = normalized.last_reviewed_at ? new Date(normalized.last_reviewed_at).getTime() : -Infinity;
+      if (nextReviewed >= prevReviewed) {
+        map.set(cardId, { ...prev, ...normalized });
       }
     });
+
+    return Array.from(map.values());
+  }, [mem.rows, memRows]);
+
+  // Compute stats from memory snapshot
+  const liveStats = React.useMemo(() => {
+    if (!normalizedMemRows.length) {
+      return { totalCards: 0, learnedUnique: 0, dist: [0, 0, 0, 0, 0, 0], rows: [] };
+    }
+
+    const dist = computeDist(normalizedMemRows);
+    const learnedUnique = normalizedMemRows.length;
 
     return {
       learnedUnique,
       dist,
-      totalCards: null // optional: fetch separately from /api/cards/count if you want
+      rows: normalizedMemRows,
+      totalCards: normalizedMemRows.length,
     };
-  }, [memRows]);
+  }, [normalizedMemRows]);
 
   const totalWordsOfType = Number(stats?.[typeFilter] || 0);
   const learnedCount = Number(liveStats.learnedUnique || 0);
   const remaining = Math.max(0, totalWordsOfType - learnedCount);
-  const globalDistOmni = mem.dist;
-  const wordsByLevelOmni = (lvl) =>
-      mem.rows.filter((r) => Number(r.level) === lvl && (r.front || r.back));
+  const globalDistOmni = liveStats.dist;
+  const wordsByLevelOmni = React.useCallback(
+    (lvl) => normalizedMemRows.filter((r) => Number(r.level) === lvl),
+    [normalizedMemRows],
+  );
   const toggleLevelOmni = (lvl) =>
       setOpenLevelsOmni((prev) => ({ ...prev, [lvl]: !prev?.[lvl] }));
 
