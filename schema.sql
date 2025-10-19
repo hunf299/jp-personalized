@@ -274,15 +274,31 @@ declare
   fail_count int;
   target_level int;
   leech_value int;
+  last_success timestamptz;
 begin
   select c.type into card_type from public.cards c where c.id = p_card_id;
   if card_type is null then card_type := 'vocab'; end if;
 
-  select count(*)
-    into fail_count
+  select max(created_at)
+    into last_success
   from public.review_logs
   where card_id = p_card_id
-    and quality <= 1;
+    and quality >= 2;
+
+  if last_success is null then
+    select count(*)
+      into fail_count
+    from public.review_logs
+    where card_id = p_card_id
+      and quality <= 1;
+  else
+    select count(*)
+      into fail_count
+    from public.review_logs
+    where card_id = p_card_id
+      and quality <= 1
+      and created_at > last_success;
+  end if;
 
   leech_value := greatest(0, coalesce(fail_count, 0) - 1);
 
