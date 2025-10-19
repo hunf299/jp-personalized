@@ -179,10 +179,19 @@ export default async function handler(req, res) {
         const previousLeechCount = normalizeNumber(current?.leech_count);
         const previousIsLeech = normalizeBoolean(current?.is_leech);
         const nextLevel = normalizeNumber(nextState.level);
+        const resolvedFinalLevel = normalizeNumber(resolvedFinal);
 
-        const movedOutOfLowLevels = nextLevel !== null && nextLevel > 1;
+        const effectiveNextLevel = (() => {
+            if (nextLevel === null) return resolvedFinalLevel;
+            if (resolvedFinalLevel === null) return nextLevel;
+            return Math.max(nextLevel, resolvedFinalLevel);
+        })();
+
+        const movedOutOfLowLevels = effectiveNextLevel !== null && effectiveNextLevel > 1;
         const jumpedStraightToHigh =
-            (previousLevel === 0 || previousLevel === 1) && nextLevel !== null && nextLevel >= 3;
+            (previousLevel === 0 || previousLevel === 1) &&
+            effectiveNextLevel !== null &&
+            effectiveNextLevel >= 3;
         const wasLeech = !!previousIsLeech;
 
         if (jumpedStraightToHigh && wasLeech) {
