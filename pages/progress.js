@@ -2,7 +2,7 @@
 import React from 'react';
 import {
   Container, Typography, Grid, Card, CardContent, Chip, Divider,
-  Stack, Button, Collapse, IconButton, FormControl, InputLabel, Select, MenuItem, Slider
+  Stack, Button, Collapse, IconButton, FormControl, InputLabel, Select, MenuItem, Slider, Box
 } from '@mui/material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ExpandLessIcon from '@mui/icons-material/ExpandLess';
@@ -41,6 +41,7 @@ export default function ProgressPage() {
   const [expanded, setExpanded] = React.useState({});
   const [openSettings, setOpenSettings] = React.useState(false);
   const [omniCount, setOmniCount] = React.useState(settings?.cards_per_session || 10);
+  const [openLevelsOmni, setOpenLevelsOmni] = React.useState({});
 
   // Memory-level snapshot (nguồn dữ liệu chuẩn)
   const [mem, setMem] = React.useState({ rows: [], dist: [0, 0, 0, 0, 0, 0], total: 0 });
@@ -185,6 +186,8 @@ export default function ProgressPage() {
   const globalDistOmni = mem.dist;
   const wordsByLevelOmni = (lvl) =>
       mem.rows.filter((r) => Number(r.level) === lvl && (r.front || r.back));
+  const toggleLevelOmni = (lvl) =>
+      setOpenLevelsOmni((prev) => ({ ...prev, [lvl]: !prev?.[lvl] }));
 
 
   // Điều hướng Review
@@ -446,11 +449,63 @@ export default function ProgressPage() {
         </Typography>
         <Card sx={{ borderRadius: 3, border: '1px solid #ffe0e0' }}>
           <CardContent>
-            <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap', mb: 2 }}>
-              {[0, 1, 2, 3, 4, 5].map((l) => (
-                  <Chip key={l} label={`Mức ${l}: ${globalDistOmni[l] || 0}`} />
-              ))}
-            </Stack>
+            <Box
+                sx={{
+                  display: 'grid',
+                  gap: 1,
+                  mb: 2,
+                  gridTemplateColumns: {
+                    xs: 'repeat(1, minmax(0, 1fr))',
+                    sm: 'repeat(3, minmax(0, 1fr))',
+                    md: 'repeat(6, minmax(0, 1fr))',
+                  },
+                }}
+            >
+              {[0, 1, 2, 3, 4, 5].map((lvl) => {
+                const list = wordsByLevelOmni(lvl);
+                const isOpen = !!openLevelsOmni[lvl];
+                const count = globalDistOmni?.[lvl] || 0;
+                return (
+                    <React.Fragment key={lvl}>
+                      <Button
+                          variant="outlined"
+                          onClick={() => toggleLevelOmni(lvl)}
+                          endIcon={isOpen ? <ExpandLessIcon /> : <ExpandMoreIcon />}
+                          disabled={list.length === 0}
+                          size="small"
+                          sx={{
+                            justifyContent: 'space-between',
+                            gridColumn: { xs: '1 / -1', sm: 'auto' },
+                            px: 1.25,
+                            py: 0.5,
+                            minHeight: 34,
+                            fontSize: '0.75rem',
+                          }}
+                      >
+                        Mức {lvl}: {count}
+                      </Button>
+                      <Collapse
+                          in={isOpen && list.length > 0}
+                          timeout="auto"
+                          unmountOnExit
+                          sx={{ gridColumn: '1 / -1' }}
+                      >
+                        <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap', mt: 1 }}>
+                          {list.map((item, idx) => {
+                            const label = (item.front && item.front.trim())
+                              || (item.back && item.back.trim())
+                              || item.card_id
+                              || `item-${lvl}-${idx}`;
+                            return (
+                                <Chip key={item.card_id || `${lvl}-${idx}`} label={label} sx={{ mb: 1 }} />
+                            );
+                          })}
+                        </Stack>
+                      </Collapse>
+                    </React.Fragment>
+                );
+              })}
+            </Box>
 
             <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} alignItems="center">
               <Stack spacing={1} sx={{ minWidth: 260 }}>
