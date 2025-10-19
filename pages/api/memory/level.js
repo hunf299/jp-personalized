@@ -26,25 +26,21 @@ export default async function handler(req, res) {
 
         const base = Number.isFinite(Number(base_level)) ? Number(base_level) : null;
 
-        const candidateOrder = [
-            { key: 'final', value: final },
-            { key: 'new_level', value: new_level },
-            { key: 'quality', value: qualityFromClient },
-        ];
+        const clampLevel = (value) => Math.max(0, Math.min(5, Math.round(Number(value))));
 
-        const numericCandidates = candidateOrder
-            .map(({ key, value }) => {
-                if (!Number.isFinite(Number(value))) return null;
-                const num = Math.max(0, Math.min(5, Math.round(Number(value))));
-                return { key, value: num };
-            })
-            .filter(Boolean);
+        const hasNewLevel = Number.isFinite(Number(new_level));
+        const hasFinal = Number.isFinite(Number(final));
+        const hasQuality = Number.isFinite(Number(qualityFromClient));
 
-        if (!numericCandidates.length) {
+        if (!hasNewLevel && !hasFinal && !hasQuality) {
             return res.status(400).json({ ok: false, error: 'Missing level/final/quality number' });
         }
 
-        const lvl = numericCandidates[0].value;
+        const lvl = hasNewLevel
+            ? clampLevel(new_level)
+            : hasFinal
+            ? clampLevel(final)
+            : clampLevel(qualityFromClient);
 
         // Chọn quality: ưu tiên client gửi lên, nếu thiếu thì suy ra từ base -> lvl
         let quality = Number(qualityFromClient);
@@ -54,7 +50,11 @@ export default async function handler(req, res) {
         }
         quality = Math.max(0, Math.min(5, Math.round(quality)));
 
-        const resolvedFinal = numericCandidates.find((c) => c.key === 'final')?.value ?? lvl;
+        const resolvedFinal = hasNewLevel
+            ? lvl
+            : hasFinal
+            ? clampLevel(final)
+            : lvl;
 
         const now = new Date().toISOString();
 
@@ -135,7 +135,7 @@ export default async function handler(req, res) {
             const sessionId = sessionCard.session_id;
             const { error: sessionUpdateErr } = await supabase
                 .from('session_cards')
-                .update({ final: lvl })
+                .update({ final: resolvedFinal })
                 .eq('session_id', sessionId)
                 .eq('card_id', card_id);
             if (sessionUpdateErr) {
