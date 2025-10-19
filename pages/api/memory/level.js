@@ -24,11 +24,17 @@ export default async function handler(req, res) {
 
         if (!card_id) return res.status(400).json({ ok: false, error: 'card_id required' });
 
-        const lvl = Number(new_level);
         const base = Number.isFinite(Number(base_level)) ? Number(base_level) : null;
-        if (!Number.isFinite(lvl)) {
-            return res.status(400).json({ ok: false, error: 'new_level must be a number' });
+
+        const numericCandidates = [new_level, final, qualityFromClient]
+            .map((value) => (Number.isFinite(Number(value)) ? Number(value) : null))
+            .filter((value) => value != null);
+
+        if (!numericCandidates.length) {
+            return res.status(400).json({ ok: false, error: 'Missing level/final/quality number' });
         }
+
+        const lvl = Math.max(0, Math.min(5, Math.round(numericCandidates[0])));
 
         // Chọn quality: ưu tiên client gửi lên, nếu thiếu thì suy ra từ base -> lvl
         let quality = Number(qualityFromClient);
@@ -36,6 +42,11 @@ export default async function handler(req, res) {
             if (base === null) quality = lvl >= 4 ? 5 : (lvl >= 2 ? 3 : 1);
             else quality = lvl > base ? 5 : (lvl === base ? 3 : 1);
         }
+        quality = Math.max(0, Math.min(5, Math.round(quality)));
+
+        const resolvedFinal = Number.isFinite(Number(final))
+            ? Math.max(0, Math.min(5, Math.round(Number(final))))
+            : lvl;
 
         const now = new Date().toISOString();
 
@@ -67,7 +78,7 @@ export default async function handler(req, res) {
                 auto_active: !!auto_active,
                 base_level: base,
                 new_level: lvl,
-                final: Number.isFinite(Number(final)) ? Number(final) : null,
+                final: resolvedFinal,
             },
         };
         const { error: logErr } = await supabase.from('review_logs').insert(logPayload);
