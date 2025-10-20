@@ -3,14 +3,14 @@ import SwiftUI
 import UIKit
 
 @available(iOS 13.0, *)
-struct DashboardRootView: View {
+struct ContentView: View {
     var body: some View {
-        DashboardNavigationControllerRepresentable()
+        DashboardNavigationControllerContainer()
     }
 }
 
 @available(iOS 13.0, *)
-struct DashboardNavigationControllerRepresentable: UIViewControllerRepresentable {
+struct DashboardNavigationControllerContainer: UIViewControllerRepresentable {
     func makeUIViewController(context: Context) -> UINavigationController {
         let navigationController = UINavigationController(rootViewController: DashboardViewController())
         navigationController.navigationBar.prefersLargeTitles = true
@@ -24,7 +24,7 @@ struct DashboardNavigationControllerRepresentable: UIViewControllerRepresentable
 #if compiler(>=5.9)
 @available(iOS 17.0, *)
 #Preview {
-    DashboardRootView()
+    ContentView()
 }
 #endif
 

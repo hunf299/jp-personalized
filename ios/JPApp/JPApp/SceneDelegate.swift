@@ -17,7 +17,7 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
 
 #if canImport(SwiftUI)
         if #available(iOS 13.0, *) {
-            window.rootViewController = UIHostingController(rootView: DashboardRootView())
+            window.rootViewController = UIHostingController(rootView: ContentView())
         } else {
             window.rootViewController = makeDashboardNavigationController()
         }
