@@ -107,10 +107,10 @@ function WarmupMCQ({ card, deck, isKanji, onCheck }) {
                 </Button>
             ))}
           </Stack>
-          <Stack direction="row" spacing={1} sx={{ mt: 2 }}>
-            <Button variant="contained" disabled={!chosen} onClick={handleCheck}>Kiểm tra</Button>
+          <Stack className="responsive-stack" direction="row" spacing={1} sx={{ mt: 2 }}>
+            <Button variant="contained" disabled={!chosen} onClick={handleCheck} fullWidth>Kiểm tra</Button>
             {checked && (
-                <Typography sx={{ ml: 1 }}>
+                <Typography sx={{ ml: { xs: 0, sm: 1 }, textAlign: { xs: 'center', sm: 'left' } }}>
                   {result ? 'Đúng' : <>Sai · Đáp án đúng: <b>{correctLabel}</b></>}
                 </Typography>
             )}
@@ -369,8 +369,8 @@ export default function FlashcardsPage() {
                         isKanji={isKanji}
                         onCheck={onWarmupChecked}
                     />
-                    <Stack direction="row" spacing={1} sx={{ mt:2 }}>
-                      <Button variant="outlined" onClick={nextWarmup}>Tiếp</Button>
+                    <Stack className="responsive-stack" direction="row" spacing={1} sx={{ mt:2 }}>
+                      <Button variant="outlined" onClick={nextWarmup} fullWidth>Tiếp</Button>
                     </Stack>
                   </>
               )}
@@ -393,20 +393,26 @@ export default function FlashcardsPage() {
               {phase==='recall' && batch[index] && (
                   <Card sx={{ borderRadius:3, border:'1px solid #ffe0e0', background:'#fff' }}>
                     <CardContent>
-                      <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb:1 }}>
+                      <Stack className="responsive-stack" direction="row" justifyContent="space-between" alignItems="center" sx={{ mb:1 }}>
                         {isKanji ? (
-                            <Typography variant="h6" sx={{ color:'#a33b3b' }}>
+                            <Typography variant="h6" sx={{ color:'#a33b3b', textAlign: { xs: 'center', sm: 'left' } }}>
                               Điền KANJI cho: <b>{kanjiLabel(batch[index])}</b>
                             </Typography>
                         ) : (
-                            <Typography variant="h6" sx={{ color:'#a33b3b' }}>{batch[index].front}</Typography>
+                            <Typography variant="h6" sx={{ color:'#a33b3b', textAlign: { xs: 'center', sm: 'left' } }}>{batch[index].front}</Typography>
                         )}
 
-                        <ToggleButtonGroup size="small" exclusive value={mode} onChange={(e,v)=>{
+                        <ToggleButtonGroup
+                          size="small"
+                          exclusive
+                          value={mode}
+                          onChange={(e,v)=>{
                           if (!v) return;
                           if (isKanji && v === 'typing') return;
                           setMode(v);
-                        }}>
+                        }}
+                          sx={{ width: { xs: '100%', sm: 'auto' }, justifyContent: 'center' }}
+                        >
                           <ToggleButton value="typing" disabled={isKanji}>Gõ</ToggleButton>
                           {isKanji && <ToggleButton value="handwrite">Viết tay</ToggleButton>}
                         </ToggleButtonGroup>
@@ -429,8 +435,8 @@ export default function FlashcardsPage() {
                           </Stack>
                       )}
 
-                      <Stack direction="row" spacing={1} sx={{ mt:2 }}>
-                        <Button variant="contained" onClick={checkRecall}>Kiểm tra</Button>
+                      <Stack className="responsive-stack" direction="row" spacing={1} sx={{ mt:2 }}>
+                        <Button variant="contained" onClick={checkRecall} fullWidth>Kiểm tra</Button>
                       </Stack>
 
                       {recallScores[batch[index].id] && (
@@ -451,9 +457,9 @@ export default function FlashcardsPage() {
                             )}
 
                             <Typography sx={{ mt:1 }}>Chọn mức độ nhớ (0–5):</Typography>
-                            <Stack direction="row" spacing={1} sx={{ mt:1 }}>
+                            <Stack className="responsive-stack" direction="row" spacing={1} sx={{ mt:1 }}>
                               {[0,1,2,3,4,5].map(q => (
-                                  <Button key={q} variant="outlined" onClick={()=>gradeRecall(q)}>{q}</Button>
+                                  <Button key={q} variant="outlined" onClick={()=>gradeRecall(q)} fullWidth>{q}</Button>
                               ))}
                             </Stack>
                           </>
@@ -480,8 +486,8 @@ export default function FlashcardsPage() {
                       </Stack>
 
                       <Divider sx={{ my:2 }} />
-                      <Stack direction="row" spacing={1}>
-                        <Button href="/progress" variant="contained">Xem Progress</Button>
+                      <Stack className="responsive-stack" direction="row" spacing={1}>
+                        <Button href="/progress" variant="contained" fullWidth>Xem Progress</Button>
                         <Button
                             variant="outlined"
                             onClick={async ()=>{
@@ -493,8 +499,9 @@ export default function FlashcardsPage() {
                               setBatch(cards); setPhase('warmup'); setIndex(0);
                               setWarmupScores({}); setRecallScores({}); setAnswer('');
                             }}
+                            fullWidth
                         >Tiếp 20 lượt (10 thẻ mới)</Button>
-                        <Button onClick={()=>{ setPhase('warmup'); setIndex(0); setWarmupScores({}); setRecallScores({}); setAnswer(''); }}>
+                        <Button onClick={()=>{ setPhase('warmup'); setIndex(0); setWarmupScores({}); setRecallScores({}); setAnswer(''); }} fullWidth>
                           Học lại phiên này
                         </Button>
                       </Stack>

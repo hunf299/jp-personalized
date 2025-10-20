@@ -7,6 +7,7 @@ import { GlobalBusyProvider } from '../components/GlobalBusy';
 
 // 🔽 THÊM DÒNG NÀY
 import { PomodoroProvider } from '../lib/pomodoroStore';
+import '../styles/globals.css';
 
 const theme = createTheme({
   palette: {

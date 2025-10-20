@@ -36,7 +36,7 @@ export default function KanjiPage() {
         <Card sx={{ borderRadius:3, mb:2 }}>
           <CardContent>
             <Typography sx={{ mb:1 }}>{ex.prompt}</Typography>
-            <Stack direction="row" spacing={1} sx={{ mb:1 }}>
+            <Stack className="responsive-stack" direction="row" spacing={1} sx={{ mb:1 }}>
               {kanji.slice(0,6).map(k => <Chip key={k.id} label={`${k.front} · ${k.back}`} />)}
             </Stack>
             <Button onClick={()=> setIdx((idx+1)%exercises.length)}>Tiếp</Button>
@@ -49,9 +49,16 @@ export default function KanjiPage() {
       <Card sx={{ borderRadius:3 }}>
         <CardContent>
           <Typography variant="h6" sx={{ mb:1 }}>Thực hành viết tay (nhận dạng nét)</Typography>
-          <Stack direction="row" spacing={1} sx={{ mb:1 }}>
-            <TextField label="Kanji" value={practiceChar} onChange={e=>setPracticeChar(e.target.value.trim())} sx={{ width:120 }} />
-            <Typography sx={{ alignSelf:'center', opacity:.7 }}>Demo có: 休 / 本 / 体</Typography>
+          <Stack className="responsive-stack" direction="row" spacing={1} sx={{ mb:1 }}>
+            <TextField
+              label="Kanji"
+              value={practiceChar}
+              onChange={e=>setPracticeChar(e.target.value.trim())}
+              sx={{ width: { xs: '100%', sm: 120 } }}
+            />
+            <Typography sx={{ alignSelf:{ xs: 'flex-start', sm: 'center' }, opacity:.7, textAlign:{ xs: 'center', sm: 'left' } }}>
+              Demo có: 休 / 本 / 体
+            </Typography>
           </Stack>
           {refStrokes.length ? <StrokePractice refStrokes={refStrokes}/> : <Typography>Chưa có dữ liệu nét chuẩn cho chữ này.</Typography>}
         </CardContent>

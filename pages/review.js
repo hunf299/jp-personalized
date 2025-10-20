@@ -478,9 +478,9 @@ export default function ReviewPage(){
                       ? 'Mức này chưa có thẻ hoặc số thẻ ít hơn chỉ tiêu. Bạn vẫn có thể quay lại Progress để chọn mức khác.'
                       : 'Không có thẻ phù hợp bộ lọc hiện tại.'}
                 </Typography>
-                <Stack direction="row" spacing={1}>
-                  <Button variant="contained" href="/progress">Về Progress</Button>
-                  <Button variant="outlined" onClick={()=>window.location.reload()}>Thử lại</Button>
+                <Stack className="responsive-stack" direction="row" spacing={1}>
+                  <Button variant="contained" href="/progress" fullWidth>Về Progress</Button>
+                  <Button variant="outlined" onClick={()=>window.location.reload()} fullWidth>Thử lại</Button>
                 </Stack>
               </CardContent>
             </Card>
@@ -502,11 +502,11 @@ export default function ReviewPage(){
                       </Button>
                   ))}
                 </Stack>
-                <Stack direction="row" spacing={1} sx={{ mt:2 }} alignItems="center">
+                <Stack className="responsive-stack" direction="row" spacing={1} sx={{ mt:2 }} alignItems="center">
                   {(!parseAuto(auto) || isLevelMode || disableAuto) && (
                       <>
-                        <Button variant="contained" onClick={checkMCQ_Manual}>Kiểm tra</Button>
-                        <Button variant="outlined" onClick={nextMCQ_Manual}>Tiếp</Button>
+                        <Button variant="contained" onClick={checkMCQ_Manual} fullWidth>Kiểm tra</Button>
+                        <Button variant="outlined" onClick={nextMCQ_Manual} fullWidth>Tiếp</Button>
                       </>
                   )}
                   {showAns && <Typography sx={{ ml:1 }}>Đáp án: <b>{mcq.correct}</b></Typography>}
@@ -557,7 +557,7 @@ export default function ReviewPage(){
                 )}
 
                 {((!autoCfg) || disableAuto || isLevelMode) && (
-                    <Button sx={{ mt:2 }} variant="contained" onClick={checkRecall_Manual}>Kiểm tra</Button>
+                    <Button sx={{ mt:2 }} variant="contained" onClick={checkRecall_Manual} fullWidth>Kiểm tra</Button>
                 )}
 
                 {/* Sau khi hiện đáp án → chọn mức nhớ */}
@@ -565,20 +565,22 @@ export default function ReviewPage(){
                     <>
                       <Divider sx={{ my:2 }} />
                       <Typography>Chọn mức nhớ (Recall) cho thẻ này:</Typography>
-                      <Stack direction="row" spacing={1} sx={{ mt:1 }} flexWrap="wrap">
+                      <Stack className="responsive-stack" direction="row" spacing={1} sx={{ mt:1 }} flexWrap="wrap">
                         {[0,1,2,3,4,5].map(v=>(
-                            <Button key={v}
-                                    variant={(proposed[card.id] ?? (baseLevels[String(card.id).toLowerCase()] ?? -1))===v ? 'contained':'outlined'}
-                                    onClick={()=>{
-                                      setProposed(p => ({ ...p, [card.id]: v }));
-                                      setProposedSource(s => ({ ...s, [card.id]: 'manual' }));
-                                    }}
+                            <Button
+                                key={v}
+                                variant={(proposed[card.id] ?? (baseLevels[String(card.id).toLowerCase()] ?? -1))===v ? 'contained':'outlined'}
+                                onClick={()=>{
+                                  setProposed(p => ({ ...p, [card.id]: v }));
+                                  setProposedSource(s => ({ ...s, [card.id]: 'manual' }));
+                                }}
+                                fullWidth
                             >
                               {v}
                             </Button>
                         ))}
                       </Stack>
-                      <Stack direction="row" spacing={1} sx={{ mt:2 }}>
+                      <Stack className="responsive-stack" direction="row" spacing={1} sx={{ mt:2 }}>
                         <Button variant="outlined" onClick={()=>{
                           setAnswer(''); setShowAns(false);
                           if(idx+1<deck.length) setIdx(i=>i+1); else setStage('done');
@@ -599,7 +601,7 @@ export default function ReviewPage(){
                 <Typography variant="h6" sx={{ mb:1 }}>Tổng kết phiên ôn</Typography>
 
                 {/* Tổng hợp phân bố theo FINAL */}
-                <Stack direction="row" spacing={1} flexWrap="wrap" sx={{ mb:2 }}>
+                <Stack className="responsive-stack" direction="row" spacing={1} flexWrap="wrap" sx={{ mb:2 }}>
                   {[0,1,2,3,4,5].map(v=>(
                       <Chip key={v} label={`Mức ${v}: ${finalDist[v]}`} />
                   ))}
@@ -630,10 +632,10 @@ export default function ReviewPage(){
                     return (
                         <Stack key={c.id} direction={{ xs:'column', md:'row' }} spacing={1} alignItems="center"
                                sx={{ border:'1px solid #eee', borderRadius:2, p:1 }}>
-                          <Typography sx={{ flex:1 }}>
+                          <Typography sx={{ flex:1, textAlign:{ xs:'center', md:'left' } }}>
                             <b>{c.front}</b>{c.back ? ` · ${c.back}` : ''}
                           </Typography>
-                          <Stack direction="row" spacing={1} flexWrap="wrap" alignItems="center">
+                          <Stack className="responsive-stack" direction="row" spacing={1} flexWrap="wrap" alignItems="center">
                             <Chip size="small" label={`Base: ${base}`} />
                             <Chip size="small" label={`MCQ: ${mcq}`} />
                             <Chip size="small" label={`Recall: ${rec}`} />
@@ -644,9 +646,10 @@ export default function ReviewPage(){
                   })}
                 </Stack>
 
-                <Stack direction="row" spacing={1} sx={{ mt:2 }}>
+                <Stack className="responsive-stack" direction="row" spacing={1} sx={{ mt:2 }}>
                   <Button
                       variant="contained" color="success"
+                      fullWidth
                       onClick={async ()=>{
                         try{
                           // Build save rows
@@ -726,7 +729,7 @@ export default function ReviewPage(){
                   >
                     Lưu tất cả & Kết thúc
                   </Button>
-                  <Button variant="outlined" onClick={()=>{ window.location.href = '/progress'; }}>
+                  <Button variant="outlined" onClick={()=>{ window.location.href = '/progress'; }} fullWidth>
                     Kết thúc (không lưu)
                   </Button>
                 </Stack>

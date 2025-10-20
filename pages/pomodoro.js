@@ -17,17 +17,17 @@ export default function PomodoroPage() {
 
       <Card sx={{ borderRadius: 4, border: '1px solid #ffdddd', background: '#fff' }}>
         <CardContent>
-          <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 2 }}>
+          <Stack className="responsive-stack" direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 2 }}>
             <Typography variant="h5" sx={{ fontWeight: 700, color: current.type === 'focus' ? '#c33' : '#888' }}>
               {current.type === 'focus' ? `Tập trung · Chu kỳ ${current.cycle}/2` : `Nghỉ · Chu kỳ ${current.cycle}/2`}
             </Typography>
-            <Stack direction="row" spacing={1}>
+            <Stack className="responsive-stack" direction="row" spacing={1}>
               {paused ? (
-                <Button variant="contained" onClick={resume}>Resume</Button>
+                <Button variant="contained" onClick={resume} fullWidth>Resume</Button>
               ) : (
-                <Button variant="outlined" onClick={pause}>Pause</Button>
+                <Button variant="outlined" onClick={pause} fullWidth>Pause</Button>
               )}
-              <Button variant="contained" color="warning" onClick={reset}>Reset 2h</Button>
+              <Button variant="contained" color="warning" onClick={reset} fullWidth>Reset 2h</Button>
             </Stack>
           </Stack>
 
@@ -50,7 +50,7 @@ export default function PomodoroPage() {
           />
 
           {/* timeline 2 chu kỳ (focus/break) */}
-          <Stack direction="row" spacing={2} justifyContent="center" sx={{ mt: 3 }}>
+          <Stack className="responsive-stack" direction="row" spacing={2} justifyContent="center" sx={{ mt: 3 }}>
             {cycles.map((c) => (
               <Stack key={c.index} spacing={1} alignItems="center">
                 <Box

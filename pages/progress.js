@@ -544,10 +544,10 @@ export default function ProgressPage() {
     return (
         <Card sx={{ borderRadius: 3, mt: 2, border: '1px solid #ffe0e0', background: '#fff' }}>
           <CardContent>
-            <Stack direction="row" justifyContent="space-between" alignItems="center">
+            <Stack className="responsive-stack" direction="row" justifyContent="space-between" alignItems="center">
               <Typography variant="h6">Leech board</Typography>
-              <Stack direction="row" spacing={1} alignItems="center">
-                <Button variant="outlined" onClick={goQuickReviewAll} disabled={liveLeech.length===0}>ÔN NHANH LEECH</Button>
+              <Stack className="responsive-stack" direction="row" spacing={1} alignItems="center">
+                <Button variant="outlined" onClick={goQuickReviewAll} disabled={liveLeech.length===0} fullWidth>ÔN NHANH LEECH</Button>
               </Stack>
             </Stack>
 
@@ -558,11 +558,18 @@ export default function ProgressPage() {
 
             <Stack spacing={1} sx={{ mt:1 }}>
               {liveLeech.map(r => (
-                  <Stack key={r.card_id} direction="row" spacing={1} alignItems="center" sx={{ border:'1px solid #f1f1f1', p:1, borderRadius:2 }}>
+                  <Stack
+                    key={r.card_id}
+                    className="responsive-stack"
+                    direction="row"
+                    spacing={1}
+                    alignItems="center"
+                    sx={{ border:'1px solid #f1f1f1', p:1, borderRadius:2 }}
+                  >
                     <Chip label={`×${r.leech_count||0}`} color={(r.leech_count||0)>0?'error':'default'} size="small" />
-                    <Typography sx={{ flex:1 }}><b>{r.front}</b>{r.back?` · ${r.back}`:''}</Typography>
+                    <Typography sx={{ flex:1, textAlign:{ xs:'center', sm:'left' } }}><b>{r.front}</b>{r.back?` · ${r.back}`:''}</Typography>
                     <Chip size="small" label={`Lv ${r.liveLevel ?? '—'}`} />
-                    <Button size="small" variant="outlined" onClick={()=> goQuickReviewCard(r.card_id)}>Ôn</Button>
+                    <Button size="small" variant="outlined" onClick={()=> goQuickReviewCard(r.card_id)} fullWidth>Ôn</Button>
                   </Stack>
               ))}
             </Stack>
@@ -606,7 +613,7 @@ export default function ProgressPage() {
         <Card sx={{ border: '1px solid #ffe0e0', borderRadius: 3, mb: 2 }}>
           <CardContent>
             <Typography variant="h6">Tổng kết hôm nay (mọi loại)</Typography>
-            <Stack direction="row" spacing={2} sx={{ mt: 1 }} flexWrap="wrap">
+            <Stack className="responsive-stack" direction="row" spacing={2} sx={{ mt: 1 }} flexWrap="wrap">
               <Chip label={`Từ đã ôn: ${todayCards.length}`} color="success" />
               <Chip label={`Mức nhớ TB: ${todayAvg}`} />
             </Stack>
@@ -688,7 +695,7 @@ export default function ProgressPage() {
                           unmountOnExit
                           sx={{ gridColumn: '1 / -1' }}
                       >
-                        <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap', mt: 1 }}>
+                        <Stack className="responsive-stack" direction="row" spacing={1} sx={{ flexWrap: 'wrap', mt: 1 }}>
                           {list.map((item, idx) => {
                             const cardId = item?.card_id || item?.id || null;
                             const isLeech = !!item?.is_leech;
@@ -754,7 +761,7 @@ export default function ProgressPage() {
                   }
                 </Typography>
               </Stack>
-              <Stack direction="row" spacing={1}>
+              <Stack className="responsive-stack" direction="row" spacing={1}>
                 <Button variant="contained" onClick={() => goOmni(typeFilter, omniCount)}>
                   Review (Omni)
                 </Button>
@@ -769,7 +776,7 @@ export default function ProgressPage() {
             <Typography variant="subtitle2" sx={{ mb: 1 }}>
               Ôn theo mức nhớ · {typeFilter}
             </Typography>
-            <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap' }}>
+            <Stack className="responsive-stack" direction="row" spacing={1} sx={{ flexWrap: 'wrap' }}>
               {[0, 1, 2, 3, 4, 5].map((lvl) => {
                 const list = wordsByLevelOmni(lvl);
                 return (
@@ -803,7 +810,7 @@ export default function ProgressPage() {
                     Session gần nhất ·{' '}
                     {new Date(latest.created_at).toLocaleString('vi-VN')}
                   </Typography>
-                  <Stack direction="row" spacing={1}>
+                  <Stack className="responsive-stack" direction="row" spacing={1}>
                     <Button
                         variant="outlined"
                         href={`/flashcards?sessionId=${encodeURIComponent(latest.id)}`}
@@ -830,7 +837,7 @@ export default function ProgressPage() {
                 <Typography variant="subtitle2" sx={{ mt: 1 }}>
                   Từ & mức nhớ:
                 </Typography>
-                <Stack direction="row" spacing={1} flexWrap="wrap">
+                <Stack className="responsive-stack" direction="row" spacing={1} flexWrap="wrap">
                   {toArray(latest.cards).map((c, idx) => {
                     const cardId = c.card_id ?? c.cardId ?? c.id ?? null;
                     const memoRow = cardId ? memCardMap.get(cardId) : null;
@@ -879,7 +886,7 @@ export default function ProgressPage() {
 
                 <Divider sx={{ my: 2 }} />
                 <Typography variant="subtitle2">Phân bố mức nhớ:</Typography>
-                <Stack direction="row" spacing={1} flexWrap="wrap">
+                <Stack className="responsive-stack" direction="row" spacing={1} flexWrap="wrap">
                   {latestSessionDist.map((n, i)=> (
                       <Chip key={i} label={`Mức ${i}: ${n}`} />
                   ))}
@@ -906,7 +913,7 @@ export default function ProgressPage() {
                             <Typography>
                               <b>{new Date(s.created_at).toLocaleString('vi-VN')}</b>
                             </Typography>
-                            <Stack direction="row" spacing={1} alignItems="center">
+                            <Stack className="responsive-stack" direction="row" spacing={1} alignItems="center">
                               <Button
                                   variant="outlined"
                                   href={`/flashcards?sessionId=${encodeURIComponent(s.id)}`}

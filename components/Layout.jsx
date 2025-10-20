@@ -61,7 +61,7 @@ function MiniTimer() {
 
     // Nếu không, hiển thị đồng hồ mini như bình thường
     return (
-        <Stack direction="row" spacing={1} alignItems="center" sx={{ ml: { xs: 0, md: 1 } }}>
+        <Stack className="responsive-stack" direction="row" spacing={1} alignItems="center" sx={{ ml: { xs: 0, md: 1 } }}>
             <Chip
                 label={labelMini}
                 sx={{
@@ -91,7 +91,7 @@ export default function Layout({ children }) {
     const [open, setOpen] = React.useState(false);
 
     const NavButtons = () => (
-        <Stack direction="row" spacing={1} sx={{
+        <Stack className="responsive-stack" direction="row" spacing={1} sx={{
             border: '1px solid #eee', borderRadius: 999, px: 1, py: 0.5, background: '#fff'
         }}>
             <Button component={Link} href="/" color="inherit">Cập nhật dữ liệu</Button>
@@ -112,15 +112,33 @@ export default function Layout({ children }) {
                     sx={{ background: '#fff', color: '#222', borderBottom: '1px solid #f1f1f1' }}
                 >
                     <Toolbar disableGutters>
-                        <Container maxWidth="lg" sx={{ display: 'flex', alignItems: 'center', gap: 2, py: 1 }}>
+                        <Container
+                            maxWidth="lg"
+                            sx={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: { xs: 1, md: 2 },
+                                py: { xs: 0.5, md: 1 },
+                                flexWrap: 'wrap',
+                                rowGap: { xs: 0.5, md: 0 },
+                            }}
+                        >
                             {/* Logo */}
-                            <Typography variant="h6" sx={{ fontWeight: 800, color: '#a43a3a', mr: 1, whiteSpace: 'nowrap' }}>
+                            <Typography
+                                variant="h6"
+                                sx={{
+                                    fontWeight: 800,
+                                    color: '#a43a3a',
+                                    mr: { xs: 0, md: 1 },
+                                    whiteSpace: { xs: 'normal', md: 'nowrap' },
+                                }}
+                            >
                                 일본어를Learnします
                             </Typography>
                             {/* Desktop nav */}
                             {isMdUp && <NavButtons />}
 
-                            <Box sx={{ flex: 1 }} />
+                            <Box sx={{ flex: { xs: '0 0 100%', md: 1 } }} />
 
                             {/* Mini Pomodoro + Nút bật thông báo — CHỈ render ở client để tránh hydration */}
                             <NoSsr defer>
@@ -146,8 +164,12 @@ export default function Layout({ children }) {
 
             {/* Mobile Drawer */}
             <Drawer anchor="right" open={open} onClose={() => setOpen(false)}>
-                <Box sx={{ width: 280 }} role="presentation" onClick={() => setOpen(false)}>
-                    <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ px: 2, py: 2 }}>
+                <Box
+                    sx={{ width: { xs: 240, sm: 280 } }}
+                    role="presentation"
+                    onClick={() => setOpen(false)}
+                >
+                    <Stack className="responsive-stack" direction="row" alignItems="center" justifyContent="space-between" sx={{ px: 2, py: 2 }}>
                         <Typography sx={{ fontWeight: 800, color: '#a43a3a' }}>Menu</Typography>
                     </Stack>
                     <Divider />
