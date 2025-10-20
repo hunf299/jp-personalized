@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE storyboard PUBLIC "-//Apple//DTD STORYBOARD 1.0//EN" "http://developer.apple.com/DTDs/IBStoryboard.dtd">
+<storyboard initialViewController="LaunchScreen" version="3.0" toolsVersion="20037" targetRuntime="iOS.CocoaTouch" propertyAccessControl="none">
+    <scenes>
+        <scene sceneID="LaunchScene">
+            <objects>
+                <viewController id="LaunchScreen" sceneMemberID="viewController">
+                    <view key="view" contentMode="scaleToFill" id="LaunchView">
+                        <rect key="frame" x="0.0" y="0.0" width="390" height="844"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
+                        <color key="backgroundColor" systemColor="systemBackgroundColor"/>
+                        <subviews>
+                            <imageView clipsSubviews="YES" userInteractionEnabled="NO" contentMode="scaleAspectFit" image="AppIcon" translatesAutoresizingMaskIntoConstraints="NO" id="LogoImage"/>
+                        </subviews>
+                        <constraints>
+                            <constraint firstItem="LogoImage" firstAttribute="centerX" secondItem="LaunchView" secondAttribute="centerX" id="centerX"/>
+                            <constraint firstItem="LogoImage" firstAttribute="centerY" secondItem="LaunchView" secondAttribute="centerY" id="centerY"/>
+                            <constraint firstAttribute="width" relation="greaterThanOrEqual" constant="200" id="width"/>
+                        </constraints>
+                    </view>
+                </viewController>
+                <placeholder placeholderIdentifier="IBFirstResponder" id="FirstResponder" userLabel="First Responder"/>
+            </objects>
+        </scene>
+    </scenes>
+    <resources>
+        <image name="AppIcon" width="1024" height="1024"/>
+    </resources>
+</storyboard>
