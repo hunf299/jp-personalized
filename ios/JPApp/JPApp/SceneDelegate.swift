@@ -1,4 +1,7 @@
 import UIKit
+#if canImport(SwiftUI)
+import SwiftUI
+#endif
 
 class SceneDelegate: UIResponder, UIWindowSceneDelegate {
     var window: UIWindow?
@@ -11,12 +14,24 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         guard let windowScene = scene as? UIWindowScene else { return }
 
         let window = UIWindow(windowScene: windowScene)
+
+#if canImport(SwiftUI)
+        if #available(iOS 13.0, *) {
+            window.rootViewController = UIHostingController(rootView: DashboardRootView())
+        } else {
+            window.rootViewController = makeDashboardNavigationController()
+        }
+#else
+        window.rootViewController = makeDashboardNavigationController()
+#endif
+        self.window = window
+        window.makeKeyAndVisible()
+    }
+
+    private func makeDashboardNavigationController() -> UINavigationController {
         let navigationController = UINavigationController(rootViewController: DashboardViewController())
         navigationController.navigationBar.prefersLargeTitles = true
         navigationController.navigationBar.tintColor = UIColor(named: "LiquidPrimary")
-
-        window.rootViewController = navigationController
-        self.window = window
-        window.makeKeyAndVisible()
+        return navigationController
     }
 }
