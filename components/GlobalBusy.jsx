@@ -42,16 +42,3 @@ export function useBusy() {
   return ctx;
 }
 
-export default function Layout({ children }) {
-    // ...
-    return (
-        <Box sx={{ minHeight: '100vh', bgcolor: focus ? '#fff' : 'linear-gradient(180deg,#f3e5f5 0%,#e1f5fe 100%)' }}>
-            {/* AppBar ... */}
-            <Box sx={{ maxWidth: 1040, mx: 'auto', px: 2, py: 3 }}>
-                {/* Banner nhắc bật thông báo */}
-                <NotifyBanner />
-                {children}
-            </Box>
-        </Box>
-    );
-}

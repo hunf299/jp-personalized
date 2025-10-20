@@ -1,6 +1,6 @@
 // /api/review/save.js
-import { supabase } from '../../lib/supabase';
-import { planNext } from '../../lib/fsrs';
+import { supabase } from '../../../lib/supabase';
+import { planNext } from '../../../lib/fsrs';
 
 export default async function handler(req, res) {
     if (req.method !== 'POST') return res.status(405).json({ ok: false, error: 'Method not allowed' });
