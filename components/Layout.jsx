@@ -154,7 +154,7 @@ export default function Layout({ children }) {
                     <List>
                         <ListItemButton component={Link} href="/"><ListItemText primary="Cập nhật dữ liệu" /></ListItemButton>
                         <ListItemButton component={Link} href="/menu"><ListItemText primary="Chức năng" /></ListItemButton>
-                        <ListItemButton component={Link} href="/progress"><ListItemText primary="Quá tình học" /></ListItemButton>
+                        <ListItemButton component={Link} href="/progress"><ListItemText primary="Quá trình học" /></ListItemButton>
                         <ListItemButton component={Link} href="/pomodoro"><ListItemText primary="Pomodoro" /></ListItemButton>
                     </List>
                 </Box>
