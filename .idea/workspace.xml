@@ -1,0 +1,162 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="AutoImportSettings">
+    <option name="autoReloadType" value="SELECTIVE" />
+  </component>
+  <component name="ChangeListManager">
+    <list default="true" id="a1b7cb83-1e17-4204-b04f-926bea60a9d9" name="Changes" comment="commit name changes" />
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="Git.Settings">
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+  </component>
+  <component name="MarkdownSettingsMigration">
+    <option name="stateVersion" value="1" />
+  </component>
+  <component name="ProjectColorInfo">{
+  &quot;associatedIndex&quot;: 2
+}</component>
+  <component name="ProjectId" id="340xLVsfr7L8sVeKdAe9dcgFUtO" />
+  <component name="ProjectViewState">
+    <option name="hideEmptyMiddlePackages" value="true" />
+    <option name="showLibraryContents" value="true" />
+  </component>
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;RunOnceActivity.OpenProjectViewOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;main&quot;,
+    &quot;last_opened_file_path&quot;: &quot;/Users/nguyenhung/Documents/jp-personalized&quot;,
+    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
+    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
+    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
+    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
+    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
+    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
+  }
+}</component>
+  <component name="RecentsManager">
+    <key name="CopyFile.RECENT_KEYS">
+      <recent name="$PROJECT_DIR$" />
+    </key>
+  </component>
+  <component name="SpellCheckerSettings" RuntimeDictionaries="0" Folders="0" CustomDictionaries="0" DefaultDictionary="application-level" UseSingleDictionary="true" transferred="true" />
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="Default task">
+      <changelist id="a1b7cb83-1e17-4204-b04f-926bea60a9d9" name="Changes" comment="" />
+      <created>1760364236006</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1760364236006</updated>
+      <workItem from="1760364237043" duration="1131000" />
+      <workItem from="1760365385029" duration="4743000" />
+      <workItem from="1760577806187" duration="365000" />
+      <workItem from="1760782105651" duration="1830000" />
+      <workItem from="1760801491797" duration="1434000" />
+      <workItem from="1760845858993" duration="3028000" />
+      <workItem from="1760878432175" duration="13478000" />
+      <workItem from="1760965369928" duration="2387000" />
+    </task>
+    <task id="LOCAL-00001" summary="commit env">
+      <option name="closed" value="true" />
+      <created>1760364484921</created>
+      <option name="number" value="00001" />
+      <option name="presentableId" value="LOCAL-00001" />
+      <option name="project" value="LOCAL" />
+      <updated>1760364484921</updated>
+    </task>
+    <task id="LOCAL-00002" summary="commit env">
+      <option name="closed" value="true" />
+      <created>1760364495089</created>
+      <option name="number" value="00002" />
+      <option name="presentableId" value="LOCAL-00002" />
+      <option name="project" value="LOCAL" />
+      <updated>1760364495089</updated>
+    </task>
+    <task id="LOCAL-00003" summary="commit lint npm">
+      <option name="closed" value="true" />
+      <created>1760366397027</created>
+      <option name="number" value="00003" />
+      <option name="presentableId" value="LOCAL-00003" />
+      <option name="project" value="LOCAL" />
+      <updated>1760366397027</updated>
+    </task>
+    <task id="LOCAL-00004" summary="commit eslint npm">
+      <option name="closed" value="true" />
+      <created>1760366675513</created>
+      <option name="number" value="00004" />
+      <option name="presentableId" value="LOCAL-00004" />
+      <option name="project" value="LOCAL" />
+      <updated>1760366675513</updated>
+    </task>
+    <task id="LOCAL-00005" summary="commit package.json">
+      <option name="closed" value="true" />
+      <created>1760367034596</created>
+      <option name="number" value="00005" />
+      <option name="presentableId" value="LOCAL-00005" />
+      <option name="project" value="LOCAL" />
+      <updated>1760367034596</updated>
+    </task>
+    <task id="LOCAL-00006" summary="commit pomodoro">
+      <option name="closed" value="true" />
+      <created>1760578140078</created>
+      <option name="number" value="00006" />
+      <option name="presentableId" value="LOCAL-00006" />
+      <option name="project" value="LOCAL" />
+      <updated>1760578140078</updated>
+    </task>
+    <task id="LOCAL-00007" summary="commit pomodoro">
+      <option name="closed" value="true" />
+      <created>1760578156846</created>
+      <option name="number" value="00007" />
+      <option name="presentableId" value="LOCAL-00007" />
+      <option name="project" value="LOCAL" />
+      <updated>1760578156846</updated>
+    </task>
+    <task id="LOCAL-00008" summary="commit language changes">
+      <option name="closed" value="true" />
+      <created>1760885510578</created>
+      <option name="number" value="00008" />
+      <option name="presentableId" value="LOCAL-00008" />
+      <option name="project" value="LOCAL" />
+      <updated>1760885510578</updated>
+    </task>
+    <task id="LOCAL-00009" summary="commit name changes">
+      <option name="closed" value="true" />
+      <created>1760886372325</created>
+      <option name="number" value="00009" />
+      <option name="presentableId" value="LOCAL-00009" />
+      <option name="project" value="LOCAL" />
+      <updated>1760886372325</updated>
+    </task>
+    <option name="localTasksCounter" value="10" />
+    <servers />
+  </component>
+  <component name="TypeScriptGeneratedFilesManager">
+    <option name="version" value="3" />
+  </component>
+  <component name="Vcs.Log.Tabs.Properties">
+    <option name="TAB_STATES">
+      <map>
+        <entry key="MAIN">
+          <value>
+            <State />
+          </value>
+        </entry>
+      </map>
+    </option>
+  </component>
+  <component name="VcsManagerConfiguration">
+    <MESSAGE value="commit env" />
+    <MESSAGE value="commit lint npm" />
+    <MESSAGE value="commit eslint npm" />
+    <MESSAGE value="commit package.json" />
+    <MESSAGE value="commit pomodoro" />
+    <MESSAGE value="commit language changes" />
+    <MESSAGE value="commit name changes" />
+    <option name="LAST_COMMIT_MESSAGE" value="commit name changes" />
+  </component>
+</project>

@@ -9,7 +9,7 @@ final class LiquidGlassView: UIView {
 
     override init(frame: CGRect) {
         let blurEffect: UIBlurEffect
-        if #available(iOS 17.0, *) {
+        if #available(iOS 26.0, *) {
             blurEffect = UIBlurEffect(style: .systemUltraThinMaterial)
         } else {
             blurEffect = UIBlurEffect(style: .systemThinMaterial)
