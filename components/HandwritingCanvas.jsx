@@ -191,9 +191,9 @@ export default function HandwritingCanvas({
             onPointerLeave={handlePointerLeave}
         />
         {showControls && (
-            <Stack direction="row" spacing={1}>
-              <Button size="small" variant="outlined" onClick={undo}>Undo</Button>
-              <Button size="small" variant="contained" onClick={clearCanvas}>Clear</Button>
+            <Stack className="responsive-stack" direction="row" spacing={1}>
+              <Button size="small" variant="outlined" onClick={undo} fullWidth>Undo</Button>
+              <Button size="small" variant="contained" onClick={clearCanvas} fullWidth>Clear</Button>
             </Stack>
         )}
       </Stack>

@@ -34,11 +34,11 @@ export default function ParticlesPage() {
           <Grid item xs={12} md={6} key={r.id}>
             <Card sx={{ borderRadius:3 }}>
               <CardContent>
-                <Stack direction="row" spacing={1} alignItems="center" sx={{ mb:1 }}>
+                <Stack className="responsive-stack" direction="row" spacing={1} alignItems="center" sx={{ mb:1 }}>
                   <Chip color="primary" label={r.front}/>
                   <Chip label={r.category||'trợ từ'} />
                 </Stack>
-                <Typography>{r.back}</Typography>
+                <Typography sx={{ textAlign: { xs: 'center', sm: 'left' } }}>{r.back}</Typography>
               </CardContent>
             </Card>
           </Grid>
@@ -51,11 +51,11 @@ export default function ParticlesPage() {
           <Grid item xs={12} md={6} key={idx}>
             <Card sx={{ borderRadius:3, background:'linear-gradient(180deg,#fff 0%,#e1f5fe 100%)' }}>
               <CardContent>
-                <Stack direction="row" spacing={1} sx={{ mb:1 }}>
+                <Stack className="responsive-stack" direction="row" spacing={1} sx={{ mb:1 }}>
                   <Chip color="secondary" label={c.left}/>
                   <Chip color="success" label={c.right}/>
                 </Stack>
-                <Typography>{c.note}</Typography>
+                <Typography sx={{ textAlign: { xs: 'center', sm: 'left' } }}>{c.note}</Typography>
               </CardContent>
             </Card>
           </Grid>

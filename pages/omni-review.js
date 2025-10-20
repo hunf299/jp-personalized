@@ -43,7 +43,7 @@ export default function OmniReviewPage() {
 
                         <Stack spacing={1} sx={{ minWidth: 220 }}>
                             <Typography variant="subtitle2">Mức nhớ (0–5)</Typography>
-                            <Stack direction="row" spacing={1} flexWrap="wrap">
+                            <Stack className="responsive-stack" direction="row" spacing={1} flexWrap="wrap">
                                 {[0,1,2,3,4,5].map(v=>(
                                     <Chip key={v}
                                           label={`Mức ${v}`}
@@ -70,9 +70,9 @@ export default function OmniReviewPage() {
                         </Stack>
                     </Stack>
 
-                    <Stack direction="row" spacing={1} sx={{ mt: 2 }}>
-                        <Button variant="contained" onClick={start}>Review</Button>
-                        <Button variant="outlined" onClick={()=>setOpen(true)}>Settings</Button>
+                    <Stack className="responsive-stack" direction="row" spacing={1} sx={{ mt: 2 }}>
+                        <Button variant="contained" onClick={start} fullWidth>Review</Button>
+                        <Button variant="outlined" onClick={()=>setOpen(true)} fullWidth>Settings</Button>
                     </Stack>
                 </CardContent>
             </Card>

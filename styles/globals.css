@@ -1,0 +1,31 @@
+:root {
+  color-scheme: light;
+}
+
+body {
+  background-color: #fff;
+}
+
+@media (max-width: 600px) {
+  .responsive-stack {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    row-gap: 12px !important;
+  }
+
+  .responsive-stack > .MuiButtonBase-root,
+  .responsive-stack > .MuiButton-root,
+  .responsive-stack > .MuiFormControl-root,
+  .responsive-stack > .MuiTextField-root,
+  .responsive-stack > button,
+  .responsive-stack > .MuiToggleButtonGroup-root {
+    width: 100% !important;
+  }
+}
+
+@media (max-width: 900px) {
+  .responsive-stack {
+    column-gap: 12px !important;
+    row-gap: 12px !important;
+  }
+}

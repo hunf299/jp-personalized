@@ -42,24 +42,44 @@ export default function Home() {
         {['vocab','kanji','grammar','particle'].map(key => (
           <Card key={key} sx={{ flex:1, borderRadius:3, background:'linear-gradient(180deg,#fff 0%,#f3e5f5 100%)' }}>
             <CardContent>
-              <Stack direction="row" justifyContent="space-between" alignItems="center">
+              <Stack className="responsive-stack" direction="row" justifyContent="space-between" alignItems="center">
                 <Typography variant="h6">{key}</Typography>
                 <Chip label={`${stats?.[key]||0} mục`} color={(stats?.[key]||0)?'success':'default'} />
               </Stack>
-              <Stack direction="row" spacing={1} sx={{ mt:1 }}>
-                <TextField select size="small" label="type" value={types[key]} onChange={e=> setTypes(t=> ({...t,[key]: e.target.value}))}>
+              <Stack className="responsive-stack" direction="row" spacing={1} sx={{ mt:1 }}>
+                <TextField
+                  select
+                  size="small"
+                  fullWidth
+                  label="type"
+                  value={types[key]}
+                  onChange={e=> setTypes(t=> ({...t,[key]: e.target.value}))}
+                >
                   <MenuItem value="vocab">vocab</MenuItem><MenuItem value="kanji">kanji</MenuItem><MenuItem value="grammar">grammar</MenuItem><MenuItem value="particle">particle</MenuItem>
                 </TextField>
-                <Button component="label" variant="contained" disabled={busy}>Upload CSV<input hidden accept=".csv" type="file" onChange={handleFile(key)} /></Button>
+                <Button component="label" variant="contained" disabled={busy} fullWidth>
+                  Upload CSV
+                  <input hidden accept=".csv" type="file" onChange={handleFile(key)} />
+                </Button>
               </Stack>
             </CardContent>
           </Card>
         ))}
       </Stack>
 
-      <Stack direction="row" spacing={2} sx={{ mt:3 }}>
+      <Stack className="responsive-stack" direction="row" spacing={2} sx={{ mt:3 }}>
         <Button href="/menu" variant="contained" size="large" disabled={!hasAny}>Bắt đầu học</Button>
-        {!hasAny && <Typography sx={{ alignSelf:'center', color:'text.secondary' }}>(Hãy import ít nhất một loại dữ liệu để mở menu)</Typography>}
+        {!hasAny && (
+          <Typography
+            sx={{
+              alignSelf: { xs: 'stretch', sm: 'center' },
+              textAlign: { xs: 'center', sm: 'left' },
+              color: 'text.secondary',
+            }}
+          >
+            (Hãy import ít nhất một loại dữ liệu để mở menu)
+          </Typography>
+        )}
       </Stack>
     </Container>
   );
