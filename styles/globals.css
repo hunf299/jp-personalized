@@ -13,11 +13,21 @@ body {
     row-gap: 12px !important;
   }
 
-  .responsive-stack > .MuiButtonBase-root,
   .responsive-stack > .MuiButton-root,
+  .responsive-stack > button:not(.MuiIconButton-root) {
+    width: 100% !important;
+    max-width: 320px !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+  }
+
+  .responsive-stack > .MuiButtonBase-root.MuiIconButton-root {
+    width: auto !important;
+    align-self: center !important;
+  }
+
   .responsive-stack > .MuiFormControl-root,
   .responsive-stack > .MuiTextField-root,
-  .responsive-stack > button,
   .responsive-stack > .MuiToggleButtonGroup-root {
     width: 100% !important;
   }
