@@ -238,25 +238,6 @@ private struct MemorySnapshotSection: View {
         }
     }
 }
-
-
-private extension APIClient {
-    struct SessionResultPayload: Encodable {
-        let cardID: String
-        let front: String
-        let back: String?
-        let warmup: Int
-        let recall: Int
-        let final: Int
-    }
-    struct SessionSummaryPayload: Encodable {
-        let total: Int
-        let learned: Int
-        let left: Int
-        let distribution: [Int]
-    }
-}
-
 @available(iOS 26.0, *)
 struct StudyScreen: View {
     @EnvironmentObject private var appState: AppState
