@@ -17,3 +17,7 @@ struct StudyCard: Codable, Identifiable {
 struct DashboardResponse: Codable {
     let featuredCards: [StudyCard]
 }
+
+extension StudyCard.Metric: Identifiable {
+    var id: String { "\(label)-\(value)" }
+}
