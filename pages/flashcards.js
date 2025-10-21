@@ -107,10 +107,10 @@ function WarmupMCQ({ card, deck, isKanji, onCheck }) {
                 </Button>
             ))}
           </Stack>
-          <Stack className="responsive-stack" direction="row" spacing={1} sx={{ mt: 2 }}>
+          <Stack spacing={1} sx={{ mt: 2 }} alignItems="stretch">
             <Button variant="contained" disabled={!chosen} onClick={handleCheck} fullWidth>Kiểm tra</Button>
             {checked && (
-                <Typography sx={{ ml: { xs: 0, sm: 1 }, textAlign: { xs: 'center', sm: 'left' } }}>
+                <Typography sx={{ textAlign: { xs: 'center', sm: 'left' }, width: '100%' }}>
                   {result ? 'Đúng' : <>Sai · Đáp án đúng: <b>{correctLabel}</b></>}
                 </Typography>
             )}

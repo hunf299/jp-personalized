@@ -556,7 +556,17 @@ export default function ProgressPage() {
             {loading && <Typography sx={{ opacity:.7 }}>Đang load...</Typography>}
             {!loading && liveLeech.length===0 && <Typography sx={{ opacity:.7 }}>Hiện không có thẻ leech ở mức 0 hoặc 1.</Typography>}
 
-            <Stack spacing={1} sx={{ mt:1 }}>
+            <Stack
+                direction={{ xs: 'column', md: 'row' }}
+                spacing={1}
+                sx={{
+                  mt: 1,
+                  flexWrap: { xs: 'wrap', md: 'nowrap' },
+                  overflowX: { xs: 'visible', md: 'auto' },
+                  alignItems: { md: 'stretch' },
+                  pb: { md: 1 },
+                }}
+            >
               {liveLeech.map(r => (
                   <Stack
                     key={r.card_id}
@@ -564,12 +574,18 @@ export default function ProgressPage() {
                     direction="row"
                     spacing={1}
                     alignItems="center"
-                    sx={{ border:'1px solid #f1f1f1', p:1, borderRadius:2 }}
+                    sx={{
+                      border: '1px solid #f1f1f1',
+                      p: 1,
+                      borderRadius: 2,
+                      minWidth: { xs: '100%', md: 260 },
+                      flex: { xs: '1 1 auto', md: '0 0 auto' },
+                    }}
                   >
                     <Chip label={`×${r.leech_count||0}`} color={(r.leech_count||0)>0?'error':'default'} size="small" />
                     <Typography sx={{ flex:1, textAlign:{ xs:'center', sm:'left' } }}><b>{r.front}</b>{r.back?` · ${r.back}`:''}</Typography>
                     <Chip size="small" label={`Lv ${r.liveLevel ?? '—'}`} />
-                    <Button size="small" variant="outlined" onClick={()=> goQuickReviewCard(r.card_id)} fullWidth>Ôn</Button>
+                    <Button size="small" variant="outlined" onClick={()=> goQuickReviewCard(r.card_id)}>Ôn</Button>
                   </Stack>
               ))}
             </Stack>
