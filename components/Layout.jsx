@@ -16,9 +16,15 @@ import useMediaQuery from '@mui/material/useMediaQuery';
 import { usePomodoro } from '../lib/pomodoroStore';
 import EnableNotifyButton from './EnableNotifyButton';
 
-// components/Layout.jsx
-
-// components/Layout.jsx
+const navLinks = [
+    { href: '/', label: 'Cập nhật dữ liệu' },
+    { href: '/flashcards', label: 'Flashcards' },
+    { href: '/kanji', label: 'Kanji' },
+    { href: '/grammar', label: 'Ngữ pháp' },
+    { href: '/particles', label: 'Trợ từ' },
+    { href: '/progress', label: 'Quá trình học' },
+    { href: '/pomodoro', label: 'Pomodoro' },
+];
 
 function MiniTimer() {
     // Lấy thêm 'phaseIndex' từ hook để xác định pha cuối cùng
@@ -54,14 +60,20 @@ function MiniTimer() {
                     }
                 }}
             >
-                Bắt đầu Pomo
+                Start
             </Button>
         );
     }
 
     // Nếu không, hiển thị đồng hồ mini như bình thường
     return (
-        <Stack className="responsive-stack" direction="row" spacing={1} alignItems="center" sx={{ ml: { xs: 0, md: 1 } }}>
+        <Stack
+            className="responsive-stack responsive-stack--no-collapse"
+            direction="row"
+            spacing={1}
+            alignItems="center"
+            sx={{ ml: { xs: 0, md: 1 } }}
+        >
             <Chip
                 label={labelMini}
                 sx={{
@@ -91,13 +103,33 @@ export default function Layout({ children }) {
     const [open, setOpen] = React.useState(false);
 
     const NavButtons = () => (
-        <Stack className="responsive-stack" direction="row" spacing={1} sx={{
-            border: '1px solid #eee', borderRadius: 999, px: 1, py: 0.5, background: '#fff'
-        }}>
-            <Button component={Link} href="/" color="inherit">Cập nhật dữ liệu</Button>
-            <Button component={Link} href="/menu" color="inherit">Chức năng</Button>
-            <Button component={Link} href="/progress" color="inherit">Quá trình học</Button>
-            <Button component={Link} href="/pomodoro" color="inherit">Pomodoro</Button>
+        <Stack
+            className="responsive-stack"
+            direction="row"
+            spacing={0.5}
+            sx={{
+                border: '1px solid #eee',
+                borderRadius: 999,
+                px: 1,
+                py: 0.5,
+                background: '#fff',
+                flexWrap: 'wrap',
+                columnGap: 0.5,
+                rowGap: 0.5,
+            }}
+        >
+            {navLinks.map((link) => (
+                <Button
+                    key={link.href}
+                    component={Link}
+                    href={link.href}
+                    color="inherit"
+                    size="small"
+                    sx={{ textTransform: 'none', px: 1.5 }}
+                >
+                    {link.label}
+                </Button>
+            ))}
         </Stack>
     );
 
@@ -117,10 +149,11 @@ export default function Layout({ children }) {
                             sx={{
                                 display: 'flex',
                                 alignItems: 'center',
-                                gap: { xs: 1, md: 2 },
+                                gap: { xs: 0.75, md: 2 },
                                 py: { xs: 0.5, md: 1 },
-                                flexWrap: 'wrap',
+                                flexWrap: { xs: 'nowrap', md: 'wrap' },
                                 rowGap: { xs: 0.5, md: 0 },
+                                overflowX: { xs: 'auto', md: 'visible' },
                             }}
                         >
                             {/* Logo */}
@@ -131,6 +164,8 @@ export default function Layout({ children }) {
                                     color: '#a43a3a',
                                     mr: { xs: 0, md: 1 },
                                     whiteSpace: { xs: 'normal', md: 'nowrap' },
+                                    fontSize: { xs: 18, md: 20 },
+                                    flexShrink: { xs: 1, md: 0 },
                                 }}
                             >
                                 일본어를Learnします
@@ -138,7 +173,7 @@ export default function Layout({ children }) {
                             {/* Desktop nav */}
                             {isMdUp && <NavButtons />}
 
-                            <Box sx={{ flex: { xs: '0 0 100%', md: 1 } }} />
+                            <Box sx={{ flex: 1, minWidth: { xs: 12, md: 'auto' } }} />
 
                             {/* Mini Pomodoro + Nút bật thông báo — CHỈ render ở client để tránh hydration */}
                             <NoSsr defer>
@@ -174,10 +209,11 @@ export default function Layout({ children }) {
                     </Stack>
                     <Divider />
                     <List>
-                        <ListItemButton component={Link} href="/"><ListItemText primary="Cập nhật dữ liệu" /></ListItemButton>
-                        <ListItemButton component={Link} href="/menu"><ListItemText primary="Chức năng" /></ListItemButton>
-                        <ListItemButton component={Link} href="/progress"><ListItemText primary="Quá trình học" /></ListItemButton>
-                        <ListItemButton component={Link} href="/pomodoro"><ListItemText primary="Pomodoro" /></ListItemButton>
+                        {navLinks.map((link) => (
+                            <ListItemButton key={link.href} component={Link} href={link.href}>
+                                <ListItemText primary={link.label} />
+                            </ListItemButton>
+                        ))}
                     </List>
                 </Box>
             </Drawer>
