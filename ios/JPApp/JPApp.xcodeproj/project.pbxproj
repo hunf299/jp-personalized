@@ -8,10 +8,8 @@
 
 /* Begin PBXBuildFile section */
 		679319AE2EA6A60200C275D1 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 679319AD2EA6A60200C275D1 /* LaunchScreen.storyboard */; };
-		AA1A000127D3F36F00A1B1A0 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA1A000027D3F36F00A1B1A0 /* AppDelegate.swift */; };
-		AA1A000327D3F36F00A1B1A0 /* SceneDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA1A000227D3F36F00A1B1A0 /* SceneDelegate.swift */; };
-		AA1A000527D3F36F00A1B1A0 /* ViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA1A000427D3F36F00A1B1A0 /* ViewController.swift */; };
-		AA1A000727D3F36F00A1B1A0 /* LiquidGlassView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA1A000627D3F36F00A1B1A0 /* LiquidGlassView.swift */; };
+		AA1A000127D3F36F00A1B1A0 /* BackendApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA1A000027D3F36F00A1B1A0 /* BackendApp.swift */; };
+		AA1A000327D3F36F00A1B1A0 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA1A000227D3F36F00A1B1A0 /* ContentView.swift */; };
 		AA1A000927D3F36F00A1B1A0 /* APIClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA1A000827D3F36F00A1B1A0 /* APIClient.swift */; };
 		AA1A000B27D3F36F00A1B1A0 /* StudyCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA1A000A27D3F36F00A1B1A0 /* StudyCard.swift */; };
 		AA1A000D27D3F36F00A1B1A0 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = AA1A000C27D3F36F00A1B1A0 /* Assets.xcassets */; };
@@ -19,10 +17,8 @@
 
 /* Begin PBXFileReference section */
 		679319AD2EA6A60200C275D1 /* LaunchScreen.storyboard */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; path = LaunchScreen.storyboard; sourceTree = "<group>"; };
-		AA1A000027D3F36F00A1B1A0 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
-		AA1A000227D3F36F00A1B1A0 /* SceneDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SceneDelegate.swift; sourceTree = "<group>"; };
-		AA1A000427D3F36F00A1B1A0 /* ViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ViewController.swift; sourceTree = "<group>"; };
-		AA1A000627D3F36F00A1B1A0 /* LiquidGlassView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiquidGlassView.swift; sourceTree = "<group>"; };
+		AA1A000027D3F36F00A1B1A0 /* BackendApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackendApp.swift; sourceTree = "<group>"; };
+		AA1A000227D3F36F00A1B1A0 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		AA1A000827D3F36F00A1B1A0 /* APIClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIClient.swift; sourceTree = "<group>"; };
 		AA1A000A27D3F36F00A1B1A0 /* StudyCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StudyCard.swift; sourceTree = "<group>"; };
 		AA1A000C27D3F36F00A1B1A0 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
@@ -69,10 +65,8 @@
 		AA1A001B27D3F36F00A1B1A0 /* Sources */ = {
 			isa = PBXGroup;
 			children = (
-				AA1A000027D3F36F00A1B1A0 /* AppDelegate.swift */,
-				AA1A000227D3F36F00A1B1A0 /* SceneDelegate.swift */,
-				AA1A000427D3F36F00A1B1A0 /* ViewController.swift */,
-				AA1A000627D3F36F00A1B1A0 /* LiquidGlassView.swift */,
+				AA1A000027D3F36F00A1B1A0 /* BackendApp.swift */,
+				AA1A000227D3F36F00A1B1A0 /* ContentView.swift */,
 				AA1A000827D3F36F00A1B1A0 /* APIClient.swift */,
 				AA1A000A27D3F36F00A1B1A0 /* StudyCard.swift */,
 			);
@@ -154,10 +148,8 @@
 			files = (
 				AA1A000B27D3F36F00A1B1A0 /* StudyCard.swift in Sources */,
 				AA1A000927D3F36F00A1B1A0 /* APIClient.swift in Sources */,
-				AA1A000727D3F36F00A1B1A0 /* LiquidGlassView.swift in Sources */,
-				AA1A000527D3F36F00A1B1A0 /* ViewController.swift in Sources */,
-				AA1A000327D3F36F00A1B1A0 /* SceneDelegate.swift in Sources */,
-				AA1A000127D3F36F00A1B1A0 /* AppDelegate.swift in Sources */,
+				AA1A000327D3F36F00A1B1A0 /* ContentView.swift in Sources */,
+				AA1A000127D3F36F00A1B1A0 /* BackendApp.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
