@@ -1,11 +1,18 @@
 #if canImport(SwiftUI)
 import SwiftUI
+import Combine
 
-@available(iOS 16.0, *)
+@available(iOS 26.0, *)
 struct ContentView: View {
     @StateObject private var viewModel: DashboardViewModel
+    @State private var isShowingErrorAlert = false
+    @State private var currentErrorMessage: String? = nil
 
-    init(viewModel: DashboardViewModel = DashboardViewModel()) {
+    init() {
+        _viewModel = StateObject(wrappedValue: DashboardViewModel())
+    }
+
+    init(viewModel: DashboardViewModel) {
         _viewModel = StateObject(wrappedValue: viewModel)
     }
 
@@ -15,7 +22,7 @@ struct ContentView: View {
                 Color(.systemGroupedBackground)
                     .ignoresSafeArea()
 
-                if viewModel.cards.isEmpty {
+                if viewModel.overviewCard == nil {
                     if viewModel.isLoading {
                         ProgressView("Đang tải dữ liệu...")
                             .progressViewStyle(.circular)
@@ -26,64 +33,59 @@ struct ContentView: View {
                         }
                     }
                 } else {
-                    cardList
+                    cardContent
                 }
             }
-            .animation(.easeInOut, value: viewModel.cards.isEmpty)
+            .animation(.easeInOut, value: viewModel.overviewCard == nil)
             .navigationTitle("JP Personalized")
         }
-        .task { await viewModel.load() }
+        .task { await viewModel.refresh() }
         .alert(
             "Không thể đồng bộ",
-            isPresented: Binding(
-                get: { viewModel.errorMessage != nil },
-                set: { if !$0 { viewModel.errorMessage = nil } }
-            )
+            isPresented: $isShowingErrorAlert
         ) {
             Button("Thử lại") {
                 Task { await viewModel.refresh() }
             }
-            Button("Đóng", role: .cancel) {
-                viewModel.errorMessage = nil
-            }
+            Button("Đóng", role: .cancel) { }
         } message: {
-            Text(viewModel.errorMessage ?? "")
+            Text(currentErrorMessage ?? "")
+        }
+        .onChange(of: viewModel.errorMessage) { _, newValue in
+            currentErrorMessage = newValue
+            isShowingErrorAlert = (newValue != nil)
         }
     }
 
     @ViewBuilder
-    private var cardList: some View {
-        List {
-            ForEach(viewModel.cards) { card in
-                NavigationLink {
-                    CardDetailView(card: card)
-                } label: {
-                    CardRow(card: card)
+    private var cardContent: some View {
+        if let card = viewModel.overviewCard {
+            ScrollView {
+                VStack(spacing: 24) {
+                    GlassContainer {
+                        VStack(alignment: .leading, spacing: 16) {
+                            Text(card.subtitle)
+                                .font(.headline)
+                                .foregroundColor(Color("LiquidPrimary"))
+                            Text(card.longDescription)
+                                .font(.body)
+                                .foregroundColor(.secondary)
+                        }
+                    }
+
+                    VStack(spacing: 12) {
+                        ForEach(card.metrics) { metric in
+                            MetricRow(metric: metric)
+                        }
+                    }
                 }
-                .listRowSeparator(.hidden)
-                .listRowBackground(Color.clear)
-                .padding(.vertical, 4)
-            }
-        }
-        .listStyle(.plain)
-        .scrollContentBackground(.hidden)
-        .background(Color.clear)
-        .refreshable { await viewModel.refresh() }
-        .overlay {
-            if viewModel.isLoading {
-                ProgressView()
-                    .progressViewStyle(.circular)
-                    .padding()
-                    .background(
-                        .regularMaterial,
-                        in: RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    )
+                .padding()
             }
         }
     }
 }
 
-@available(iOS 16.0, *)
+@available(iOS 26.0, *)
 struct CardRow: View {
     let card: StudyCard
 
@@ -110,7 +112,7 @@ struct CardRow: View {
     }
 }
 
-@available(iOS 16.0, *)
+@available(iOS 26.0, *)
 struct CardDetailView: View {
     let card: StudyCard
 
@@ -142,7 +144,7 @@ struct CardDetailView: View {
     }
 }
 
-@available(iOS 16.0, *)
+@available(iOS 26.0, *)
 struct MetricRow: View {
     let metric: StudyCard.Metric
 
@@ -192,7 +194,7 @@ struct DashboardEmptyState: View {
     }
 }
 
-@available(iOS 16.0, *)
+@available(iOS 26.0, *)
 struct GlassContainer<Content: View>: View {
     private let content: Content
     private let cornerRadius: CGFloat
@@ -234,44 +236,8 @@ struct GlassContainer<Content: View>: View {
     }
 }
 
-@available(iOS 16.0, *)
-@MainActor
-final class DashboardViewModel: ObservableObject {
-    @Published private(set) var cards: [StudyCard]
-    @Published private(set) var isLoading = false
-    @Published var errorMessage: String?
-
-    private let apiClient: APIClient
-
-    init(apiClient: APIClient = APIClient(), initialCards: [StudyCard] = []) {
-        self.apiClient = apiClient
-        self.cards = initialCards
-    }
-
-    func load() async {
-        guard cards.isEmpty else { return }
-        await refresh()
-    }
-
-    func refresh() async {
-        if isLoading { return }
-        isLoading = true
-        errorMessage = nil
-        defer { isLoading = false }
-
-        do {
-            let dashboard = try await apiClient.fetchDashboard()
-            withAnimation(.spring(response: 0.45, dampingFraction: 0.82)) {
-                cards = dashboard.featuredCards
-            }
-        } catch {
-            errorMessage = error.localizedDescription
-        }
-    }
-}
-
 #if compiler(>=5.9)
-@available(iOS 17.0, *)
+@available(iOS 26.0, *)
 #Preview("Danh sách thẻ") {
     let sampleMetrics = [
         StudyCard.Metric(label: "Số thẻ", value: "24"),
@@ -298,9 +264,9 @@ final class DashboardViewModel: ObservableObject {
         )
     ]
 
-    return ContentView(viewModel: DashboardViewModel(initialCards: sampleCards))
-        .frame(maxHeight: .infinity)
+    ContentView()
 }
 #endif
 
 #endif
+

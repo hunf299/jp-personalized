@@ -35,11 +35,11 @@ final class APIClient {
             return url
         }
 
-        // Fallback to local Next.js dev server
-        return URL(string: "http://localhost:3000")!
+        // Fallback to production Vercel deployment
+        return URL(string: "https://jp-personalized.vercel.app")!
     }
 
-    func fetchDashboard() async throws -> DashboardResponse {
+    func fetchStats() async throws -> DashboardStats {
         let endpoint = baseURL.appendingPathComponent("api/stats")
         let (data, _) = try await data(for: endpoint)
 
@@ -51,7 +51,7 @@ final class APIClient {
         }
 
         do {
-            return try decoder.decode(DashboardResponse.self, from: data)
+            return try decoder.decode(DashboardStats.self, from: data)
         } catch {
             throw APIError.decodingFailed
         }
@@ -69,3 +69,4 @@ final class APIClient {
         }
     }
 }
+
