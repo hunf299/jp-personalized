@@ -16,9 +16,15 @@ import useMediaQuery from '@mui/material/useMediaQuery';
 import { usePomodoro } from '../lib/pomodoroStore';
 import EnableNotifyButton from './EnableNotifyButton';
 
-// components/Layout.jsx
-
-// components/Layout.jsx
+const navLinks = [
+    { href: '/', label: 'Cập nhật dữ liệu' },
+    { href: '/flashcards', label: 'Flashcards' },
+    { href: '/kanji', label: 'Kanji' },
+    { href: '/grammar', label: 'Ngữ pháp' },
+    { href: '/particles', label: 'Trợ từ' },
+    { href: '/progress', label: 'Quá trình học' },
+    { href: '/pomodoro', label: 'Pomodoro' },
+];
 
 function MiniTimer() {
     // Lấy thêm 'phaseIndex' từ hook để xác định pha cuối cùng
@@ -54,7 +60,7 @@ function MiniTimer() {
                     }
                 }}
             >
-                Bắt đầu Pomo
+                Bắt đầu
             </Button>
         );
     }
@@ -91,13 +97,33 @@ export default function Layout({ children }) {
     const [open, setOpen] = React.useState(false);
 
     const NavButtons = () => (
-        <Stack className="responsive-stack" direction="row" spacing={1} sx={{
-            border: '1px solid #eee', borderRadius: 999, px: 1, py: 0.5, background: '#fff'
-        }}>
-            <Button component={Link} href="/" color="inherit">Cập nhật dữ liệu</Button>
-            <Button component={Link} href="/menu" color="inherit">Chức năng</Button>
-            <Button component={Link} href="/progress" color="inherit">Quá trình học</Button>
-            <Button component={Link} href="/pomodoro" color="inherit">Pomodoro</Button>
+        <Stack
+            className="responsive-stack"
+            direction="row"
+            spacing={0.5}
+            sx={{
+                border: '1px solid #eee',
+                borderRadius: 999,
+                px: 1,
+                py: 0.5,
+                background: '#fff',
+                flexWrap: 'wrap',
+                columnGap: 0.5,
+                rowGap: 0.5,
+            }}
+        >
+            {navLinks.map((link) => (
+                <Button
+                    key={link.href}
+                    component={Link}
+                    href={link.href}
+                    color="inherit"
+                    size="small"
+                    sx={{ textTransform: 'none', px: 1.5 }}
+                >
+                    {link.label}
+                </Button>
+            ))}
         </Stack>
     );
 
@@ -113,7 +139,7 @@ export default function Layout({ children }) {
                 >
                     <Toolbar disableGutters>
                         <Container
-                            maxWidth="lg"
+                            maxWidth="md"
                             sx={{
                                 display: 'flex',
                                 alignItems: 'center',
@@ -131,6 +157,7 @@ export default function Layout({ children }) {
                                     color: '#a43a3a',
                                     mr: { xs: 0, md: 1 },
                                     whiteSpace: { xs: 'normal', md: 'nowrap' },
+                                    fontSize: { xs: 18, md: 20 },
                                 }}
                             >
                                 일본어를Learnします
@@ -174,10 +201,11 @@ export default function Layout({ children }) {
                     </Stack>
                     <Divider />
                     <List>
-                        <ListItemButton component={Link} href="/"><ListItemText primary="Cập nhật dữ liệu" /></ListItemButton>
-                        <ListItemButton component={Link} href="/menu"><ListItemText primary="Chức năng" /></ListItemButton>
-                        <ListItemButton component={Link} href="/progress"><ListItemText primary="Quá trình học" /></ListItemButton>
-                        <ListItemButton component={Link} href="/pomodoro"><ListItemText primary="Pomodoro" /></ListItemButton>
+                        {navLinks.map((link) => (
+                            <ListItemButton key={link.href} component={Link} href={link.href}>
+                                <ListItemText primary={link.label} />
+                            </ListItemButton>
+                        ))}
                     </List>
                 </Box>
             </Drawer>
@@ -192,7 +220,7 @@ export default function Layout({ children }) {
             )}
 
             {/* Content */}
-            <Container maxWidth="lg" sx={{ px: { xs: 1.5, sm: 2 }, py: { xs: 2, md: 3 } }}>
+            <Container maxWidth="md" sx={{ px: { xs: 1.5, sm: 2 }, py: { xs: 2, md: 3 } }}>
                 {children}
             </Container>
         </Box>
