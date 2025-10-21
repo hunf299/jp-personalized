@@ -26,6 +26,20 @@ body {
     align-self: center !important;
   }
 
+  .responsive-stack--no-collapse {
+    flex-direction: row !important;
+    align-items: center !important;
+    row-gap: 0 !important;
+  }
+
+  .responsive-stack--no-collapse > .MuiButton-root,
+  .responsive-stack--no-collapse > button:not(.MuiIconButton-root) {
+    width: auto !important;
+    max-width: none !important;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+  }
+
   .responsive-stack > .MuiFormControl-root,
   .responsive-stack > .MuiTextField-root,
   .responsive-stack > .MuiToggleButtonGroup-root {

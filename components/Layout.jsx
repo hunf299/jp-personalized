@@ -67,7 +67,13 @@ function MiniTimer() {
 
     // Nếu không, hiển thị đồng hồ mini như bình thường
     return (
-        <Stack className="responsive-stack" direction="row" spacing={1} alignItems="center" sx={{ ml: { xs: 0, md: 1 } }}>
+        <Stack
+            className="responsive-stack responsive-stack--no-collapse"
+            direction="row"
+            spacing={1}
+            alignItems="center"
+            sx={{ ml: { xs: 0, md: 1 } }}
+        >
             <Chip
                 label={labelMini}
                 sx={{
@@ -143,10 +149,11 @@ export default function Layout({ children }) {
                             sx={{
                                 display: 'flex',
                                 alignItems: 'center',
-                                gap: { xs: 1, md: 2 },
+                                gap: { xs: 0.75, md: 2 },
                                 py: { xs: 0.5, md: 1 },
-                                flexWrap: 'wrap',
+                                flexWrap: { xs: 'nowrap', md: 'wrap' },
                                 rowGap: { xs: 0.5, md: 0 },
+                                overflowX: { xs: 'auto', md: 'visible' },
                             }}
                         >
                             {/* Logo */}
@@ -158,6 +165,7 @@ export default function Layout({ children }) {
                                     mr: { xs: 0, md: 1 },
                                     whiteSpace: { xs: 'normal', md: 'nowrap' },
                                     fontSize: { xs: 18, md: 20 },
+                                    flexShrink: { xs: 1, md: 0 },
                                 }}
                             >
                                 일본어를Learnします
@@ -165,7 +173,7 @@ export default function Layout({ children }) {
                             {/* Desktop nav */}
                             {isMdUp && <NavButtons />}
 
-                            <Box sx={{ flex: { xs: '0 0 100%', md: 1 } }} />
+                            <Box sx={{ flex: 1, minWidth: { xs: 12, md: 'auto' } }} />
 
                             {/* Mini Pomodoro + Nút bật thông báo — CHỈ render ở client để tránh hydration */}
                             <NoSsr defer>
