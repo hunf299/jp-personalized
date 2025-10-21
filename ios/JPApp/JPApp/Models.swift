@@ -218,7 +218,7 @@ struct DeckCard: Identifiable, Decodable, Hashable {
             return arr
         }
         if let value = extra["related_rules"]?.stringValue {
-            return value.split(separator: ',').map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            return value.split(separator: ",").map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
         }
         return []
     }

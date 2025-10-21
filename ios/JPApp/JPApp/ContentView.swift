@@ -1,5 +1,6 @@
 #if canImport(SwiftUI)
 import SwiftUI
+import Combine
 
 @available(iOS 26.0, *)
 struct ContentView: View {
@@ -42,7 +43,7 @@ struct ContentView: View {
             .tag(Tab.tools)
         }
         .task { await appState.loadInitialDataIfNeeded() }
-        .onChange(of: appState.lastError) { _, newValue in
+        .onChange(of: appState.lastError) { newValue in
             currentErrorMessage = newValue
             showErrorAlert = newValue != nil
         }
@@ -218,7 +219,9 @@ private struct MemorySnapshotSection: View {
                         .font(.subheadline)
                         .foregroundColor(.secondary)
                 } else {
-                    ForEach(Array(snapshot.dist.enumerated()), id: \(.0)) { index, value in
+                    ForEach(Array(snapshot.dist.enumerated()), id: \.offset) { pair in
+                        let index = pair.offset
+                        let value = pair.element
                         HStack {
                             Text("Mức \(index)")
                             Spacer()
@@ -236,6 +239,23 @@ private struct MemorySnapshotSection: View {
     }
 }
 
+
+private extension APIClient {
+    struct SessionResultPayload: Encodable {
+        let cardID: String
+        let front: String
+        let back: String?
+        let warmup: Int
+        let recall: Int
+        let final: Int
+    }
+    struct SessionSummaryPayload: Encodable {
+        let total: Int
+        let learned: Int
+        let left: Int
+        let distribution: [Int]
+    }
+}
 
 @available(iOS 26.0, *)
 struct StudyScreen: View {
@@ -520,7 +540,7 @@ enum CardType: String, CaseIterable, Identifiable {
 @available(iOS 26.0, *)
 struct PracticeSessionView: View {
     @EnvironmentObject private var appState: AppState
-    @Environment(\(.dismiss)) private var dismiss
+    @Environment(\.dismiss) private var dismiss
 
     let type: CardType
     let cards: [DeckCard]
@@ -766,7 +786,7 @@ private struct WarmupQuestion: View {
                     .font(.headline)
                     .foregroundColor(Color("LiquidPrimary"))
                 VStack(spacing: 8) {
-                    ForEach(options, id: \(.self)) { option in
+                    ForEach(options, id: \.self) { option in
                         Button {
                             selectedOption = option
                         } label: {
@@ -810,7 +830,8 @@ private struct WarmupSummaryView: View {
                     .font(.headline)
                     .foregroundColor(Color("LiquidPrimary"))
                 let dist = distribution()
-                ForEach(0..<dist.count, id: \(.self)) { value in
+                ForEach(Array(dist.enumerated()), id: \.offset) { pair in
+                    let value = pair.offset
                     HStack {
                         Text("Mức \(value)")
                         Spacer()
@@ -903,7 +924,9 @@ private struct SessionResultsView: View {
                 let summary = aggregated()
                 Text("Thẻ đã học: \(summary.learned)/\(cards.count)")
                     .font(.title3.weight(.semibold))
-                ForEach(0..<summary.dist.count, id: \(.self)) { level in
+                ForEach(Array(summary.dist.enumerated()), id: \.offset) { pair in
+                    let level = pair.offset
+                    let value = pair.element
                     HStack {
                         Text("Mức \(level)")
                         Spacer()
@@ -1011,7 +1034,9 @@ private struct MemoryDistributionCard: View {
                     Text("Chưa có dữ liệu ôn tập cho loại này.")
                         .foregroundColor(.secondary)
                 } else {
-                    ForEach(Array(snapshot.dist.enumerated()), id: \(.0)) { level, value in
+                    ForEach(Array(snapshot.dist.enumerated()), id: \.offset) { pair in
+                        let level = pair.offset
+                        let value = pair.element
                         HStack {
                             Text("Mức \(level)")
                             Spacer()
@@ -1478,8 +1503,8 @@ private struct PomodoroScreen: View {
                 advancePhase()
             }
         }
-        .onChange(of: appState.pomodoroState) { _, newValue in
-            localState = newValue
+        .onChange(of: appState.pomodoroState?.phaseIndex ?? -1) { _, _ in
+            localState = appState.pomodoroState
             syncDate = Date()
         }
         .task {
@@ -1542,7 +1567,7 @@ private struct DrawingCanvas: View {
         GeometryReader { geometry in
             ZStack {
                 Color(.systemBackground)
-                ForEach(strokes.indices, id: \(.self)) { index in
+                ForEach(strokes.indices, id: \.self) { index in
                     path(for: strokes[index])
                         .stroke(Color.blue, style: StrokeStyle(lineWidth: 4, lineCap: .round, lineJoin: .round))
                 }
@@ -1685,3 +1710,4 @@ struct GlassContainer<Content: View>: View {
 }
 
 #endif
+
