@@ -145,7 +145,7 @@ export default function Layout({ children }) {
                 >
                     <Toolbar disableGutters>
                         <Container
-                            maxWidth="lg"
+                            maxWidth="md"
                             sx={{
                                 display: 'flex',
                                 alignItems: 'center',
@@ -228,7 +228,7 @@ export default function Layout({ children }) {
             )}
 
             {/* Content */}
-            <Container maxWidth="lg" sx={{ px: { xs: 1.5, sm: 2 }, py: { xs: 2, md: 3 } }}>
+            <Container maxWidth="md" sx={{ px: { xs: 1.5, sm: 2 }, py: { xs: 2, md: 3 } }}>
                 {children}
             </Container>
         </Box>
