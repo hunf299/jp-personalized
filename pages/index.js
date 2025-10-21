@@ -34,7 +34,7 @@ export default function Home() {
   const hasAny = ['vocab','kanji','grammar','particle'].some(k => (stats?.[k]||0) > 0);
 
   return (
-    <Container maxWidth="md">
+    <Container>
       <Typography variant="h5" sx={{ fontWeight:700, mb:1 }}>Cập nhật dữ liệu trước khi học</Typography>
       <Typography sx={{ mb:2, color:'text.secondary' }}>Tải CSV (headers: <b>front,back,category</b>). Có thể chỉ định type ở ô chọn.</Typography>
 
