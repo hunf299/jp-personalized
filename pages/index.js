@@ -34,7 +34,7 @@ export default function Home() {
   const hasAny = ['vocab','kanji','grammar','particle'].some(k => (stats?.[k]||0) > 0);
 
   return (
-    <Container>
+    <Container maxWidth="md">
       <Typography variant="h5" sx={{ fontWeight:700, mb:1 }}>Cập nhật dữ liệu trước khi học</Typography>
       <Typography sx={{ mb:2, color:'text.secondary' }}>Tải CSV (headers: <b>front,back,category</b>). Có thể chỉ định type ở ô chọn.</Typography>
 
@@ -68,7 +68,7 @@ export default function Home() {
       </Stack>
 
       <Stack className="responsive-stack" direction="row" spacing={2} sx={{ mt:3 }}>
-        <Button href="/menu" variant="contained" size="large" disabled={!hasAny}>Bắt đầu học</Button>
+        <Button href="/flashcards" variant="contained" size="large" disabled={!hasAny}>Bắt đầu học</Button>
         {!hasAny && (
           <Typography
             sx={{
@@ -77,7 +77,7 @@ export default function Home() {
               color: 'text.secondary',
             }}
           >
-            (Hãy import ít nhất một loại dữ liệu để mở menu)
+            (Hãy import ít nhất một loại dữ liệu để bắt đầu)
           </Typography>
         )}
       </Stack>
