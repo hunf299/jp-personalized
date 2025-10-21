@@ -3,10 +3,13 @@ import SwiftUI
 
 @main
 struct BackendApp: App {
+    @StateObject private var appState = AppState()
+
     var body: some Scene {
         WindowGroup {
             if #available(iOS 26.0, *) {
                 ContentView()
+                    .environmentObject(appState)
             } else {
                 UpgradeView()
             }
