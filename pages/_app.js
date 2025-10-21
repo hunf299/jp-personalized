@@ -20,6 +20,13 @@ const theme = createTheme({
     error: { main: '#ef5350' },
   },
   typography: { fontFamily: `'Inter', system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial`, h5: { fontWeight: 700 } },
+  components: {
+    MuiContainer: {
+      defaultProps: {
+        maxWidth: 'md',
+      },
+    },
+  },
 });
 
 export default function MyApp({ Component, pageProps }) {
