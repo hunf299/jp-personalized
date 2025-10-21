@@ -60,7 +60,7 @@ function MiniTimer() {
                     }
                 }}
             >
-                Bắt đầu
+                Start
             </Button>
         );
     }
