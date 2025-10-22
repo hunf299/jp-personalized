@@ -1,6 +1,5 @@
 #if canImport(SwiftUI)
 import SwiftUI
-import Combine
 
 @available(iOS 26.0, *)
 struct ContentView: View {
@@ -1422,26 +1421,25 @@ private struct ParticlesCatalogView: View {
 @available(iOS 26.0, *)
 private struct PomodoroScreen: View {
     @EnvironmentObject private var appState: AppState
-    @State private var localState: PomodoroState? = nil
-    @State private var syncDate = Date()
-    @State private var timer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
     @State private var isUpdating = false
+    @State private var autoRefreshTask: Task<Void, Never>? = nil
 
+    private let refreshInterval: UInt64 = 1_000_000_000
     private var schedule: [PomodoroState.Phase] { PomodoroState.Phase.schedule }
 
     var body: some View {
         VStack(spacing: 24) {
-            if let state = localState ?? appState.pomodoroState {
+            if let state = appState.pomodoroState {
                 let phase = state.currentPhase
                 GlassContainer {
                     VStack(alignment: .leading, spacing: 12) {
                         Text(phase.kind == .focus ? "Tập trung" : "Nghỉ")
                             .font(.headline)
                             .foregroundColor(Color("LiquidPrimary"))
-                        Text("Chu kỳ \(phase.cycle)/2")
+                        Text("Chu kỳ \(phase.cycle)/\(max(1, schedule.count / 2))")
                             .font(.subheadline)
                             .foregroundColor(.secondary)
-                        Text(timeLabel(for: state))
+                        Text(state.formattedTime)
                             .font(.system(size: 64, weight: .bold, design: .rounded))
                             .frame(maxWidth: .infinity, alignment: .center)
                         ProgressView(value: progress(for: state))
@@ -1450,9 +1448,10 @@ private struct PomodoroScreen: View {
                             .padding(.top, 8)
                         HStack {
                             Button(state.paused ? "Bắt đầu" : "Tạm dừng") {
-                                Task { await toggleRunning(paused: !state.paused) }
+                                Task { await togglePause(for: state) }
                             }
                             .buttonStyle(.borderedProminent)
+                            .disabled(isUpdating)
 
                             Button("Reset 2h") {
                                 Task { await resetTimer() }
@@ -1469,72 +1468,67 @@ private struct PomodoroScreen: View {
         }
         .padding()
         .navigationTitle("Pomodoro")
-        .onAppear {
-            localState = appState.pomodoroState
-            syncDate = Date()
-        }
-        .onReceive(timer) { _ in
-            guard var state = localState ?? appState.pomodoroState else { return }
-            if state.paused { return }
-            let elapsed = Date().timeIntervalSince(syncDate)
-            let next = max(0, state.secLeft - elapsed)
-            state = PomodoroState(phaseIndex: state.phaseIndex, secLeft: next, paused: false, updatedBy: state.updatedBy, updatedAt: state.updatedAt)
-            localState = state
-            if next <= 0.5 {
-                advancePhase()
-            }
-        }
-        .onChange(of: appState.pomodoroState?.phaseIndex ?? -1) { _, _ in
-            localState = appState.pomodoroState
-            syncDate = Date()
-        }
-        .task {
-            if appState.pomodoroState == nil {
-                await appState.refreshPomodoro()
-                localState = appState.pomodoroState
-                syncDate = Date()
-            }
-        }
-    }
-
-    private func timeLabel(for state: PomodoroState) -> String {
-        let remaining = Int(max(0, state.secLeft))
-        let minutes = remaining / 60
-        let seconds = remaining % 60
-        return String(format: "%02d:%02d", minutes, seconds)
+        .task { await ensureStateLoaded() }
+        .onAppear { startAutoRefresh() }
+        .onDisappear { stopAutoRefresh() }
+        .refreshable { await appState.refreshPomodoro() }
     }
 
     private func progress(for state: PomodoroState) -> Double {
         let phase = state.currentPhase
-        return 1 - max(0, min(1, state.secLeft / phase.duration))
+        guard phase.duration > 0 else { return 0 }
+        let ratio = max(0, min(1, state.secLeft / phase.duration))
+        return 1 - ratio
     }
 
-    private func toggleRunning(paused: Bool) async {
-        guard let current = localState ?? appState.pomodoroState else { return }
+    @MainActor
+    private func togglePause(for state: PomodoroState) async {
+        guard !isUpdating else { return }
         isUpdating = true
         defer { isUpdating = false }
-        await appState.updatePomodoro(phaseIndex: current.phaseIndex, secLeft: current.secLeft, paused: paused, updatedBy: nil)
-        localState = appState.pomodoroState
-        syncDate = Date()
+        await appState.updatePomodoro(
+            phaseIndex: state.phaseIndex,
+            secLeft: state.secLeft,
+            paused: !state.paused,
+            updatedBy: nil
+        )
+        await appState.refreshPomodoro()
     }
 
+    @MainActor
     private func resetTimer() async {
+        guard let first = schedule.first, !isUpdating else { return }
         isUpdating = true
         defer { isUpdating = false }
-        let first = schedule.first ?? PomodoroState.Phase(kind: .focus, cycle: 1, duration: 50 * 60)
-        await appState.updatePomodoro(phaseIndex: 0, secLeft: first.duration, paused: true, updatedBy: nil)
-        localState = appState.pomodoroState
-        syncDate = Date()
+        await appState.updatePomodoro(
+            phaseIndex: 0,
+            secLeft: first.duration,
+            paused: true,
+            updatedBy: nil
+        )
+        await appState.refreshPomodoro()
     }
 
-    private func advancePhase() {
-        guard let current = localState ?? appState.pomodoroState else { return }
-        let nextIndex = min(current.phaseIndex + 1, schedule.count - 1)
-        Task {
-            await appState.updatePomodoro(phaseIndex: nextIndex, secLeft: schedule[nextIndex].duration, paused: false, updatedBy: nil)
-            localState = appState.pomodoroState
-            syncDate = Date()
+    @MainActor
+    private func ensureStateLoaded() async {
+        if appState.pomodoroState == nil {
+            await appState.refreshPomodoro()
         }
+    }
+
+    private func startAutoRefresh() {
+        guard autoRefreshTask == nil else { return }
+        autoRefreshTask = Task { @MainActor in
+            while !Task.isCancelled {
+                await appState.refreshPomodoro()
+                try? await Task.sleep(nanoseconds: refreshInterval)
+            }
+        }
+    }
+
+    private func stopAutoRefresh() {
+        autoRefreshTask?.cancel()
+        autoRefreshTask = nil
     }
 }
 

@@ -96,7 +96,7 @@ final class APIClient {
 
     private struct UpdatePomodoroPayload: Encodable {
         let phaseIndex: Int
-        let secLeft: TimeInterval
+        let secLeft: Int
         let paused: Bool
         let updatedBy: String?
     }
@@ -209,7 +209,9 @@ final class APIClient {
     }
 
     func updatePomodoroState(phaseIndex: Int, secLeft: TimeInterval, paused: Bool, updatedBy: String?) async throws -> PomodoroState {
-        let payload = UpdatePomodoroPayload(phaseIndex: phaseIndex, secLeft: secLeft, paused: paused, updatedBy: updatedBy)
+        let normalizedSeconds = max(0, secLeft)
+        let secondsRemaining = Int(normalizedSeconds.rounded(.down))
+        let payload = UpdatePomodoroPayload(phaseIndex: phaseIndex, secLeft: secondsRemaining, paused: paused, updatedBy: updatedBy)
         let body = try encoder.encode(payload)
         let data = try await sendRequest(path: "api/pomodoro/state", method: .post, body: body)
         let response = try decodeResponse(PomodoroUpdateResponse.self, from: data)
