@@ -2,6 +2,7 @@
 import SwiftUI
 
 @main
+@MainActor
 struct BackendApp: App {
     @StateObject private var appState = AppState()
 
