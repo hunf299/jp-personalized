@@ -1,8 +1,5 @@
 #if canImport(SwiftUI)
 import SwiftUI
-import Combine
-import UserNotifications
-import UIKit
 
 @available(iOS 26.0, *)
 struct ContentView: View {
@@ -1424,37 +1421,27 @@ private struct ParticlesCatalogView: View {
 @available(iOS 26.0, *)
 private struct PomodoroScreen: View {
     @EnvironmentObject private var appState: AppState
-    @State private var localState: PomodoroState? = nil
-    @State private var syncDate = Date()
-    @State private var timer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
     @State private var isUpdating = false
-    @State private var pollTask: Task<Void, Never>? = nil
-    @State private var isSyncing = false
-    @State private var lastServerPushDate: Date? = nil
-    @State private var lastPostedPhaseIndex: Int = -1
-    @State private var lastPostedSecLeft: TimeInterval = -1
-    @State private var lastPostedPaused = true
-    @State private var lastNotifiedPhaseIndex: Int? = nil
-    @State private var didNotifyCompletion = false
-    @State private var hasNotificationPermission = false
+    @State private var autoRefreshTask: Task<Void, Never>? = nil
 
+    private let refreshInterval: UInt64 = 1_000_000_000
     private var schedule: [PomodoroState.Phase] { PomodoroState.Phase.schedule }
     private var currentState: PomodoroState? { localState ?? appState.pomodoroState }
     private let deviceID: String = PomodoroScreen.makeDeviceID()
 
     var body: some View {
         VStack(spacing: 24) {
-            if let state = currentState {
+            if let state = appState.pomodoroState {
                 let phase = state.currentPhase
                 GlassContainer {
                     VStack(alignment: .leading, spacing: 12) {
                         Text(phase.kind == .focus ? "Tập trung" : "Nghỉ")
                             .font(.headline)
                             .foregroundColor(Color("LiquidPrimary"))
-                        Text("Chu kỳ \(phase.cycle)/2")
+                        Text("Chu kỳ \(phase.cycle)/\(max(1, schedule.count / 2))")
                             .font(.subheadline)
                             .foregroundColor(.secondary)
-                        Text(timeLabel(for: state))
+                        Text(state.formattedTime)
                             .font(.system(size: 64, weight: .bold, design: .rounded))
                             .frame(maxWidth: .infinity, alignment: .center)
                         ProgressView(value: progress(for: state))
@@ -1463,7 +1450,7 @@ private struct PomodoroScreen: View {
                             .padding(.top, 8)
                         HStack {
                             Button(state.paused ? "Bắt đầu" : "Tạm dừng") {
-                                Task { await toggleRunning(paused: !state.paused) }
+                                Task { await togglePause(for: state) }
                             }
                             .buttonStyle(.borderedProminent)
                             .disabled(isUpdating)
@@ -1483,189 +1470,51 @@ private struct PomodoroScreen: View {
         }
         .padding()
         .navigationTitle("Pomodoro")
-        .onAppear {
-            prepareNotifications()
-            if let state = appState.pomodoroState {
-                let source: StateSource = state.updatedBy == deviceID ? .localSync : .remote
-                applyState(state, source: source, resetClock: true, shouldNotify: false)
-            }
-            startPolling()
-            Task { await refreshFromServer() }
-        }
-        .onDisappear {
-            stopPolling()
-        }
-        .onReceive(timer) { _ in
-            tick()
-        }
-        .onReceive(appState.$pomodoroState) { state in
-            guard let state else { return }
-            let source: StateSource = state.updatedBy == deviceID ? .localSync : .remote
-            applyState(state, source: source, resetClock: true, shouldNotify: source != .localSync)
-        }
-        .task {
-            if appState.pomodoroState == nil {
-                await appState.refreshPomodoro()
-            }
-            if let fetched = appState.pomodoroState {
-                let source: StateSource = fetched.updatedBy == deviceID ? .localSync : .remote
-                applyState(fetched, source: source, resetClock: true, shouldNotify: false)
-            }
-        }
-    }
-
-    @MainActor
-    private func tick() {
-        guard var state = currentState else { return }
-        if state.paused { return }
-        let elapsed = Date().timeIntervalSince(syncDate)
-        if elapsed < 0.5 { return }
-        let next = max(0, state.secLeft - elapsed)
-        state = PomodoroState(phaseIndex: state.phaseIndex, secLeft: next, paused: false, updatedBy: deviceID, updatedAt: Date())
-        applyState(state, source: .localUserAction, resetClock: true, shouldNotify: false)
-        if next <= 0.5 {
-            advancePhase()
-        } else {
-            Task { await pushStateIfNeeded() }
-        }
-    }
-
-    private func timeLabel(for state: PomodoroState) -> String {
-        let remaining = Int(max(0, state.secLeft))
-        let minutes = remaining / 60
-        let seconds = remaining % 60
-        return String(format: "%02d:%02d", minutes, seconds)
+        .task { await ensureStateLoaded() }
+        .onAppear { startAutoRefresh() }
+        .onDisappear { stopAutoRefresh() }
+        .refreshable { await appState.refreshPomodoro() }
     }
 
     private func progress(for state: PomodoroState) -> Double {
         let phase = state.currentPhase
-        return 1 - max(0, min(1, state.secLeft / phase.duration))
+        guard phase.duration > 0 else { return 0 }
+        let ratio = max(0, min(1, state.secLeft / phase.duration))
+        return 1 - ratio
     }
 
     @MainActor
-    private func toggleRunning(paused: Bool) async {
-        guard var current = currentState else { return }
+    private func togglePause(for state: PomodoroState) async {
+        guard !isUpdating else { return }
         isUpdating = true
         defer { isUpdating = false }
-        current = PomodoroState(phaseIndex: current.phaseIndex, secLeft: current.secLeft, paused: paused, updatedBy: deviceID, updatedAt: Date())
-        applyState(current, source: .localUserAction, resetClock: true, shouldNotify: false)
-        await pushState(force: true)
+        await appState.updatePomodoro(
+            phaseIndex: state.phaseIndex,
+            secLeft: state.secLeft,
+            paused: !state.paused,
+            updatedBy: nil
+        )
+        await appState.refreshPomodoro()
     }
 
     @MainActor
     private func resetTimer() async {
-        guard let first = schedule.first else { return }
+        guard let first = schedule.first, !isUpdating else { return }
         isUpdating = true
         defer { isUpdating = false }
-        let newState = PomodoroState(phaseIndex: 0, secLeft: first.duration, paused: true, updatedBy: deviceID, updatedAt: Date())
-        didNotifyCompletion = false
-        applyState(newState, source: .localUserAction, resetClock: true, shouldNotify: true)
-        await pushState(force: true)
-    }
-
-    @MainActor
-    private func advancePhase() {
-        guard let current = currentState else { return }
-        if current.phaseIndex >= schedule.count - 1 {
-            completeSession()
-            return
-        }
-        let nextIndex = current.phaseIndex + 1
-        let nextPhase = schedule[nextIndex]
-        let newState = PomodoroState(phaseIndex: nextIndex, secLeft: nextPhase.duration, paused: false, updatedBy: deviceID, updatedAt: Date())
-        applyState(newState, source: .localUserAction, resetClock: true, shouldNotify: true)
-        Task { await pushState(force: true) }
-    }
-
-    @MainActor
-    private func completeSession() {
-        let finalIndex = max(0, schedule.count - 1)
-        let newState = PomodoroState(phaseIndex: finalIndex, secLeft: 0, paused: true, updatedBy: deviceID, updatedAt: Date())
-        applyState(newState, source: .localUserAction, resetClock: true, shouldNotify: true)
-        Task { await pushState(force: true) }
-    }
-
-    private func prepareNotifications() {
-        Task {
-            let center = UNUserNotificationCenter.current()
-            do {
-                let granted = try await center.requestAuthorization(options: [.alert, .sound])
-                await MainActor.run {
-                    hasNotificationPermission = granted
-                }
-            } catch {
-                await MainActor.run {
-                    hasNotificationPermission = false
-                }
-            }
-        }
-    }
-
-    @MainActor
-    private func startPolling() {
-        pollTask?.cancel()
-        pollTask = Task {
-            while !Task.isCancelled {
-                try? await Task.sleep(nanoseconds: 5_000_000_000)
-                await refreshFromServer()
-            }
-        }
-    }
-
-    @MainActor
-    private func stopPolling() {
-        pollTask?.cancel()
-        pollTask = nil
-    }
-
-    @MainActor
-    private func refreshFromServer() async {
+        await appState.updatePomodoro(
+            phaseIndex: 0,
+            secLeft: first.duration,
+            paused: true,
+            updatedBy: nil
+        )
         await appState.refreshPomodoro()
-        guard let remote = appState.pomodoroState else { return }
-        if shouldIgnore(remote: remote) { return }
-        let source: StateSource = remote.updatedBy == deviceID ? .localSync : .remote
-        applyState(remote, source: source, resetClock: true, shouldNotify: source != .localSync)
     }
 
     @MainActor
-    private func pushState(force: Bool = false) async {
-        guard let current = currentState else { return }
-        if !force && current.paused { return }
-        let now = Date()
-        if !force {
-            if let last = lastServerPushDate,
-               now.timeIntervalSince(last) < 4,
-               lastPostedPhaseIndex == current.phaseIndex,
-               abs(lastPostedSecLeft - current.secLeft) < 1,
-               lastPostedPaused == current.paused {
-                return
-            }
-        }
-        if isSyncing {
-            if !force { return }
-            while isSyncing {
-                try? await Task.sleep(nanoseconds: 50_000_000)
-            }
-        }
-        isSyncing = true
-        defer { isSyncing = false }
-        lastServerPushDate = now
-        lastPostedPhaseIndex = current.phaseIndex
-        lastPostedSecLeft = current.secLeft
-        lastPostedPaused = current.paused
-        await appState.updatePomodoro(phaseIndex: current.phaseIndex, secLeft: max(0, current.secLeft), paused: current.paused, updatedBy: deviceID)
-        if let updated = appState.pomodoroState {
-            let source: StateSource = updated.updatedBy == deviceID ? .localSync : .remote
-            applyState(updated, source: source, resetClock: true, shouldNotify: false)
-        }
-    }
-
-    @MainActor
-    private func applyState(_ state: PomodoroState, source: StateSource, resetClock: Bool, shouldNotify: Bool) {
-        let previous = localState
-        localState = state
-        if resetClock {
-            syncDate = Date()
+    private func ensureStateLoaded() async {
+        if appState.pomodoroState == nil {
+            await appState.refreshPomodoro()
         }
         updateNotificationTrackers(previous: previous, next: state, shouldNotify: shouldNotify)
         if source != .localUserAction {
@@ -1782,6 +1631,21 @@ private struct PomodoroScreen: View {
         case localUserAction
         case localSync
         case remote
+    }
+
+    private func startAutoRefresh() {
+        guard autoRefreshTask == nil else { return }
+        autoRefreshTask = Task { @MainActor in
+            while !Task.isCancelled {
+                await appState.refreshPomodoro()
+                try? await Task.sleep(nanoseconds: refreshInterval)
+            }
+        }
+    }
+
+    private func stopAutoRefresh() {
+        autoRefreshTask?.cancel()
+        autoRefreshTask = nil
     }
 }
 
