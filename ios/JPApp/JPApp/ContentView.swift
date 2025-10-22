@@ -4,7 +4,7 @@ import SwiftUI
 import Combine
 #endif
 
-@available(iOS 26.0, *)
+@available(iOS 16.0, *)
 struct ContentView: View {
     enum Tab: Hashable {
         case dashboard
@@ -60,7 +60,7 @@ struct ContentView: View {
     }
 }
 
-@available(iOS 26.0, *)
+@available(iOS 16.0, *)
 struct DashboardScreen: View {
     @EnvironmentObject private var appState: AppState
     @Binding var selectedTab: ContentView.Tab
@@ -133,7 +133,7 @@ struct DashboardScreen: View {
     }
 }
 
-@available(iOS 26.0, *)
+@available(iOS 16.0, *)
 private struct StudyShortcutSection: View {
     @EnvironmentObject private var appState: AppState
     @Binding var selectedTab: ContentView.Tab
@@ -206,7 +206,7 @@ private struct StudyShortcutSection: View {
     }
 }
 
-@available(iOS 26.0, *)
+@available(iOS 16.0, *)
 private struct MemorySnapshotSection: View {
     let snapshot: MemorySnapshot
 
@@ -240,7 +240,7 @@ private struct MemorySnapshotSection: View {
         }
     }
 }
-@available(iOS 26.0, *)
+@available(iOS 16.0, *)
 struct StudyScreen: View {
     @EnvironmentObject private var appState: AppState
     @State private var selectedType: CardType = .vocab
@@ -324,7 +324,7 @@ struct StudyScreen: View {
     }
 }
 
-@available(iOS 26.0, *)
+@available(iOS 16.0, *)
 private struct CardDetailView: View {
     let card: DeckCard
     let allCards: [DeckCard]
@@ -369,7 +369,7 @@ private struct CardDetailView: View {
     }
 }
 
-@available(iOS 26.0, *)
+@available(iOS 16.0, *)
 private struct KanjiDetailSection: View {
     let card: DeckCard
     @Binding var kanjiMeta: KanjiMeta?
@@ -435,7 +435,7 @@ private struct KanjiDetailSection: View {
     }
 }
 
-@available(iOS 26.0, *)
+@available(iOS 16.0, *)
 private struct GrammarDetailSection: View {
     let card: DeckCard
     let allCards: [DeckCard]
@@ -478,7 +478,7 @@ private struct GrammarDetailSection: View {
     }
 }
 
-@available(iOS 26.0, *)
+@available(iOS 16.0, *)
 private struct ParticleDetailSection: View {
     let card: DeckCard
 
@@ -495,7 +495,7 @@ private struct ParticleDetailSection: View {
     }
 }
 
-@available(iOS 26.0, *)
+@available(iOS 16.0, *)
 enum CardType: String, CaseIterable, Identifiable {
     case vocab
     case kanji
@@ -515,7 +515,7 @@ enum CardType: String, CaseIterable, Identifiable {
 }
 
 
-@available(iOS 26.0, *)
+@available(iOS 16.0, *)
 struct PracticeSessionView: View {
     @EnvironmentObject private var appState: AppState
     @Environment(\.dismiss) private var dismiss
@@ -749,7 +749,7 @@ struct PracticeSessionView: View {
     }
 }
 
-@available(iOS 26.0, *)
+@available(iOS 16.0, *)
 private struct WarmupQuestion: View {
     let card: DeckCard
     let options: [String]
@@ -796,7 +796,7 @@ private struct WarmupQuestion: View {
     }
 }
 
-@available(iOS 26.0, *)
+@available(iOS 16.0, *)
 private struct WarmupSummaryView: View {
     let cards: [DeckCard]
     let warmupScores: [String: PracticeSessionView.WarmupResult]
@@ -837,7 +837,7 @@ private struct WarmupSummaryView: View {
     }
 }
 
-@available(iOS 26.0, *)
+@available(iOS 16.0, *)
 private struct RecallQuestion: View {
     let card: DeckCard
     let type: CardType
@@ -887,7 +887,7 @@ private struct RecallQuestion: View {
     }
 }
 
-@available(iOS 26.0, *)
+@available(iOS 16.0, *)
 private struct SessionResultsView: View {
     let cards: [DeckCard]
     let warmupScores: [String: PracticeSessionView.WarmupResult]
@@ -936,7 +936,7 @@ private struct SessionResultsView: View {
 }
 
 
-@available(iOS 26.0, *)
+@available(iOS 16.0, *)
 struct ProgressScreen: View {
     @EnvironmentObject private var appState: AppState
     @State private var selectedType: CardType = .vocab
@@ -989,7 +989,7 @@ struct ProgressScreen: View {
     }
 }
 
-@available(iOS 26.0, *)
+@available(iOS 16.0, *)
 private struct MemoryDistributionCard: View {
     let type: CardType
     let snapshot: MemorySnapshot
@@ -1036,7 +1036,7 @@ private struct MemoryDistributionCard: View {
     }
 }
 
-@available(iOS 26.0, *)
+@available(iOS 16.0, *)
 private struct SessionListView: View {
     let sessions: [StudySession]
     let onDelete: (StudySession) -> Void
@@ -1078,7 +1078,7 @@ private struct SessionListView: View {
     }
 }
 
-@available(iOS 26.0, *)
+@available(iOS 16.0, *)
 private struct SessionRow: View {
     let session: StudySession
     let isExpanded: Bool
@@ -1160,7 +1160,7 @@ private struct SessionRow: View {
     }
 }
 
-@available(iOS 26.0, *)
+@available(iOS 16.0, *)
 private struct TagLabel: View {
     let title: String
     let value: Int
@@ -1181,7 +1181,7 @@ private struct TagLabel: View {
 }
 
 
-@available(iOS 26.0, *)
+@available(iOS 16.0, *)
 struct ToolsScreen: View {
     var body: some View {
         List {
@@ -1207,7 +1207,7 @@ struct ToolsScreen: View {
     }
 }
 
-@available(iOS 26.0, *)
+@available(iOS 16.0, *)
 private struct KanjiToolsView: View {
     @EnvironmentObject private var appState: AppState
     @State private var selectedCard: DeckCard? = nil
@@ -1319,7 +1319,7 @@ private struct KanjiToolsView: View {
     }
 }
 
-@available(iOS 26.0, *)
+@available(iOS 16.0, *)
 private struct GrammarAtlasView: View {
     @EnvironmentObject private var appState: AppState
     @State private var selectedID: String? = nil
@@ -1376,7 +1376,7 @@ private struct GrammarAtlasView: View {
     }
 }
 
-@available(iOS 26.0, *)
+@available(iOS 16.0, *)
 private struct ParticlesCatalogView: View {
     @EnvironmentObject private var appState: AppState
     @State private var search: String = ""
@@ -1416,30 +1416,21 @@ private struct ParticlesCatalogView: View {
     }
 }
 
-@available(iOS 26.0, *)
+@available(iOS 16.0, *)
 private struct PomodoroScreen: View {
     @EnvironmentObject private var appState: AppState
-    @State private var localState: PomodoroState? = nil
-    @State private var syncDate = Date()
-    @State private var isUpdating = false
-    @State private var isPosting = false
-    @State private var pollTask: Task<Void, Never>? = nil
-    @State private var elapsedSinceLastPost: TimeInterval = 0
-    @State private var lastRemoteTimestamp: Date? = nil
-    @State private var lastPostedSnapshot: PomodoroState? = nil
-    @State private var lastPostedAt: Date? = nil
+    @State private var localState: PomodoroState?
+    @State private var lastSyncDate = Date()
+    @State private var pollTask: Task<Void, Never>?
+    @State private var isSubmitting = false
+    @State private var secondsSinceSync: TimeInterval = 0
+    @State private var isSyncingProgress = false
 
-    private let tickTimer = Timer.publish(every: 0.5, on: .main, in: .common)
-    private let deviceID = PomodoroDeviceID.shared.id
     private let pollInterval: UInt64 = 5_000_000_000
-    private let flushInterval: TimeInterval = 5
+    private let tickTimer = Timer.publish(every: 1, on: .main, in: .common)
+    private let progressSyncInterval: TimeInterval = 5
     private var schedule: [PomodoroState.Phase] { PomodoroState.Phase.schedule }
-    private var currentState: PomodoroState? { localState ?? appState.pomodoroState }
-    private let deviceID: String = PomodoroScreen.makeDeviceID()
-
-    private var currentState: PomodoroState? {
-        localState ?? appState.pomodoroState
-    }
+    private var deviceID: String { PomodoroDeviceIdentifier.current }
 
     private var currentState: PomodoroState? {
         localState ?? appState.pomodoroState
@@ -1469,13 +1460,13 @@ private struct PomodoroScreen: View {
                                 Task { await togglePause() }
                             }
                             .buttonStyle(.borderedProminent)
-                            .disabled(isUpdating || currentState == nil)
+                            .disabled(isSubmitting || currentState == nil)
 
                             Button("Reset 2h") {
                                 Task { await resetTimer() }
                             }
                             .buttonStyle(.bordered)
-                            .disabled(isUpdating)
+                            .disabled(isSubmitting)
                         }
                     }
                 }
@@ -1486,25 +1477,23 @@ private struct PomodoroScreen: View {
         }
         .padding()
         .navigationTitle("Pomodoro")
-        .task { await ensureStateLoaded() }
+        .task { await loadInitialState() }
         .onAppear {
             if let state = appState.pomodoroState {
-                applyRemoteState(state, reason: .initial)
+                applyRemote(state)
             }
             startPolling()
         }
         .onDisappear {
             stopPolling()
-            Task { await pushCurrentState(force: true) }
         }
-        .onReceive(pomodoroTickStream()) { _ in
+        .onReceive(tickTimer.autoconnect()) { _ in
             handleTick()
         }
-        .onChange(of: appState.pomodoroState, initial: false) { _, newValue in
-            guard let remote = newValue else { return }
-            applyRemoteState(remote, reason: .remoteFetch)
+        .onReceive(appState.$pomodoroState.compactMap { $0 }) { remote in
+            applyRemote(remote)
         }
-        .refreshable { await manualRefresh() }
+        .refreshable { await refreshState() }
     }
 
     private func progress(for state: PomodoroState) -> Double {
@@ -1515,104 +1504,98 @@ private struct PomodoroScreen: View {
     }
 
     @MainActor
-    private func ensureStateLoaded() async {
+    private func loadInitialState() async {
         if appState.pomodoroState == nil {
             await appState.refreshPomodoro()
         }
         if let state = appState.pomodoroState {
-            applyRemoteState(state, reason: .initial)
+            applyRemote(state)
         }
     }
 
     @MainActor
-    private func manualRefresh() async {
+    private func refreshState() async {
         await appState.refreshPomodoro()
-        if let state = appState.pomodoroState {
-            applyRemoteState(state, reason: .remoteFetch)
-        }
     }
 
     @MainActor
     private func togglePause() async {
-        guard !isUpdating, var state = currentState else { return }
-        isUpdating = true
-        defer { isUpdating = false }
-        state = PomodoroState(
+        guard let state = currentState else { return }
+        let updated = PomodoroState(
             phaseIndex: state.phaseIndex,
             secLeft: state.secLeft,
             paused: !state.paused,
             updatedBy: deviceID,
             updatedAt: Date()
         )
-        localState = state
-        syncDate = Date()
-        elapsedSinceLastPost = 0
-        await pushState(state, force: true)
+        await submit(updated)
     }
 
     @MainActor
     private func resetTimer() async {
-        guard !isUpdating, let first = schedule.first else { return }
-        isUpdating = true
-        defer { isUpdating = false }
-        let state = PomodoroState(
+        guard let first = schedule.first else { return }
+        let resetState = PomodoroState(
             phaseIndex: 0,
             secLeft: first.duration,
             paused: true,
             updatedBy: deviceID,
             updatedAt: Date()
         )
-        localState = state
-        syncDate = Date()
-        elapsedSinceLastPost = 0
-        await pushState(state, force: true)
+        await submit(resetState)
     }
 
     @MainActor
     private func handleTick() {
         guard var state = currentState else { return }
-        let now = Date()
-        let elapsed = now.timeIntervalSince(syncDate)
-        syncDate = now
-        guard elapsed > 0 else { return }
         guard !state.paused else { return }
+        guard state.secLeft > 0 else { return }
+        let now = Date()
+        let elapsed = now.timeIntervalSince(lastSyncDate)
+        guard elapsed > 0 else { return }
 
-        let nextLeft = max(0, state.secLeft - elapsed)
-        state = PomodoroState(
-            phaseIndex: state.phaseIndex,
-            secLeft: nextLeft,
-            paused: false,
-            updatedBy: state.updatedBy,
-            updatedAt: state.updatedAt
-        )
-        localState = state
-        elapsedSinceLastPost += elapsed
+        secondsSinceSync += elapsed
+        let remaining = max(0, state.secLeft - elapsed)
+        lastSyncDate = now
 
-        if nextLeft <= 0.5 {
+        if remaining <= 0 {
+            secondsSinceSync = 0
+            localState = PomodoroState(
+                phaseIndex: state.phaseIndex,
+                secLeft: 0,
+                paused: state.paused,
+                updatedBy: state.updatedBy,
+                updatedAt: state.updatedAt
+            )
             Task { await advancePhase() }
-        } else if elapsedSinceLastPost >= flushInterval {
-            elapsedSinceLastPost = 0
-            Task { await pushCurrentState(force: false) }
+        } else {
+            let progressState = PomodoroState(
+                phaseIndex: state.phaseIndex,
+                secLeft: remaining,
+                paused: state.paused,
+                updatedBy: state.updatedBy,
+                updatedAt: state.updatedAt
+            )
+            localState = progressState
+            if secondsSinceSync >= progressSyncInterval {
+                secondsSinceSync = 0
+                Task { await syncProgress(progressState) }
+            }
         }
     }
 
     @MainActor
     private func advancePhase() async {
+        if isSubmitting { return }
         guard let current = currentState else { return }
-        if current.secLeft > 0.5 { return }
-
         if current.phaseIndex >= schedule.count - 1 {
-            let final = PomodoroState(
+            let finished = PomodoroState(
                 phaseIndex: current.phaseIndex,
                 secLeft: 0,
                 paused: true,
                 updatedBy: deviceID,
                 updatedAt: Date()
             )
-            localState = final
-            syncDate = Date()
-            elapsedSinceLastPost = 0
-            await pushState(final, force: true)
+            await submit(finished)
             return
         }
 
@@ -1625,83 +1608,46 @@ private struct PomodoroScreen: View {
             updatedBy: deviceID,
             updatedAt: Date()
         )
-        localState = nextState
-        syncDate = Date()
-        elapsedSinceLastPost = 0
-        await pushState(nextState, force: true)
+        await submit(nextState)
     }
 
     @MainActor
-    private func pushCurrentState(force: Bool) async {
-        guard let state = currentState else { return }
-        await pushState(state, force: force)
-    }
+    private func submit(_ state: PomodoroState) async {
+        if isSubmitting { return }
+        isSubmitting = true
+        defer { isSubmitting = false }
 
-    @MainActor
-    private func pushState(_ state: PomodoroState, force: Bool) async {
-        if isPosting { return }
-        if !force {
-            if let last = lastPostedSnapshot,
-               last.phaseIndex == state.phaseIndex,
-               last.paused == state.paused,
-               abs(last.secLeft - state.secLeft) < 1 {
-                return
-            }
-            if let lastTime = lastPostedAt, Date().timeIntervalSince(lastTime) < flushInterval {
-                return
-            }
-        }
+        localState = state
+        lastSyncDate = Date()
+        secondsSinceSync = 0
 
-        isPosting = true
-        defer { isPosting = false }
         await appState.updatePomodoro(
             phaseIndex: state.phaseIndex,
             secLeft: state.secLeft,
             paused: state.paused,
             updatedBy: deviceID
         )
-
-        if let updated = appState.pomodoroState {
-            applyRemoteState(updated, reason: .localUpdate)
-        } else {
-            applyRemoteState(state, reason: .localUpdate)
-        }
     }
 
     @MainActor
-    private func applyRemoteState(_ remote: PomodoroState, reason: PomodoroSyncReason) {
-        let timestamp = remote.updatedAt ?? Date()
+    private func syncProgress(_ state: PomodoroState) async {
+        if isSubmitting || isSyncingProgress { return }
+        isSyncingProgress = true
+        defer { isSyncingProgress = false }
 
-        if reason != .localUpdate {
-            if let last = lastRemoteTimestamp, timestamp <= last {
-                if remote.updatedBy == deviceID { return }
-                if timestamp == last,
-                   let current = localState,
-                   current.phaseIndex == remote.phaseIndex,
-                   current.paused == remote.paused,
-                   abs(current.secLeft - remote.secLeft) < 1 {
-                    return
-                }
-                if timestamp < last { return }
-            }
-        }
-
-        lastRemoteTimestamp = timestamp
-        localState = remote
-        syncDate = Date()
-
-        switch reason {
-        case .localUpdate:
-            lastPostedSnapshot = remote
-            lastPostedAt = Date()
-            elapsedSinceLastPost = 0
-        case .initial, .remoteFetch:
-            elapsedSinceLastPost = 0
-        }
+        await appState.updatePomodoro(
+            phaseIndex: state.phaseIndex,
+            secLeft: state.secLeft,
+            paused: state.paused,
+            updatedBy: deviceID
+        )
     }
 
-    private func pomodoroTickStream() -> Publishers.Autoconnect<Timer.TimerPublisher> {
-        tickTimer.autoconnect()
+    @MainActor
+    private func applyRemote(_ remote: PomodoroState) {
+        localState = remote
+        lastSyncDate = Date()
+        secondsSinceSync = 0
     }
 
     private func startPolling() {
@@ -1712,6 +1658,24 @@ private struct PomodoroScreen: View {
                 await appState.refreshPomodoro()
             }
         }
+    }
+
+    private func stopPolling() {
+        pollTask?.cancel()
+        pollTask = nil
+    }
+}
+
+private enum PomodoroDeviceIdentifier {
+    static var current: String {
+        let defaults = UserDefaults.standard
+        let key = "jp.pomodoro.deviceID"
+        if let existing = defaults.string(forKey: key), !existing.isEmpty {
+            return existing
+        }
+        let newValue = UUID().uuidString.replacingOccurrences(of: "-", with: "")
+        defaults.set(newValue, forKey: key)
+        return newValue
     }
 
     private func stopPolling() {
@@ -1909,7 +1873,7 @@ private final class PomodoroDeviceID {
 }
 
 
-@available(iOS 26.0, *)
+@available(iOS 16.0, *)
 private struct DrawingCanvas: View {
     @State private var strokes: [[CGPoint]] = []
     @State private var currentStroke: [CGPoint] = []
@@ -1965,7 +1929,7 @@ private struct DrawingCanvas: View {
 }
 
 
-@available(iOS 26.0, *)
+@available(iOS 16.0, *)
 struct MetricRow: View {
     let metric: StudyCard.Metric
 
@@ -1987,7 +1951,7 @@ struct MetricRow: View {
     }
 }
 
-@available(iOS 26.0, *)
+@available(iOS 16.0, *)
 struct DashboardEmptyState: View {
     let message: String?
     let retryAction: () -> Void
@@ -2018,7 +1982,7 @@ struct DashboardEmptyState: View {
     }
 }
 
-@available(iOS 26.0, *)
+@available(iOS 16.0, *)
 struct GlassContainer<Content: View>: View {
     private let content: Content
     private let cornerRadius: CGFloat

@@ -8,7 +8,7 @@ struct BackendApp: App {
 
     var body: some Scene {
         WindowGroup {
-            if #available(iOS 26.0, *) {
+            if #available(iOS 16.0, *) {
                 ContentView()
                     .environmentObject(appState)
             } else {
