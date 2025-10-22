@@ -2,12 +2,13 @@
 import SwiftUI
 
 @main
+@MainActor
 struct BackendApp: App {
     @StateObject private var appState = AppState()
 
     var body: some Scene {
         WindowGroup {
-            if #available(iOS 26.0, *) {
+            if #available(iOS 16.0, *) {
                 ContentView()
                     .environmentObject(appState)
             } else {
