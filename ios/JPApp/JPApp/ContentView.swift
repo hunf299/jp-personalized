@@ -1434,6 +1434,12 @@ private struct PomodoroScreen: View {
     private let pollInterval: UInt64 = 5_000_000_000
     private let flushInterval: TimeInterval = 5
     private var schedule: [PomodoroState.Phase] { PomodoroState.Phase.schedule }
+    private var currentState: PomodoroState? { localState ?? appState.pomodoroState }
+    private let deviceID: String = PomodoroScreen.makeDeviceID()
+
+    private var currentState: PomodoroState? {
+        localState ?? appState.pomodoroState
+    }
 
     private var currentState: PomodoroState? {
         localState ?? appState.pomodoroState
@@ -1735,6 +1741,170 @@ private final class PomodoroDeviceID {
             defaults.set(newValue, forKey: key)
             id = newValue
         }
+    }
+
+    @MainActor
+    private func applyRemoteState(_ remote: PomodoroState, reason: PomodoroSyncReason) {
+        let timestamp = remote.updatedAt ?? Date()
+
+        if reason != .localUpdate {
+            if let last = lastRemoteTimestamp, timestamp <= last {
+                if remote.updatedBy == deviceID { return }
+                if timestamp == last,
+                   let current = localState,
+                   current.phaseIndex == remote.phaseIndex,
+                   current.paused == remote.paused,
+                   abs(current.secLeft - remote.secLeft) < 1 {
+                    return
+                }
+                if timestamp < last { return }
+            }
+        }
+
+        lastRemoteTimestamp = timestamp
+        localState = remote
+        syncDate = Date()
+
+        switch reason {
+        case .localUpdate:
+            lastPostedSnapshot = remote
+            lastPostedAt = Date()
+            elapsedSinceLastPost = 0
+        case .initial, .remoteFetch:
+            elapsedSinceLastPost = 0
+        }
+    }
+
+    private func startPolling() {
+        guard pollTask == nil else { return }
+        pollTask = Task { @MainActor in
+            while !Task.isCancelled {
+                try? await Task.sleep(nanoseconds: pollInterval)
+                await appState.refreshPomodoro()
+            }
+        }
+    }
+
+    private func stopPolling() {
+        pollTask?.cancel()
+        pollTask = nil
+    }
+}
+
+private enum PomodoroSyncReason {
+    case initial
+    case remoteFetch
+    case localUpdate
+}
+
+private final class PomodoroDeviceID {
+    static let shared = PomodoroDeviceID()
+
+    let id: String
+
+    private init() {
+        let defaults = UserDefaults.standard
+        let key = "jp.pomodoro.deviceID"
+        if let existing = defaults.string(forKey: key), !existing.isEmpty {
+            id = existing
+        } else {
+            let newValue = UUID().uuidString.replacingOccurrences(of: "-", with: "")
+            defaults.set(newValue, forKey: key)
+            id = newValue
+        }
+    }
+
+    private func notifyTransition(to kind: PomodoroState.Phase.Kind) {
+        guard hasNotificationPermission else { return }
+        let content = UNMutableNotificationContent()
+        switch kind {
+        case .focus:
+            content.title = "Pomodoro: Bắt đầu Focus 50 phút"
+            content.body = "Quay lại tập trung nào!"
+        case .breakTime:
+            content.title = "Pomodoro: Nghỉ 10 phút"
+            content.body = "Thư giãn mắt và duỗi tay nhé. Sẽ tự chuyển lại Focus."
+        }
+        content.sound = .default
+        let request = UNNotificationRequest(
+            identifier: "pomodoro-phase-\(UUID().uuidString)",
+            content: content,
+            trigger: UNTimeIntervalNotificationTrigger(timeInterval: 1, repeats: false)
+        )
+        UNUserNotificationCenter.current().add(request, withCompletionHandler: nil)
+    }
+
+    private func notifyCompletion() {
+        guard hasNotificationPermission else { return }
+        let content = UNMutableNotificationContent()
+        content.title = "Pomodoro hoàn tất"
+        content.body = "Bạn đã hoàn thành đủ chu kỳ Pomodoro (2 tiếng). 🎉"
+        content.sound = .default
+        let request = UNNotificationRequest(
+            identifier: "pomodoro-done-\(UUID().uuidString)",
+            content: content,
+            trigger: UNTimeIntervalNotificationTrigger(timeInterval: 1, repeats: false)
+        )
+        UNUserNotificationCenter.current().add(request, withCompletionHandler: nil)
+    }
+
+    private func isCompletion(_ state: PomodoroState) -> Bool {
+        state.phaseIndex >= schedule.count - 1 && state.paused && state.secLeft <= 0.5
+    }
+
+    @MainActor
+    private func shouldIgnore(remote: PomodoroState) -> Bool {
+        guard let local = localState else { return false }
+        let remoteStamp = remote.updatedAt ?? .distantPast
+        let localStamp = local.updatedAt ?? .distantPast
+        if remote.updatedBy == deviceID && remoteStamp <= localStamp {
+            return true
+        }
+        if remote.phaseIndex == local.phaseIndex,
+           abs(remote.secLeft - local.secLeft) < 1,
+           remote.paused == local.paused,
+           remoteStamp <= localStamp {
+            return true
+        }
+        return false
+    }
+
+    @MainActor
+    private func pushStateIfNeeded() async {
+        await pushState(force: false)
+    }
+
+    private static func makeDeviceID() -> String {
+        let key = "jp.pomodoro.device-id"
+        if let existing = UserDefaults.standard.string(forKey: key), !existing.isEmpty {
+            return existing
+        }
+        let base = UIDevice.current.identifierForVendor?.uuidString ?? UUID().uuidString
+        let sanitized = base.replacingOccurrences(of: "-", with: "")
+        let value = "ios-\(sanitized)"
+        UserDefaults.standard.set(value, forKey: key)
+        return value
+    }
+
+    private enum StateSource {
+        case localUserAction
+        case localSync
+        case remote
+    }
+
+    private func startAutoRefresh() {
+        guard autoRefreshTask == nil else { return }
+        autoRefreshTask = Task { @MainActor in
+            while !Task.isCancelled {
+                await appState.refreshPomodoro()
+                try? await Task.sleep(nanoseconds: refreshInterval)
+            }
+        }
+    }
+
+    private func stopAutoRefresh() {
+        autoRefreshTask?.cancel()
+        autoRefreshTask = nil
     }
 }
 
