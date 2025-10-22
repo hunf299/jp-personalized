@@ -1426,6 +1426,8 @@ private struct PomodoroScreen: View {
 
     private let refreshInterval: UInt64 = 1_000_000_000
     private var schedule: [PomodoroState.Phase] { PomodoroState.Phase.schedule }
+    private var currentState: PomodoroState? { localState ?? appState.pomodoroState }
+    private let deviceID: String = PomodoroScreen.makeDeviceID()
 
     var body: some View {
         VStack(spacing: 24) {
@@ -1514,6 +1516,121 @@ private struct PomodoroScreen: View {
         if appState.pomodoroState == nil {
             await appState.refreshPomodoro()
         }
+        updateNotificationTrackers(previous: previous, next: state, shouldNotify: shouldNotify)
+        if source != .localUserAction {
+            lastPostedPhaseIndex = state.phaseIndex
+            lastPostedSecLeft = state.secLeft
+            lastPostedPaused = state.paused
+            if let timestamp = state.updatedAt {
+                lastServerPushDate = timestamp
+            }
+        }
+    }
+
+    @MainActor
+    private func updateNotificationTrackers(previous: PomodoroState?, next: PomodoroState, shouldNotify: Bool) {
+        if isCompletion(next) {
+            if shouldNotify && !didNotifyCompletion {
+                notifyCompletion()
+            }
+            didNotifyCompletion = true
+            lastNotifiedPhaseIndex = next.phaseIndex
+            return
+        } else if didNotifyCompletion {
+            didNotifyCompletion = false
+        }
+
+        guard let previous else {
+            lastNotifiedPhaseIndex = next.phaseIndex
+            return
+        }
+
+        if next.phaseIndex != previous.phaseIndex || next.currentPhase.kind != previous.currentPhase.kind {
+            if shouldNotify && lastNotifiedPhaseIndex != next.phaseIndex {
+                notifyTransition(to: next.currentPhase.kind)
+            }
+            lastNotifiedPhaseIndex = next.phaseIndex
+        } else {
+            lastNotifiedPhaseIndex = next.phaseIndex
+        }
+    }
+
+    private func notifyTransition(to kind: PomodoroState.Phase.Kind) {
+        guard hasNotificationPermission else { return }
+        let content = UNMutableNotificationContent()
+        switch kind {
+        case .focus:
+            content.title = "Pomodoro: Bắt đầu Focus 50 phút"
+            content.body = "Quay lại tập trung nào!"
+        case .breakTime:
+            content.title = "Pomodoro: Nghỉ 10 phút"
+            content.body = "Thư giãn mắt và duỗi tay nhé. Sẽ tự chuyển lại Focus."
+        }
+        content.sound = .default
+        let request = UNNotificationRequest(
+            identifier: "pomodoro-phase-\(UUID().uuidString)",
+            content: content,
+            trigger: UNTimeIntervalNotificationTrigger(timeInterval: 1, repeats: false)
+        )
+        UNUserNotificationCenter.current().add(request, withCompletionHandler: nil)
+    }
+
+    private func notifyCompletion() {
+        guard hasNotificationPermission else { return }
+        let content = UNMutableNotificationContent()
+        content.title = "Pomodoro hoàn tất"
+        content.body = "Bạn đã hoàn thành đủ chu kỳ Pomodoro (2 tiếng). 🎉"
+        content.sound = .default
+        let request = UNNotificationRequest(
+            identifier: "pomodoro-done-\(UUID().uuidString)",
+            content: content,
+            trigger: UNTimeIntervalNotificationTrigger(timeInterval: 1, repeats: false)
+        )
+        UNUserNotificationCenter.current().add(request, withCompletionHandler: nil)
+    }
+
+    private func isCompletion(_ state: PomodoroState) -> Bool {
+        state.phaseIndex >= schedule.count - 1 && state.paused && state.secLeft <= 0.5
+    }
+
+    @MainActor
+    private func shouldIgnore(remote: PomodoroState) -> Bool {
+        guard let local = localState else { return false }
+        let remoteStamp = remote.updatedAt ?? .distantPast
+        let localStamp = local.updatedAt ?? .distantPast
+        if remote.updatedBy == deviceID && remoteStamp <= localStamp {
+            return true
+        }
+        if remote.phaseIndex == local.phaseIndex,
+           abs(remote.secLeft - local.secLeft) < 1,
+           remote.paused == local.paused,
+           remoteStamp <= localStamp {
+            return true
+        }
+        return false
+    }
+
+    @MainActor
+    private func pushStateIfNeeded() async {
+        await pushState(force: false)
+    }
+
+    private static func makeDeviceID() -> String {
+        let key = "jp.pomodoro.device-id"
+        if let existing = UserDefaults.standard.string(forKey: key), !existing.isEmpty {
+            return existing
+        }
+        let base = UIDevice.current.identifierForVendor?.uuidString ?? UUID().uuidString
+        let sanitized = base.replacingOccurrences(of: "-", with: "")
+        let value = "ios-\(sanitized)"
+        UserDefaults.standard.set(value, forKey: key)
+        return value
+    }
+
+    private enum StateSource {
+        case localUserAction
+        case localSync
+        case remote
     }
 
     private func startAutoRefresh() {
