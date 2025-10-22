@@ -1,5 +1,8 @@
 #if canImport(SwiftUI)
 import SwiftUI
+#if canImport(Combine)
+import Combine
+#endif
 
 @available(iOS 26.0, *)
 struct ContentView: View {
@@ -42,7 +45,7 @@ struct ContentView: View {
             .tag(Tab.tools)
         }
         .task { await appState.loadInitialDataIfNeeded() }
-        .onChange(of: appState.lastError) { newValue in
+        .onChange(of: appState.lastError, initial: false) { _, newValue in
             currentErrorMessage = newValue
             showErrorAlert = newValue != nil
         }
@@ -295,14 +298,9 @@ struct StudyScreen: View {
             }
         }
         .searchable(text: $searchText, placement: .navigationBarDrawer(displayMode: .automatic), prompt: "Tìm thẻ…")
-        .background(
-            NavigationLink(
-                destination: PracticeSessionView(type: selectedType, cards: practiceCards),
-                isActive: $showPractice,
-                label: { EmptyView() }
-            )
-            .hidden()
-        )
+        .navigationDestination(isPresented: $showPractice) {
+            PracticeSessionView(type: selectedType, cards: practiceCards)
+        }
     }
 
     private var filteredCards: [DeckCard] {
@@ -631,7 +629,7 @@ struct PracticeSessionView: View {
         .onAppear {
             warmupStart = Date()
         }
-        .onChange(of: qualitySelection) { _, newValue in
+        .onChange(of: qualitySelection, initial: false) { _, newValue in
             guard phase == .recall, let card = currentCard else { return }
             var result = recallScores[card.id] ?? RecallResult(quality: newValue, correct: nil, userAnswer: answerText)
             result.quality = newValue
@@ -979,7 +977,7 @@ struct ProgressScreen: View {
         }
         .refreshable { await loadData() }
         .task { await loadData() }
-        .onChange(of: selectedType) { _, _ in
+        .onChange(of: selectedType, initial: false) { _, _ in
             Task { await loadData() }
         }
     }
@@ -1426,18 +1424,22 @@ private struct PomodoroScreen: View {
     @State private var isUpdating = false
     @State private var isPosting = false
     @State private var pollTask: Task<Void, Never>? = nil
-    @State private var timer = Timer.publish(every: 0.5, on: .main, in: .common).autoconnect()
     @State private var elapsedSinceLastPost: TimeInterval = 0
     @State private var lastRemoteTimestamp: Date? = nil
     @State private var lastPostedSnapshot: PomodoroState? = nil
     @State private var lastPostedAt: Date? = nil
 
+    private let tickTimer = Timer.publish(every: 0.5, on: .main, in: .common)
     private let deviceID = PomodoroDeviceID.shared.id
     private let pollInterval: UInt64 = 5_000_000_000
     private let flushInterval: TimeInterval = 5
     private var schedule: [PomodoroState.Phase] { PomodoroState.Phase.schedule }
     private var currentState: PomodoroState? { localState ?? appState.pomodoroState }
     private let deviceID: String = PomodoroScreen.makeDeviceID()
+
+    private var currentState: PomodoroState? {
+        localState ?? appState.pomodoroState
+    }
 
     private var currentState: PomodoroState? {
         localState ?? appState.pomodoroState
@@ -1495,10 +1497,10 @@ private struct PomodoroScreen: View {
             stopPolling()
             Task { await pushCurrentState(force: true) }
         }
-        .onReceive(timer) { _ in
+        .onReceive(pomodoroTickStream()) { _ in
             handleTick()
         }
-        .onChange(of: appState.pomodoroState) { _, newValue in
+        .onChange(of: appState.pomodoroState, initial: false) { _, newValue in
             guard let remote = newValue else { return }
             applyRemoteState(remote, reason: .remoteFetch)
         }
@@ -1663,6 +1665,81 @@ private struct PomodoroScreen: View {
             applyRemoteState(updated, reason: .localUpdate)
         } else {
             applyRemoteState(state, reason: .localUpdate)
+        }
+    }
+
+    @MainActor
+    private func applyRemoteState(_ remote: PomodoroState, reason: PomodoroSyncReason) {
+        let timestamp = remote.updatedAt ?? Date()
+
+        if reason != .localUpdate {
+            if let last = lastRemoteTimestamp, timestamp <= last {
+                if remote.updatedBy == deviceID { return }
+                if timestamp == last,
+                   let current = localState,
+                   current.phaseIndex == remote.phaseIndex,
+                   current.paused == remote.paused,
+                   abs(current.secLeft - remote.secLeft) < 1 {
+                    return
+                }
+                if timestamp < last { return }
+            }
+        }
+
+        lastRemoteTimestamp = timestamp
+        localState = remote
+        syncDate = Date()
+
+        switch reason {
+        case .localUpdate:
+            lastPostedSnapshot = remote
+            lastPostedAt = Date()
+            elapsedSinceLastPost = 0
+        case .initial, .remoteFetch:
+            elapsedSinceLastPost = 0
+        }
+    }
+
+    private func pomodoroTickStream() -> Publishers.Autoconnect<Timer.TimerPublisher> {
+        tickTimer.autoconnect()
+    }
+
+    private func startPolling() {
+        guard pollTask == nil else { return }
+        pollTask = Task { @MainActor in
+            while !Task.isCancelled {
+                try? await Task.sleep(nanoseconds: pollInterval)
+                await appState.refreshPomodoro()
+            }
+        }
+    }
+
+    private func stopPolling() {
+        pollTask?.cancel()
+        pollTask = nil
+    }
+}
+
+private enum PomodoroSyncReason {
+    case initial
+    case remoteFetch
+    case localUpdate
+}
+
+private final class PomodoroDeviceID {
+    static let shared = PomodoroDeviceID()
+
+    let id: String
+
+    private init() {
+        let defaults = UserDefaults.standard
+        let key = "jp.pomodoro.deviceID"
+        if let existing = defaults.string(forKey: key), !existing.isEmpty {
+            id = existing
+        } else {
+            let newValue = UUID().uuidString.replacingOccurrences(of: "-", with: "")
+            defaults.set(newValue, forKey: key)
+            id = newValue
         }
     }
 
