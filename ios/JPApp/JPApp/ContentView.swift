@@ -1,7 +1,11 @@
 #if canImport(SwiftUI)
 import SwiftUI
+#endif
 #if canImport(Combine)
 import Combine
+#endif
+#if canImport(UserNotifications)
+import UserNotifications
 #endif
 
 @available(iOS 16.0, *)
@@ -1479,9 +1483,7 @@ private struct PomodoroScreen: View {
         .navigationTitle("Pomodoro")
         .task { await loadInitialState() }
         .onAppear {
-            if let state = appState.pomodoroState {
-                applyRemote(state)
-            }
+            requestNotificationAuthorization()
             startPolling()
         }
         .onDisappear {
@@ -1496,6 +1498,45 @@ private struct PomodoroScreen: View {
         .refreshable { await refreshState() }
     }
 
+    private func requestNotificationAuthorization() {
+        #if canImport(UserNotifications)
+        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge]) { _, _ in }
+        #endif
+    }
+
+    private func sendNotification(title: String, body: String, identifier: String) {
+        #if canImport(UserNotifications)
+        let content = UNMutableNotificationContent()
+        content.title = title
+        content.body = body
+        content.sound = .default
+        content.threadIdentifier = identifier
+
+        let trigger = UNTimeIntervalNotificationTrigger(timeInterval: 0.1, repeats: false)
+        let request = UNNotificationRequest(identifier: identifier, content: content, trigger: trigger)
+        UNUserNotificationCenter.current().add(request, withCompletionHandler: nil)
+        #endif
+    }
+
+    private func notifyPhaseStart(kind: PomodoroState.Phase.Kind) {
+        // If kind is focus, notify focus start; otherwise treat as break.
+        if kind == .focus {
+            sendNotification(title: "Pomodoro: Bắt đầu Focus 25 phút",
+                             body: "Quay lại tập trung nào!",
+                             identifier: "pomodoro-phase")
+        } else {
+            sendNotification(title: "Pomodoro: Nghỉ 5 phút",
+                             body: "Thư giãn mắt và duỗi tay nhé. Sẽ tự chuyển lại Focus.",
+                             identifier: "pomodoro-phase")
+        }
+    }
+
+    private func notifyFinished() {
+        sendNotification(title: "Pomodoro hoàn tất",
+                         body: "Bạn đã hoàn thành đủ chu kỳ Pomodoro (2 tiếng). 🎉",
+                         identifier: "pomodoro-done")
+    }
+
     private func progress(for state: PomodoroState) -> Double {
         let phase = state.currentPhase
         guard phase.duration > 0 else { return 0 }
@@ -1505,9 +1546,7 @@ private struct PomodoroScreen: View {
 
     @MainActor
     private func loadInitialState() async {
-        if appState.pomodoroState == nil {
-            await appState.refreshPomodoro()
-        }
+        await appState.refreshPomodoro()
         if let state = appState.pomodoroState {
             applyRemote(state)
         }
@@ -1537,10 +1576,13 @@ private struct PomodoroScreen: View {
         let resetState = PomodoroState(
             phaseIndex: 0,
             secLeft: first.duration,
-            paused: true,
+            paused: false,
             updatedBy: deviceID,
             updatedAt: Date()
         )
+        if let firstPhase = schedule.first {
+            notifyPhaseStart(kind: firstPhase.kind)
+        }
         await submit(resetState)
     }
 
@@ -1595,6 +1637,7 @@ private struct PomodoroScreen: View {
                 updatedBy: deviceID,
                 updatedAt: Date()
             )
+            notifyFinished()
             await submit(finished)
             return
         }
@@ -1608,6 +1651,7 @@ private struct PomodoroScreen: View {
             updatedBy: deviceID,
             updatedAt: Date()
         )
+        notifyPhaseStart(kind: nextPhase.kind)
         await submit(nextState)
     }
 
@@ -1645,9 +1689,31 @@ private struct PomodoroScreen: View {
 
     @MainActor
     private func applyRemote(_ remote: PomodoroState) {
-        localState = remote
-        lastSyncDate = Date()
-        secondsSinceSync = 0
+        // If we don't have a local state yet, accept the remote state.
+        guard let local = localState else {
+            localState = remote
+            lastSyncDate = Date()
+            secondsSinceSync = 0
+            return
+        }
+
+        // Only apply the remote state if it is strictly newer than what we have locally.
+        // This avoids overwriting in-progress local countdown with stale polled data.
+        if (remote.updatedAt ?? .distantPast) > (local.updatedAt ?? .distantPast) {
+            localState = remote
+            lastSyncDate = Date()
+            secondsSinceSync = 0
+
+            let phaseChanged = remote.phaseIndex != local.phaseIndex
+            if phaseChanged {
+                // If remote indicates end of schedule and no time left, treat as finished
+                if remote.phaseIndex >= schedule.count - 1 && remote.secLeft <= 0 && remote.paused {
+                    notifyFinished()
+                } else {
+                    notifyPhaseStart(kind: remote.currentPhase.kind)
+                }
+            }
+        }
     }
 
     private func startPolling() {
@@ -1677,201 +1743,7 @@ private enum PomodoroDeviceIdentifier {
         defaults.set(newValue, forKey: key)
         return newValue
     }
-
-    private func stopPolling() {
-        pollTask?.cancel()
-        pollTask = nil
-    }
 }
-
-private enum PomodoroSyncReason {
-    case initial
-    case remoteFetch
-    case localUpdate
-}
-
-private final class PomodoroDeviceID {
-    static let shared = PomodoroDeviceID()
-
-    let id: String
-
-    private init() {
-        let defaults = UserDefaults.standard
-        let key = "jp.pomodoro.deviceID"
-        if let existing = defaults.string(forKey: key), !existing.isEmpty {
-            id = existing
-        } else {
-            let newValue = UUID().uuidString.replacingOccurrences(of: "-", with: "")
-            defaults.set(newValue, forKey: key)
-            id = newValue
-        }
-    }
-
-    @MainActor
-    private func applyRemoteState(_ remote: PomodoroState, reason: PomodoroSyncReason) {
-        let timestamp = remote.updatedAt ?? Date()
-
-        if reason != .localUpdate {
-            if let last = lastRemoteTimestamp, timestamp <= last {
-                if remote.updatedBy == deviceID { return }
-                if timestamp == last,
-                   let current = localState,
-                   current.phaseIndex == remote.phaseIndex,
-                   current.paused == remote.paused,
-                   abs(current.secLeft - remote.secLeft) < 1 {
-                    return
-                }
-                if timestamp < last { return }
-            }
-        }
-
-        lastRemoteTimestamp = timestamp
-        localState = remote
-        syncDate = Date()
-
-        switch reason {
-        case .localUpdate:
-            lastPostedSnapshot = remote
-            lastPostedAt = Date()
-            elapsedSinceLastPost = 0
-        case .initial, .remoteFetch:
-            elapsedSinceLastPost = 0
-        }
-    }
-
-    private func startPolling() {
-        guard pollTask == nil else { return }
-        pollTask = Task { @MainActor in
-            while !Task.isCancelled {
-                try? await Task.sleep(nanoseconds: pollInterval)
-                await appState.refreshPomodoro()
-            }
-        }
-    }
-
-    private func stopPolling() {
-        pollTask?.cancel()
-        pollTask = nil
-    }
-}
-
-private enum PomodoroSyncReason {
-    case initial
-    case remoteFetch
-    case localUpdate
-}
-
-private final class PomodoroDeviceID {
-    static let shared = PomodoroDeviceID()
-
-    let id: String
-
-    private init() {
-        let defaults = UserDefaults.standard
-        let key = "jp.pomodoro.deviceID"
-        if let existing = defaults.string(forKey: key), !existing.isEmpty {
-            id = existing
-        } else {
-            let newValue = UUID().uuidString.replacingOccurrences(of: "-", with: "")
-            defaults.set(newValue, forKey: key)
-            id = newValue
-        }
-    }
-
-    private func notifyTransition(to kind: PomodoroState.Phase.Kind) {
-        guard hasNotificationPermission else { return }
-        let content = UNMutableNotificationContent()
-        switch kind {
-        case .focus:
-            content.title = "Pomodoro: Bắt đầu Focus 50 phút"
-            content.body = "Quay lại tập trung nào!"
-        case .breakTime:
-            content.title = "Pomodoro: Nghỉ 10 phút"
-            content.body = "Thư giãn mắt và duỗi tay nhé. Sẽ tự chuyển lại Focus."
-        }
-        content.sound = .default
-        let request = UNNotificationRequest(
-            identifier: "pomodoro-phase-\(UUID().uuidString)",
-            content: content,
-            trigger: UNTimeIntervalNotificationTrigger(timeInterval: 1, repeats: false)
-        )
-        UNUserNotificationCenter.current().add(request, withCompletionHandler: nil)
-    }
-
-    private func notifyCompletion() {
-        guard hasNotificationPermission else { return }
-        let content = UNMutableNotificationContent()
-        content.title = "Pomodoro hoàn tất"
-        content.body = "Bạn đã hoàn thành đủ chu kỳ Pomodoro (2 tiếng). 🎉"
-        content.sound = .default
-        let request = UNNotificationRequest(
-            identifier: "pomodoro-done-\(UUID().uuidString)",
-            content: content,
-            trigger: UNTimeIntervalNotificationTrigger(timeInterval: 1, repeats: false)
-        )
-        UNUserNotificationCenter.current().add(request, withCompletionHandler: nil)
-    }
-
-    private func isCompletion(_ state: PomodoroState) -> Bool {
-        state.phaseIndex >= schedule.count - 1 && state.paused && state.secLeft <= 0.5
-    }
-
-    @MainActor
-    private func shouldIgnore(remote: PomodoroState) -> Bool {
-        guard let local = localState else { return false }
-        let remoteStamp = remote.updatedAt ?? .distantPast
-        let localStamp = local.updatedAt ?? .distantPast
-        if remote.updatedBy == deviceID && remoteStamp <= localStamp {
-            return true
-        }
-        if remote.phaseIndex == local.phaseIndex,
-           abs(remote.secLeft - local.secLeft) < 1,
-           remote.paused == local.paused,
-           remoteStamp <= localStamp {
-            return true
-        }
-        return false
-    }
-
-    @MainActor
-    private func pushStateIfNeeded() async {
-        await pushState(force: false)
-    }
-
-    private static func makeDeviceID() -> String {
-        let key = "jp.pomodoro.device-id"
-        if let existing = UserDefaults.standard.string(forKey: key), !existing.isEmpty {
-            return existing
-        }
-        let base = UIDevice.current.identifierForVendor?.uuidString ?? UUID().uuidString
-        let sanitized = base.replacingOccurrences(of: "-", with: "")
-        let value = "ios-\(sanitized)"
-        UserDefaults.standard.set(value, forKey: key)
-        return value
-    }
-
-    private enum StateSource {
-        case localUserAction
-        case localSync
-        case remote
-    }
-
-    private func startAutoRefresh() {
-        guard autoRefreshTask == nil else { return }
-        autoRefreshTask = Task { @MainActor in
-            while !Task.isCancelled {
-                await appState.refreshPomodoro()
-                try? await Task.sleep(nanoseconds: refreshInterval)
-            }
-        }
-    }
-
-    private func stopAutoRefresh() {
-        autoRefreshTask?.cancel()
-        autoRefreshTask = nil
-    }
-}
-
 
 @available(iOS 16.0, *)
 private struct DrawingCanvas: View {
@@ -2023,6 +1895,4 @@ struct GlassContainer<Content: View>: View {
             }
     }
 }
-
-#endif
 
