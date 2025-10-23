@@ -1588,9 +1588,8 @@ private struct PomodoroScreen: View {
 
     @MainActor
     private func handleTick() {
-        guard var state = currentState else { return }
+        guard let state = currentState else { return }
         guard !state.paused else { return }
-        guard state.secLeft > 0 else { return }
         let now = Date()
         let elapsed = now.timeIntervalSince(lastSyncDate)
         guard elapsed > 0 else { return }
@@ -1689,30 +1688,46 @@ private struct PomodoroScreen: View {
 
     @MainActor
     private func applyRemote(_ remote: PomodoroState) {
-        // If we don't have a local state yet, accept the remote state.
-        guard let local = localState else {
-            localState = remote
-            lastSyncDate = Date()
-            secondsSinceSync = 0
+        let now = Date()
+        let syncBase = min(remote.updatedAt ?? now, now)
+        let elapsed = remote.paused ? 0 : max(0, now.timeIntervalSince(syncBase))
+        let adjustedRemaining = remote.paused ? remote.secLeft : max(0, remote.secLeft - elapsed)
+        let resolved = PomodoroState(
+            phaseIndex: remote.phaseIndex,
+            secLeft: adjustedRemaining,
+            paused: remote.paused,
+            updatedBy: remote.updatedBy,
+            updatedAt: remote.updatedAt
+        )
+
+        func applyResolved(previous: PomodoroState?) {
+            localState = resolved
+            lastSyncDate = now
+            secondsSinceSync = remote.paused ? 0 : min(progressSyncInterval, elapsed)
+
+            if let previous = previous {
+                let phaseChanged = remote.phaseIndex != previous.phaseIndex
+                if phaseChanged {
+                    if remote.phaseIndex >= schedule.count - 1 && adjustedRemaining <= 0 && remote.paused {
+                        notifyFinished()
+                    } else {
+                        notifyPhaseStart(kind: remote.currentPhase.kind)
+                    }
+                }
+            }
+
+            if !remote.paused && adjustedRemaining <= 0 && !isSubmitting {
+                Task { await advancePhase() }
+            }
+        }
+
+        guard let existing = localState else {
+            applyResolved(previous: nil)
             return
         }
 
-        // Only apply the remote state if it is strictly newer than what we have locally.
-        // This avoids overwriting in-progress local countdown with stale polled data.
-        if (remote.updatedAt ?? .distantPast) > (local.updatedAt ?? .distantPast) {
-            localState = remote
-            lastSyncDate = Date()
-            secondsSinceSync = 0
-
-            let phaseChanged = remote.phaseIndex != local.phaseIndex
-            if phaseChanged {
-                // If remote indicates end of schedule and no time left, treat as finished
-                if remote.phaseIndex >= schedule.count - 1 && remote.secLeft <= 0 && remote.paused {
-                    notifyFinished()
-                } else {
-                    notifyPhaseStart(kind: remote.currentPhase.kind)
-                }
-            }
+        if (remote.updatedAt ?? .distantPast) > (existing.updatedAt ?? .distantPast) {
+            applyResolved(previous: existing)
         }
     }
 
