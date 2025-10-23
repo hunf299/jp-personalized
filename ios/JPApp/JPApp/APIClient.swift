@@ -94,6 +94,13 @@ final class APIClient {
         let error: String?
     }
 
+    private struct LeechBoardResponse: Decodable {
+        let ok: Bool?
+        let rows: [LeechEntry]?
+        let items: [LeechEntry]?
+        let error: String?
+    }
+
     private struct UpdatePomodoroPayload: Encodable {
         let phaseIndex: Int
         let secLeft: Int
@@ -161,6 +168,25 @@ final class APIClient {
         }
         let data = try await sendRequest(path: "api/sessions", queryItems: queryItems)
         return try decodeResponse([StudySession].self, from: data)
+    }
+
+    func fetchLeechBoard(type: String) async throws -> [LeechEntry] {
+        let queryItems = [URLQueryItem(name: "type", value: type)]
+        let data = try await sendRequest(path: "api/leech/top", queryItems: queryItems)
+        let response = try decodeResponse(LeechBoardResponse.self, from: data)
+        if let error = response.error, !(error.isEmpty) {
+            throw APIError.serverMessage(error)
+        }
+        if response.ok == false {
+            throw APIError.serverMessage("Không thể tải danh sách leech.")
+        }
+        if let rows = response.rows, !rows.isEmpty {
+            return rows
+        }
+        if let items = response.items {
+            return items
+        }
+        return []
     }
 
     func logReview(cardID: String, type: String, front: String, back: String?, warmup: Int?, recall: Int?, final: Int?, quality: Int) async throws {

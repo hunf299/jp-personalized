@@ -5,19 +5,25 @@ import Foundation
 @MainActor
 final class AppState: ObservableObject {
     @Published private(set) var stats: DashboardStats?
-    @Published private(set) var cards: [DeckCard] = []
+    @Published private(set) var cards: [DeckCard] = [] {
+        didSet { rebuildCardLookup() }
+    }
     @Published private(set) var sessionsByType: [String: [StudySession]] = [:]
     @Published private(set) var memorySnapshots: [String: MemorySnapshot] = [:]
     @Published private(set) var pomodoroState: PomodoroState?
     @Published private(set) var isRefreshing = false
     @Published private(set) var lastError: String?
     @Published private(set) var lastUpdated: Date?
+    @Published private(set) var leechBoards: [String: [LeechEntry]] = [:]
+    @Published private(set) var leechErrors: [String: String] = [:]
 
     private let api: APIClient
     private var initialDataLoaded = false
+    private var cardLookup: [String: DeckCard] = [:]
 
     init(api: APIClient = APIClient()) {
         self.api = api
+        rebuildCardLookup()
     }
 
     func loadInitialDataIfNeeded() async {
@@ -75,6 +81,16 @@ final class AppState: ObservableObject {
         return memorySnapshots[key] ?? .empty
     }
 
+    func leechBoard(for type: String?) -> [LeechEntry] {
+        let key = normalizedKey(for: type)
+        return leechBoards[key] ?? []
+    }
+
+    func leechError(for type: String?) -> String? {
+        let key = normalizedKey(for: type)
+        return leechErrors[key]
+    }
+
     func refreshProgress(for type: String?) async {
         let key = normalizedKey(for: type)
         do {
@@ -86,6 +102,22 @@ final class AppState: ObservableObject {
             lastError = nil
         } catch {
             lastError = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
+        }
+    }
+
+    func refreshLeechBoard(for type: String?) async {
+        let key = normalizedKey(for: type)
+        guard let rawType = type?.trimmingCharacters(in: .whitespacesAndNewlines), !rawType.isEmpty else {
+            leechBoards[key] = []
+            leechErrors[key] = "Thiếu loại thẻ hợp lệ."
+            return
+        }
+        do {
+            let entries = try await api.fetchLeechBoard(type: rawType)
+            leechBoards[key] = entries
+            leechErrors[key] = nil
+        } catch {
+            leechErrors[key] = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
         }
     }
 
@@ -137,8 +169,58 @@ final class AppState: ObservableObject {
         }
     }
 
+    func deckCard(forID id: String) -> DeckCard? {
+        cardLookup[id.lowercased()]
+    }
+
+    func deckCard(for row: MemoryRow) -> DeckCard? {
+        if let matched = deckCard(forID: row.cardID) {
+            return matched
+        }
+        let trimmedFront = row.front?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        guard !trimmedFront.isEmpty else { return nil }
+        let numeric = Int(row.cardID)
+        return DeckCard(id: row.cardID, numericID: numeric, type: row.type ?? "vocab", front: trimmedFront, back: row.back, category: nil, extra: [:])
+    }
+
+    func deckCards(forIDs ids: [String]) -> [DeckCard] {
+        var results: [DeckCard] = []
+        var seen: Set<String> = []
+        for id in ids {
+            let key = id.lowercased()
+            guard !seen.contains(key), let card = deckCard(forID: id) else { continue }
+            results.append(card)
+            seen.insert(key)
+        }
+        return results
+    }
+
+    func deckCards(from rows: [MemoryRow], limit: Int? = nil) -> [DeckCard] {
+        var results: [DeckCard] = []
+        var seen: Set<String> = []
+        for row in rows {
+            let key = row.cardID.lowercased()
+            guard !seen.contains(key), let card = deckCard(for: row) else { continue }
+            results.append(card)
+            seen.insert(key)
+            if let limit, results.count >= limit { break }
+        }
+        return results
+    }
+
     private func normalizedKey(for type: String?) -> String {
         (type?.isEmpty ?? true) ? "__all__" : type!.lowercased()
+    }
+
+    private func rebuildCardLookup() {
+        var index: [String: DeckCard] = [:]
+        for card in cards {
+            index[card.id.lowercased()] = card
+            if let numeric = card.numericID {
+                index[String(numeric).lowercased()] = card
+            }
+        }
+        cardLookup = index
     }
 }
 

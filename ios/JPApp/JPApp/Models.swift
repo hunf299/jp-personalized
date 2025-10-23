@@ -149,6 +149,16 @@ struct DeckCard: Identifiable, Decodable, Hashable {
     let category: String?
     let extra: [String: JSONValue]
 
+    init(id: String, numericID: Int? = nil, type: String, front: String, back: String?, category: String? = nil, extra: [String: JSONValue] = [:]) {
+        self.id = id
+        self.numericID = numericID
+        self.type = type
+        self.front = front
+        self.back = back
+        self.category = category
+        self.extra = extra
+    }
+
     init(from decoder: Decoder) throws {
         let raw = try [String: JSONValue](from: decoder)
         extra = raw
@@ -275,6 +285,48 @@ struct MemoryRow: Identifiable, Decodable {
         back = raw["back"]?.stringValue
         leechCount = raw["leech_count"]?.intValue ?? 0
         isLeech = raw["is_leech"]?.boolValue ?? false
+    }
+}
+
+struct LeechEntry: Identifiable, Decodable {
+    let id: String
+    let cardID: String
+    let front: String
+    let back: String?
+    let leechCount: Int
+    let isLeech: Bool
+    let level: Int?
+
+    init(from decoder: Decoder) throws {
+        let raw = try [String: JSONValue](from: decoder)
+        let cardIdentifier = raw["card_id"]?.stringValue ?? raw["cardId"]?.stringValue ?? UUID().uuidString
+        cardID = cardIdentifier
+        id = cardIdentifier
+
+        let cardFields = raw["cards"]?.objectValue
+        let frontValue = raw["front"]?.stringValue
+            ?? raw["card_front"]?.stringValue
+            ?? cardFields?["front"]?.stringValue
+            ?? ""
+        front = frontValue.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        let backValue = raw["back"]?.stringValue
+            ?? raw["card_back"]?.stringValue
+            ?? cardFields?["back"]?.stringValue
+        if let backValue = backValue?.trimmingCharacters(in: .whitespacesAndNewlines), !backValue.isEmpty {
+            back = backValue
+        } else {
+            back = nil
+        }
+
+        if let levelValue = raw["level"]?.intValue ?? raw["liveLevel"]?.intValue ?? cardFields?["level"]?.intValue {
+            level = levelValue
+        } else {
+            level = nil
+        }
+
+        leechCount = raw["leech_count"]?.intValue ?? raw["leechCount"]?.intValue ?? 0
+        isLeech = raw["is_leech"]?.boolValue ?? raw["isLeech"]?.boolValue ?? false
     }
 }
 
