@@ -1424,6 +1424,7 @@ private struct ParticlesCatalogView: View {
 private struct PomodoroScreen: View {
     @EnvironmentObject private var appState: AppState
     @State private var localState: PomodoroState?
+    @State private var hasLoadedInitialState = false
     @State private var lastSyncDate = Date()
     @State private var pollTask: Task<Void, Never>?
     @State private var isSubmitting = false
@@ -1485,8 +1486,12 @@ private struct PomodoroScreen: View {
         .onAppear {
             requestNotificationAuthorization()
             startPolling()
+            if hasLoadedInitialState {
+                Task { await refreshState() }
+            }
         }
         .onDisappear {
+            Task { await persistProgressBeforeExit() }
             stopPolling()
         }
         .onReceive(tickTimer.autoconnect()) { _ in
@@ -1546,6 +1551,8 @@ private struct PomodoroScreen: View {
 
     @MainActor
     private func loadInitialState() async {
+        guard !hasLoadedInitialState else { return }
+        defer { hasLoadedInitialState = true }
         await appState.refreshPomodoro()
         if let state = appState.pomodoroState {
             applyRemote(state)
@@ -1555,6 +1562,9 @@ private struct PomodoroScreen: View {
     @MainActor
     private func refreshState() async {
         await appState.refreshPomodoro()
+        if let state = appState.pomodoroState {
+            applyRemote(state)
+        }
     }
 
     @MainActor
@@ -1744,6 +1754,24 @@ private struct PomodoroScreen: View {
     private func stopPolling() {
         pollTask?.cancel()
         pollTask = nil
+    }
+
+    @MainActor
+    private func persistProgressBeforeExit() async {
+        guard currentState != nil else { return }
+
+        handleTick()
+
+        guard let state = currentState else { return }
+        if !state.paused && state.secLeft <= 0 {
+            return
+        }
+
+        secondsSinceSync = 0
+        lastSyncDate = Date()
+        localState = state
+
+        await syncProgress(state)
     }
 }
 
