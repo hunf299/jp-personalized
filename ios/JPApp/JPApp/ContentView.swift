@@ -945,11 +945,25 @@ struct ProgressScreen: View {
     @EnvironmentObject private var appState: AppState
     @State private var selectedType: CardType = .vocab
     @State private var isLoading = false
+    @State private var isLoadingLeech = false
+    @State private var reviewCards: [DeckCard] = []
+    @State private var showReviewSession = false
+    @State private var showEmptyReviewAlert = false
 
     var body: some View {
         ScrollView {
             VStack(spacing: 24) {
-                MemoryDistributionCard(type: selectedType, snapshot: appState.memorySnapshot(for: selectedType.rawValue))
+                MemoryDistributionCard(type: selectedType, snapshot: currentSnapshot)
+                ReviewOverviewCard(type: selectedType, snapshot: currentSnapshot) { rows, limit, randomize in
+                    startReview(rows: rows, limit: limit, randomize: randomize)
+                }
+                LeechBoardSection(items: leechItems,
+                                  isLoading: isLoadingLeech,
+                                  errorMessage: leechError) {
+                    startLeechReview()
+                } onReviewItem: { item in
+                    startLeechReview(for: item)
+                }
                 SessionListView(sessions: appState.sessions(for: selectedType.rawValue)) { session in
                     Task { await appState.deleteSession(id: session.id, type: selectedType.rawValue) }
                 }
@@ -959,7 +973,7 @@ struct ProgressScreen: View {
         .navigationTitle("Tiến độ học")
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
-                if isLoading {
+                if isLoading || isLoadingLeech {
                     ProgressView()
                 } else {
                     Button {
@@ -980,16 +994,204 @@ struct ProgressScreen: View {
             }
         }
         .refreshable { await loadData() }
+        .navigationDestination(isPresented: $showReviewSession) {
+            PracticeSessionView(type: selectedType, cards: reviewCards)
+        }
+        .alert("Không có thẻ phù hợp", isPresented: $showEmptyReviewAlert) {
+            Button("Đóng", role: .cancel) { }
+        } message: {
+            Text("Hãy đồng bộ dữ liệu hoặc chọn loại thẻ khác trước khi ôn tập.")
+        }
         .task { await loadData() }
         .onChange(of: selectedType, initial: false) { _, _ in
             Task { await loadData() }
         }
     }
 
+    private var currentSnapshot: MemorySnapshot {
+        appState.memorySnapshot(for: selectedType.rawValue)
+    }
+
+    private var leechItems: [LeechBoardItem] {
+        let snapshot = currentSnapshot
+        let entries = appState.leechBoard(for: selectedType.rawValue)
+        var memoryMap: [String: MemoryRow] = [:]
+        for row in snapshot.rows {
+            memoryMap[row.cardID.lowercased()] = row
+        }
+        var combined: [LeechBoardItem] = []
+        var seen: Set<String> = []
+
+        for entry in entries {
+            let key = entry.cardID.lowercased()
+            let memoryRow = memoryMap[key]
+            let resolvedLevel = memoryRow?.level ?? entry.level
+            if let resolvedLevel, !(0...1).contains(resolvedLevel) { continue }
+            let frontSource = entry.front.isEmpty ? (memoryRow?.front ?? "") : entry.front
+            let trimmedFront = frontSource.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !trimmedFront.isEmpty else { continue }
+            let backSource = entry.back ?? memoryRow?.back
+            let trimmedBack = backSource?.trimmingCharacters(in: .whitespacesAndNewlines)
+            let leechCount = max(entry.leechCount, memoryRow?.leechCount ?? 0)
+            combined.append(LeechBoardItem(cardID: entry.cardID,
+                                           front: trimmedFront,
+                                           back: trimmedBack,
+                                           leechCount: leechCount,
+                                           level: resolvedLevel,
+                                           memoryRow: memoryRow))
+            seen.insert(key)
+        }
+
+        for row in snapshot.rows {
+            let key = row.cardID.lowercased()
+            guard !seen.contains(key) else { continue }
+            guard row.level == 0 || row.level == 1 else { continue }
+            guard row.leechCount > 0 || row.isLeech else { continue }
+            let trimmedFront = row.front?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+            guard !trimmedFront.isEmpty else { continue }
+            let trimmedBack = row.back?.trimmingCharacters(in: .whitespacesAndNewlines)
+            combined.append(LeechBoardItem(cardID: row.cardID,
+                                           front: trimmedFront,
+                                           back: trimmedBack,
+                                           leechCount: row.leechCount,
+                                           level: row.level,
+                                           memoryRow: row))
+        }
+
+        combined.sort { first, second in
+            if first.leechCount != second.leechCount {
+                return first.leechCount > second.leechCount
+            }
+            return first.front.localizedCaseInsensitiveCompare(second.front) == .orderedAscending
+        }
+        return combined
+    }
+
+    private var leechError: String? {
+        appState.leechError(for: selectedType.rawValue)
+    }
+
     private func loadData() async {
         isLoading = true
-        defer { isLoading = false }
-        await appState.refreshProgress(for: selectedType.rawValue)
+        isLoadingLeech = true
+        async let progressTask = appState.refreshProgress(for: selectedType.rawValue)
+        async let leechTask = appState.refreshLeechBoard(for: selectedType.rawValue)
+        await progressTask
+        isLoading = false
+        await leechTask
+        isLoadingLeech = false
+    }
+
+    private func startReview(rows: [MemoryRow], limit: Int, randomize: Bool) {
+        guard !rows.isEmpty else {
+            showEmptyReviewAlert = true
+            return
+        }
+        let prepared = randomize ? rows.shuffled() : rows
+        let deck = appState.deckCards(from: prepared, limit: limit)
+        present(deck: deck)
+    }
+
+    private func startLeechReview(limit: Int = 20) {
+        let deck = prepareLeechDeck(from: leechItems, limit: limit)
+        present(deck: deck)
+    }
+
+    private func startLeechReview(for item: LeechBoardItem) {
+        let deck = prepareLeechDeck(from: [item], limit: 1)
+        present(deck: deck)
+    }
+
+    private func present(deck: [DeckCard]) {
+        guard !deck.isEmpty else {
+            showEmptyReviewAlert = true
+            return
+        }
+        reviewCards = deck
+        showReviewSession = true
+    }
+
+    private func prepareLeechDeck(from items: [LeechBoardItem], limit: Int) -> [DeckCard] {
+        guard !items.isEmpty else { return [] }
+        let level0 = items.filter { $0.effectiveLevel == 0 }.shuffled()
+        let level1 = items.filter { $0.effectiveLevel == 1 }.shuffled()
+
+        var ordered: [LeechBoardItem] = []
+        var usedIDs: Set<String> = []
+
+        func appendUnique(_ item: LeechBoardItem) {
+            let key = item.cardID.lowercased()
+            guard !usedIDs.contains(key) else { return }
+            ordered.append(item)
+            usedIDs.insert(key)
+        }
+
+        var index0 = 0
+        var index1 = 0
+        while ordered.count < limit && (index0 < level0.count || index1 < level1.count) {
+            if index0 < level0.count {
+                appendUnique(level0[index0])
+                index0 += 1
+            }
+            if ordered.count >= limit { break }
+            if index1 < level1.count {
+                appendUnique(level1[index1])
+                index1 += 1
+            }
+        }
+
+        if ordered.count < limit {
+            let fallbackSource: [LeechBoardItem]
+            if !level0.isEmpty {
+                fallbackSource = level0
+            } else if !level1.isEmpty {
+                fallbackSource = level1
+            } else {
+                fallbackSource = items
+            }
+            var fallbackIndex = 0
+            while ordered.count < limit && fallbackIndex < fallbackSource.count {
+                appendUnique(fallbackSource[fallbackIndex])
+                fallbackIndex += 1
+            }
+        }
+
+        if ordered.count < limit {
+            for item in items.shuffled() {
+                guard ordered.count < limit else { break }
+                appendUnique(item)
+            }
+        }
+
+        let finalItems = ordered.prefix(limit)
+        var deck: [DeckCard] = []
+        var seen: Set<String> = []
+        for item in finalItems {
+            guard let card = resolveDeckCard(for: item) else { continue }
+            let key = item.cardID.lowercased()
+            guard !seen.contains(key) else { continue }
+            deck.append(card)
+            seen.insert(key)
+        }
+
+        if deck.count < finalItems.count {
+            for item in items {
+                guard deck.count < limit else { break }
+                let key = item.cardID.lowercased()
+                guard !seen.contains(key), let card = resolveDeckCard(for: item) else { continue }
+                deck.append(card)
+                seen.insert(key)
+            }
+        }
+
+        return deck
+    }
+
+    private func resolveDeckCard(for item: LeechBoardItem) -> DeckCard? {
+        if let row = item.memoryRow {
+            return appState.deckCard(for: row)
+        }
+        return appState.deckCard(forID: item.cardID)
     }
 }
 
@@ -1034,6 +1236,264 @@ private struct MemoryDistributionCard: View {
                     Text("Thẻ đến hạn ôn: \(dueCount)")
                         .font(.subheadline)
                         .foregroundColor(.secondary)
+                }
+            }
+        }
+    }
+}
+
+@available(iOS 16.0, *)
+private struct ReviewOverviewCard: View {
+    let type: CardType
+    let snapshot: MemorySnapshot
+    let onStartReview: (_ rows: [MemoryRow], _ limit: Int, _ randomize: Bool) -> Void
+
+    @State private var reviewCount: Int = 10
+
+    private var maxReviewCount: Int {
+        let total = snapshot.rows.count
+        return max(5, min(50, max(total, 1)))
+    }
+
+    private var dueRows: [MemoryRow] {
+        let now = Date()
+        return snapshot.rows
+            .filter { row in
+                guard let due = row.due else { return false }
+                return due <= now
+            }
+            .sorted { lhs, rhs in
+                let lhsDue = lhs.due ?? .distantPast
+                let rhsDue = rhs.due ?? .distantPast
+                return lhsDue < rhsDue
+            }
+    }
+
+    private var dueSoonCount: Int {
+        let now = Date()
+        guard let threshold = Calendar.current.date(byAdding: .day, value: 3, to: now) else { return 0 }
+        return snapshot.rows.filter { row in
+            guard let due = row.due else { return false }
+            return due > now && due <= threshold
+        }.count
+    }
+
+    var body: some View {
+        GlassContainer {
+            VStack(alignment: .leading, spacing: 12) {
+                Text("Ôn tập · \(type.displayName)")
+                    .font(.headline)
+                    .foregroundColor(Color("LiquidPrimary"))
+                if snapshot.rows.isEmpty {
+                    Text("Chưa có dữ liệu ôn tập cho loại này.")
+                        .foregroundColor(.secondary)
+                } else {
+                    Text("Thẻ đến hạn: \(dueRows.count)")
+                        .font(.subheadline)
+                        .foregroundColor(dueRows.isEmpty ? .secondary : Color("LiquidAccent"))
+                    if dueSoonCount > 0 {
+                        Text("Sắp đến hạn trong 3 ngày: \(dueSoonCount)")
+                            .font(.footnote)
+                            .foregroundColor(.secondary)
+                    }
+
+                    let maxCount = maxReviewCount
+                    let binding = Binding(
+                        get: { min(reviewCount, maxCount) },
+                        set: { newValue in
+                            reviewCount = min(maxCount, max(5, newValue))
+                        }
+                    )
+
+                    Stepper(value: binding, in: 5...maxCount, step: 5) {
+                        Text("Số thẻ mỗi phiên: \(binding.wrappedValue)")
+                    }
+
+                    Button {
+                        onStartReview(dueRows, binding.wrappedValue, false)
+                    } label: {
+                        Label("Ôn thẻ đến hạn", systemImage: "clock.arrow.circlepath")
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .disabled(dueRows.isEmpty)
+
+                    if dueRows.isEmpty {
+                        Text("Hiện chưa có thẻ đến hạn. Hãy ôn các thẻ mức 0 hoặc 1 để củng cố ghi nhớ.")
+                            .font(.footnote)
+                            .foregroundColor(.secondary)
+                    }
+
+                    Divider()
+
+                    Text("Ôn theo mức nhớ")
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+
+                    LazyVGrid(columns: [GridItem(.adaptive(minimum: 110), spacing: 12)], spacing: 12) {
+                        ForEach(0..<6) { level in
+                            let rows = rows(for: level)
+                            Button {
+                                onStartReview(rows, binding.wrappedValue, true)
+                            } label: {
+                                VStack(spacing: 6) {
+                                    Text("Mức \(level)")
+                                        .font(.subheadline.weight(.semibold))
+                                    Text("\(rows.count) thẻ")
+                                        .font(.caption)
+                                        .foregroundColor(.secondary)
+                                }
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 12)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                                        .fill(level <= 1 ? Color("LiquidHighlight").opacity(0.18) : Color(.secondarySystemBackground))
+                                )
+                            }
+                            .buttonStyle(.plain)
+                            .disabled(rows.isEmpty)
+                            .opacity(rows.isEmpty ? 0.45 : 1)
+                        }
+                    }
+
+                    Text("Các thẻ mức 0 và 1 thường là leech hoặc thẻ mới. Hãy ưu tiên ôn chúng trước.")
+                        .font(.footnote)
+                        .foregroundColor(.secondary)
+                }
+            }
+        }
+        .onChange(of: type) { _ in
+            reviewCount = min(10, maxReviewCount)
+        }
+    }
+
+    private func rows(for level: Int) -> [MemoryRow] {
+        snapshot.rows
+            .filter { $0.level == level }
+            .sorted { lhs, rhs in
+                let lhsDue = lhs.due ?? .distantFuture
+                let rhsDue = rhs.due ?? .distantFuture
+                return lhsDue < rhsDue
+            }
+    }
+}
+
+private struct LeechBoardItem: Identifiable {
+    let id: String
+    let cardID: String
+    let front: String
+    let back: String?
+    let leechCount: Int
+    let level: Int?
+    let memoryRow: MemoryRow?
+
+    init(cardID: String, front: String, back: String?, leechCount: Int, level: Int?, memoryRow: MemoryRow?) {
+        self.id = cardID
+        self.cardID = cardID
+        self.front = front
+        self.back = back
+        self.leechCount = leechCount
+        self.level = level
+        self.memoryRow = memoryRow
+    }
+
+    var effectiveLevel: Int? {
+        if let level { return level }
+        return memoryRow?.level
+    }
+}
+
+@available(iOS 16.0, *)
+private struct LeechBoardSection: View {
+    let items: [LeechBoardItem]
+    let isLoading: Bool
+    let errorMessage: String?
+    let onReviewAll: () -> Void
+    let onReviewItem: (LeechBoardItem) -> Void
+
+    var body: some View {
+        GlassContainer {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack(alignment: .top) {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Leech board")
+                            .font(.headline)
+                            .foregroundColor(Color("LiquidPrimary"))
+                        Text("Theo dõi các thẻ đang yếu ở mức 0/1 để ôn tập nhanh.")
+                            .font(.footnote)
+                            .foregroundColor(.secondary)
+                    }
+                    Spacer()
+                    Button(action: onReviewAll) {
+                        Label("Ôn nhanh leech", systemImage: "bolt.fill")
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .disabled(items.isEmpty)
+                }
+
+                if let errorMessage, !errorMessage.isEmpty {
+                    Text(errorMessage)
+                        .font(.footnote)
+                        .foregroundColor(.red)
+                }
+
+                if isLoading {
+                    HStack(spacing: 8) {
+                        ProgressView()
+                        Text("Đang tải danh sách leech…")
+                            .font(.footnote)
+                            .foregroundColor(.secondary)
+                    }
+                } else if items.isEmpty {
+                    Text("Hiện không có thẻ leech ở mức 0 hoặc 1.")
+                        .foregroundColor(.secondary)
+                } else {
+                    VStack(alignment: .leading, spacing: 10) {
+                        ForEach(items) { item in
+                            HStack(alignment: .center, spacing: 12) {
+                                Text("×\(item.leechCount)")
+                                    .font(.caption.bold())
+                                    .padding(.vertical, 6)
+                                    .padding(.horizontal, 12)
+                                    .background(
+                                        Capsule().fill(Color("LiquidHighlight").opacity(0.2))
+                                    )
+                                    .foregroundColor(Color("LiquidHighlight"))
+
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text(item.front)
+                                        .font(.subheadline.weight(.semibold))
+                                    if let back = item.back, !back.isEmpty {
+                                        Text(back)
+                                            .font(.footnote)
+                                            .foregroundColor(.secondary)
+                                    }
+                                }
+
+                                Spacer()
+
+                                if let level = item.effectiveLevel {
+                                    Text("Lv \(level)")
+                                        .font(.caption)
+                                        .padding(.horizontal, 10)
+                                        .padding(.vertical, 4)
+                                        .background(
+                                            Capsule().fill(Color(.secondarySystemBackground))
+                                        )
+                                }
+
+                                Button("Ôn") {
+                                    onReviewItem(item)
+                                }
+                                .buttonStyle(.bordered)
+                            }
+                            .padding(12)
+                            .background(
+                                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                                    .fill(Color(.secondarySystemBackground))
+                            )
+                        }
+                    }
                 }
             }
         }
