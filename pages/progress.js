@@ -247,25 +247,20 @@ export default function ProgressPage() {
 
   // Tổng kết hôm nay
   const todayCards = React.useMemo(() => {
-    const unique = new Map();
+    const flat = [];
     toArray(sessions).forEach((s) => {
       if (s?.created_at && isTodayUTC(s.created_at)) {
         const sessionType = s?.type || null;
-        toArray(s.cards).forEach((card, index) => {
-          const rawId = card?.card_id ?? card?.cardId ?? card?.id ?? null;
-          const type = card?.type || sessionType || 'unknown';
-          const key = rawId != null ? `${type}#${rawId}` : `${type}#${index}`;
-          if (!unique.has(key)) {
-            unique.set(key, {
-              ...card,
-              type,
-              card_id: rawId ?? card?.card_id ?? card?.cardId ?? card?.id ?? null,
-            });
-          }
+        toArray(s.cards).forEach((card) => {
+          flat.push({
+            ...card,
+            type: card?.type || sessionType || 'unknown',
+            card_id: card?.card_id ?? card?.cardId ?? card?.id ?? null,
+          });
         });
       }
     });
-    return Array.from(unique.values());
+    return flat;
   }, [sessions]);
   const todayAvg = todayCards.length
       ? Math.round(todayCards.reduce((a, b) => a + (b.final || 0), 0) / todayCards.length)
@@ -593,14 +588,19 @@ export default function ProgressPage() {
                   >
                     <Chip label={`×${r.leech_count||0}`} color={(r.leech_count||0)>0?'error':'default'} size="small" />
                     <Box sx={{ flex:1, textAlign:{ xs:'center', sm:'left' } }}>
-                      <Typography component="div" sx={{ fontWeight: 700 }}>
-                        {r.front}
+                      <Typography
+                        component="div"
+                        sx={{ fontWeight: 700, display: 'inline-flex', flexWrap: 'wrap', gap: 0.5 }}
+                      >
+                        <Box component="span" sx={{ fontWeight: 700 }}>
+                          {r.front}
+                        </Box>
+                        {r.back && (
+                          <Box component="span" sx={{ fontWeight: 400, opacity: 0.8 }}>
+                            — {r.back}
+                          </Box>
+                        )}
                       </Typography>
-                      {r.back && (
-                        <Typography component="div" sx={{ opacity: 0.8 }}>
-                          {r.back}
-                        </Typography>
-                      )}
                     </Box>
                     <Chip size="small" label={`Lv ${r.liveLevel ?? '—'}`} />
                     <Button size="small" variant="outlined" onClick={()=> goQuickReviewCard(r.card_id)}>Ôn</Button>
