@@ -247,13 +247,20 @@ export default function ProgressPage() {
 
   // Tổng kết hôm nay
   const todayCards = React.useMemo(() => {
-    const arr = [];
+    const flat = [];
     toArray(sessions).forEach((s) => {
       if (s?.created_at && isTodayUTC(s.created_at)) {
-        toArray(s.cards).forEach((c) => arr.push(c));
+        const sessionType = s?.type || null;
+        toArray(s.cards).forEach((card) => {
+          flat.push({
+            ...card,
+            type: card?.type || sessionType || 'unknown',
+            card_id: card?.card_id ?? card?.cardId ?? card?.id ?? null,
+          });
+        });
       }
     });
-    return arr;
+    return flat;
   }, [sessions]);
   const todayAvg = todayCards.length
       ? Math.round(todayCards.reduce((a, b) => a + (b.final || 0), 0) / todayCards.length)
@@ -557,14 +564,11 @@ export default function ProgressPage() {
             {!loading && liveLeech.length===0 && <Typography sx={{ opacity:.7 }}>Hiện không có thẻ leech ở mức 0 hoặc 1.</Typography>}
 
             <Stack
-                direction={{ xs: 'column', md: 'row' }}
+                direction="column"
                 spacing={1}
                 sx={{
                   mt: 1,
-                  flexWrap: { xs: 'wrap', md: 'nowrap' },
-                  overflowX: { xs: 'visible', md: 'auto' },
-                  alignItems: { md: 'stretch' },
-                  pb: { md: 1 },
+                  width: '100%',
                 }}
             >
               {liveLeech.map(r => (
@@ -578,12 +582,26 @@ export default function ProgressPage() {
                       border: '1px solid #f1f1f1',
                       p: 1,
                       borderRadius: 2,
-                      minWidth: { xs: '100%', md: 260 },
-                      flex: { xs: '1 1 auto', md: '0 0 auto' },
+                      minWidth: '100%',
+                      width: '100%',
                     }}
                   >
                     <Chip label={`×${r.leech_count||0}`} color={(r.leech_count||0)>0?'error':'default'} size="small" />
-                    <Typography sx={{ flex:1, textAlign:{ xs:'center', sm:'left' } }}><b>{r.front}</b>{r.back?` · ${r.back}`:''}</Typography>
+                    <Box sx={{ flex:1, textAlign:{ xs:'center', sm:'left' } }}>
+                      <Typography
+                        component="div"
+                        sx={{ fontWeight: 700, display: 'inline-flex', flexWrap: 'wrap', gap: 0.5 }}
+                      >
+                        <Box component="span" sx={{ fontWeight: 700 }}>
+                          {r.front}
+                        </Box>
+                        {r.back && (
+                          <Box component="span" sx={{ fontWeight: 400, opacity: 0.8 }}>
+                            — {r.back}
+                          </Box>
+                        )}
+                      </Typography>
+                    </Box>
                     <Chip size="small" label={`Lv ${r.liveLevel ?? '—'}`} />
                     <Button size="small" variant="outlined" onClick={()=> goQuickReviewCard(r.card_id)}>Ôn</Button>
                   </Stack>
