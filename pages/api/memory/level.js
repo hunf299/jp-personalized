@@ -140,7 +140,6 @@ export default async function handler(req, res) {
         }
 
         let leechCount = Math.max(0, failStreak - 1);
-        let isLeech = leechCount >= 3;
 
         // 3) Upsert memory_levels với mức nhớ mới + leech metadata chính xác
         const normalizeLevel = (value) => {
@@ -178,6 +177,9 @@ export default async function handler(req, res) {
         const previousLevel = normalizeNumber(current?.level ?? base);
         const previousLeechCount = normalizeNumber(current?.leech_count);
         const previousIsLeech = normalizeBoolean(current?.is_leech);
+        if (previousLeechCount !== null) {
+            leechCount = Math.max(leechCount, previousLeechCount);
+        }
         const hadLeechState =
             (previousLeechCount !== null && previousLeechCount >= 3) || previousIsLeech;
         const nextLevel = normalizeNumber(nextState.level);
@@ -189,9 +191,41 @@ export default async function handler(req, res) {
             return Math.max(nextLevel, resolvedFinalLevel);
         })();
 
+        const finalLevelForRules = (() => {
+            if (resolvedFinalLevel !== null) return resolvedFinalLevel;
+            if (effectiveNextLevel !== null) return effectiveNextLevel;
+            return nextLevel;
+        })();
+
+        const previousLevelLow = previousLevel !== null && previousLevel <= 1;
+        let isLeech = leechCount > 0 || previousIsLeech;
+
+        if (previousLevelLow && finalLevelForRules !== null) {
+            if (finalLevelForRules >= 2) {
+                leechCount = 0;
+                isLeech = false;
+            } else if (
+                (previousLevel === 0 || previousLevel === 1) &&
+                (finalLevelForRules === 0 || finalLevelForRules === 1) &&
+                finalLevelForRules !== previousLevel
+            ) {
+                const baseCount = previousLeechCount !== null ? previousLeechCount : 0;
+                leechCount = Math.max(leechCount, baseCount) + 1;
+                isLeech = true;
+            }
+        }
+
+        if (leechCount <= 0) {
+            leechCount = 0;
+            isLeech = false;
+        } else {
+            isLeech = true;
+        }
+
         const movedOutOfLowLevels = effectiveNextLevel !== null && effectiveNextLevel > 1;
         const wasLeech = !!hadLeechState;
         const reachedHighLevelForFirstTime =
+            !previousLevelLow &&
             wasLeech &&
             effectiveNextLevel !== null &&
             effectiveNextLevel >= 3 &&
@@ -208,8 +242,7 @@ export default async function handler(req, res) {
             const tomorrow = new Date();
             tomorrow.setDate(tomorrow.getDate() + 1);
             nextState.due = tomorrow.toISOString();
-        } else if (movedOutOfLowLevels) {
-            leechCount = 0;
+        } else if (!previousLevelLow && movedOutOfLowLevels && leechCount === 0) {
             isLeech = false;
         }
 
