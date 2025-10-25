@@ -833,9 +833,33 @@ struct PracticeSessionView: View {
                                                        left: max(0, cards.count - learned),
                                                        distribution: distribution)
         Task {
-            await appState.saveSession(type: type.rawValue, cards: rows, summary: summary)
-            isSavingSession = false
+            var encounteredError = false
+            for update in updates {
+                do {
+                    try await appState.updateMemoryLevel(for: update.card, baseLevel: update.base, finalLevel: update.final)
+                } catch {
+                    encounteredError = true
+                }
+            }
+
+            await appState.refreshProgress(for: type.rawValue)
+
+            await MainActor.run {
+                isUpdatingMemory = false
+                if encounteredError {
+                    hasAppliedUpdates = false
+                }
+            }
         }
+    }
+
+    private func memoryBaseLevels() -> [String: Int] {
+        let snapshot = appState.memorySnapshot(for: type.rawValue)
+        var map: [String: Int] = [:]
+        for row in snapshot.rows {
+            map[row.cardID.lowercased()] = row.level
+        }
+        return map
     }
 
     private func scoreForTime(_ seconds: Int) -> Int {
