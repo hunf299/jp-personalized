@@ -1,5 +1,49 @@
 import Foundation
 
+private enum JSONDateFormatters {
+    static let iso8601WithFractional: ISO8601DateFormatter = {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        return formatter
+    }()
+
+    static let iso8601Basic: ISO8601DateFormatter = {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime]
+        return formatter
+    }()
+
+    static func parseString(_ value: String) -> Date? {
+        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return nil }
+
+        if let date = iso8601WithFractional.date(from: trimmed) { return date }
+        if let date = iso8601Basic.date(from: trimmed) { return date }
+
+        let fallbackFormats = [
+            "yyyy-MM-dd HH:mm:ss",
+            "yyyy-MM-dd'T'HH:mm:ss"
+        ]
+
+        for format in fallbackFormats {
+            let formatter = DateFormatter()
+            formatter.locale = Locale(identifier: "en_US_POSIX")
+            formatter.timeZone = TimeZone(secondsFromGMT: 0)
+            formatter.dateFormat = format
+            if let date = formatter.date(from: trimmed) {
+                return date
+            }
+        }
+
+        if let numeric = Double(trimmed) {
+            let seconds = numeric > 1_000_000_000_000 ? numeric / 1000 : numeric
+            return Date(timeIntervalSince1970: seconds)
+        }
+
+        return nil
+    }
+}
+
 enum JSONValue: Codable, Hashable {
     case string(String)
     case number(Double)
@@ -127,12 +171,9 @@ enum JSONValue: Codable, Hashable {
     func dateValue() -> Date? {
         switch self {
         case .string(let value):
-            if let date = ISO8601DateFormatter().date(from: value) { return date }
-            let formatter = DateFormatter()
-            formatter.locale = Locale(identifier: "en_US_POSIX")
-            formatter.dateFormat = "yyyy-MM-dd HH:mm:ss"
-            return formatter.date(from: value)
-        case .number(let seconds):
+            return JSONDateFormatters.parseString(value)
+        case .number(let raw):
+            let seconds = raw > 1_000_000_000_000 ? raw / 1000 : raw
             return Date(timeIntervalSince1970: seconds)
         default:
             return nil
