@@ -21,6 +21,22 @@ final class AppState: ObservableObject {
     private var initialDataLoaded = false
     private var cardLookup: [String: DeckCard] = [:]
 
+    struct MemoryDueUpdateRequest {
+        let cardID: String
+        let final: Int
+        let level: Int?
+        let stability: Double?
+        let difficulty: Double?
+        let lastReviewedAt: Date?
+        let due: Date?
+    }
+
+    private static let isoFormatter: ISO8601DateFormatter = {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        return formatter
+    }()
+
     init(api: APIClient = APIClient()) {
         self.api = api
         rebuildCardLookup()
@@ -145,6 +161,33 @@ final class AppState: ObservableObject {
             lastError = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
             throw error
         }
+    }
+
+    func updateMemoryDue(type: String, requests: [MemoryDueUpdateRequest]) async {
+        let trimmedType = type.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !requests.isEmpty, !trimmedType.isEmpty else { return }
+
+        let cards = requests.map { request -> APIClient.ReviewSaveCardPayload in
+            APIClient.ReviewSaveCardPayload(cardID: request.cardID,
+                                            final: request.final,
+                                            level: request.level,
+                                            stability: request.stability,
+                                            difficulty: request.difficulty,
+                                            lastReviewedAt: AppState.isoString(from: request.lastReviewedAt),
+                                            due: AppState.isoString(from: request.due))
+        }
+
+        do {
+            try await api.updateMemoryDue(type: trimmedType, cards: cards)
+            lastError = nil
+        } catch {
+            lastError = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
+        }
+    }
+
+    private static func isoString(from date: Date?) -> String? {
+        guard let date else { return nil }
+        return isoFormatter.string(from: date)
     }
 
     func saveSession(type: String, cards: [APIClient.SessionResultPayload], summary: APIClient.SessionSummaryPayload) async {

@@ -96,6 +96,36 @@ final class APIClient {
         let error: String?
     }
 
+    struct ReviewSaveCardPayload: Encodable {
+        let cardID: String
+        let final: Int
+        let level: Int?
+        let stability: Double?
+        let difficulty: Double?
+        let lastReviewedAt: String?
+        let due: String?
+
+        enum CodingKeys: String, CodingKey {
+            case cardID = "card_id"
+            case final
+            case level
+            case stability
+            case difficulty
+            case lastReviewedAt = "last_reviewed_at"
+            case due
+        }
+    }
+
+    private struct ReviewSavePayload: Encodable {
+        let type: String
+        let cards: [ReviewSaveCardPayload]
+    }
+
+    private struct ReviewSaveResponse: Decodable {
+        let ok: Bool?
+        let error: String?
+    }
+
     private struct SaveSessionPayload: Encodable {
         let type: String
         let cards: [SessionResultPayload]
@@ -225,6 +255,17 @@ final class APIClient {
         let response = try decodeResponse(ReviewLogResponse.self, from: data)
         if response.ok == false {
             throw APIError.serverMessage(response.error ?? "Không thể ghi log ôn tập.")
+        }
+    }
+
+    func updateMemoryDue(type: String, cards: [ReviewSaveCardPayload]) async throws {
+        guard !cards.isEmpty else { return }
+        let payload = ReviewSavePayload(type: type, cards: cards)
+        let body = try encoder.encode(payload)
+        let data = try await sendRequest(path: "api/review/save", method: .post, body: body)
+        let response = try decodeResponse(ReviewSaveResponse.self, from: data)
+        if response.ok == false {
+            throw APIError.serverMessage(response.error ?? "Không thể cập nhật lịch ôn.")
         }
     }
 
