@@ -49,6 +49,28 @@ final class APIClient {
         let distribution: [Int]
     }
 
+    private struct MemoryLevelPayload: Encodable {
+        let cardID: String
+        let type: String?
+        let newLevel: Int?
+        let baseLevel: Int?
+        let autoActive: Bool
+        let source: String?
+        let final: Int?
+        let quality: Int?
+
+        enum CodingKeys: String, CodingKey {
+            case cardID = "card_id"
+            case type
+            case newLevel = "new_level"
+            case baseLevel = "base_level"
+            case autoActive = "auto_active"
+            case source
+            case final
+            case quality
+        }
+    }
+
     private enum HTTPMethod: String {
         case get = "GET"
         case post = "POST"
@@ -82,6 +104,12 @@ final class APIClient {
 
     private struct SaveSessionResponse: Decodable {
         let id: Int?
+        let error: String?
+    }
+
+    private struct MemoryLevelResponse: Decodable {
+        let ok: Bool?
+        let memory: MemoryRow?
         let error: String?
     }
 
@@ -198,6 +226,35 @@ final class APIClient {
         if response.ok == false {
             throw APIError.serverMessage(response.error ?? "Không thể ghi log ôn tập.")
         }
+    }
+
+    @discardableResult
+    func updateMemoryLevel(cardID: String,
+                           type: String?,
+                           newLevel: Int?,
+                           baseLevel: Int?,
+                           autoActive: Bool = false,
+                           source: String? = nil,
+                           final: Int?,
+                           quality: Int?) async throws -> MemoryRow? {
+        let payload = MemoryLevelPayload(cardID: cardID,
+                                         type: type,
+                                         newLevel: newLevel,
+                                         baseLevel: baseLevel,
+                                         autoActive: autoActive,
+                                         source: source,
+                                         final: final,
+                                         quality: quality)
+        let body = try encoder.encode(payload)
+        let data = try await sendRequest(path: "api/memory/level", method: .post, body: body)
+        let response = try decodeResponse(MemoryLevelResponse.self, from: data)
+        if let ok = response.ok, ok == false {
+            throw APIError.serverMessage(response.error ?? "Không thể cập nhật mức nhớ.")
+        }
+        if let error = response.error, !error.isEmpty {
+            throw APIError.serverMessage(error)
+        }
+        return response.memory
     }
 
     func saveSession(type: String, cards: [SessionResultPayload], summary: SessionSummaryPayload) async throws {
