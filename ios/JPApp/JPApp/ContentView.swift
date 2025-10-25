@@ -767,6 +767,7 @@ struct PracticeSessionView: View {
         isUpdatingMemory = true
 
         let baseLevels = memoryBaseLevels()
+        let memoryRows = memoryRowsByID()
         let updates: [(card: DeckCard, final: Int, base: Int?)] = cards.map { card in
             let warmup = warmupScores[card.id]?.score ?? 0
             let recall = recallScores[card.id]?.quality ?? 0
@@ -778,12 +779,27 @@ struct PracticeSessionView: View {
 
         Task {
             var encounteredError = false
+            var dueRequests: [AppState.MemoryDueUpdateRequest] = []
             for update in updates {
                 do {
                     try await appState.updateMemoryLevel(for: update.card, baseLevel: update.base, finalLevel: update.final)
+                    let key = update.card.id.lowercased()
+                    let row = memoryRows[key]
+                    let request = AppState.MemoryDueUpdateRequest(cardID: update.card.id,
+                                                                  final: update.final,
+                                                                  level: row?.level ?? update.base,
+                                                                  stability: row?.stability,
+                                                                  difficulty: row?.difficulty,
+                                                                  lastReviewedAt: row?.lastReviewedAt,
+                                                                  due: row?.due)
+                    dueRequests.append(request)
                 } catch {
                     encounteredError = true
                 }
+            }
+
+            if !dueRequests.isEmpty {
+                await appState.updateMemoryDue(type: type.rawValue, requests: dueRequests)
             }
 
             await appState.refreshProgress(for: type.rawValue)
@@ -797,11 +813,20 @@ struct PracticeSessionView: View {
         }
     }
 
-    private func memoryBaseLevels() -> [String: Int] {
+    private func memoryRowsByID() -> [String: MemoryRow] {
         let snapshot = appState.memorySnapshot(for: type.rawValue)
-        var map: [String: Int] = [:]
+        var map: [String: MemoryRow] = [:]
         for row in snapshot.rows {
-            map[row.cardID.lowercased()] = row.level
+            map[row.cardID.lowercased()] = row
+        }
+        return map
+    }
+
+    private func memoryBaseLevels() -> [String: Int] {
+        let rows = memoryRowsByID()
+        var map: [String: Int] = [:]
+        for (key, row) in rows {
+            map[key] = row.level
         }
         return map
     }
@@ -1849,6 +1874,21 @@ private struct SessionRow: View {
                     Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
                         .font(.headline)
                 }
+                Button {
+                    let succeeded = onReplay()
+#if canImport(UIKit)
+                    let generator = UINotificationFeedbackGenerator()
+                    generator.notificationOccurred(succeeded ? .success : .warning)
+#endif
+                } label: {
+                    Image(systemName: "bolt.fill")
+                        .font(.headline)
+                        .foregroundColor(Color("LiquidAccent"))
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Ôn nhanh session này")
+                .disabled(session.cards.isEmpty)
+                .opacity(session.cards.isEmpty ? 0.4 : 1)
                 Button(role: .destructive, action: onDelete) {
                     if isDeleting {
                         ProgressView()
