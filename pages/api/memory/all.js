@@ -43,19 +43,24 @@ export default async function handler(req, res) {
 
         let rows = (data||[])
             .filter(r => r?.cards && !r.cards.deleted)
-            .map(r => ({
-            card_id: r.card_id,
-            type: r.type || r.cards?.type || null,
-            level: Number(r.level ?? 0),
-            stability: Number(r.stability ?? 1),
-            difficulty: Number(r.difficulty ?? 5),
-            last_reviewed_at: r.last_reviewed_at || null,
-            due: r.due || null,
-            front: r.cards?.front ?? null,
-            back: r.cards?.back ?? null,
-            leech_count: Number.isFinite(Number(r.leech_count)) ? Number(r.leech_count) : 0,
-            is_leech: normalizeBoolean(r.is_leech),
-        }));
+            .map(r => {
+            const dueRaw = r.due || null;
+            const dueTsParsed = dueRaw ? Date.parse(dueRaw) : NaN;
+            return {
+                card_id: r.card_id,
+                type: r.type || r.cards?.type || null,
+                level: Number(r.level ?? 0),
+                stability: Number(r.stability ?? 1),
+                difficulty: Number(r.difficulty ?? 5),
+                last_reviewed_at: r.last_reviewed_at || null,
+                due: dueRaw,
+                due_ts: Number.isFinite(dueTsParsed) ? dueTsParsed : null,
+                front: r.cards?.front ?? null,
+                back: r.cards?.back ?? null,
+                leech_count: Number.isFinite(Number(r.leech_count)) ? Number(r.leech_count) : 0,
+                is_leech: normalizeBoolean(r.is_leech),
+            };
+        });
 
         if (type) rows = rows.filter(r => r.type === type);
 
