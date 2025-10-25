@@ -129,6 +129,24 @@ final class AppState: ObservableObject {
         }
     }
 
+    func updateMemoryLevel(for card: DeckCard, baseLevel: Int?, finalLevel: Int) async throws {
+        let normalizedFinal = max(0, min(5, finalLevel))
+        do {
+            _ = try await api.updateMemoryLevel(cardID: card.id,
+                                               type: card.type,
+                                               newLevel: normalizedFinal,
+                                               baseLevel: baseLevel,
+                                               autoActive: false,
+                                               source: nil,
+                                               final: normalizedFinal,
+                                               quality: normalizedFinal)
+            lastError = nil
+        } catch {
+            lastError = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
+            throw error
+        }
+    }
+
     func saveSession(type: String, cards: [APIClient.SessionResultPayload], summary: APIClient.SessionSummaryPayload) async {
         do {
             try await api.saveSession(type: type, cards: cards, summary: summary)

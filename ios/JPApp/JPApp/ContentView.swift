@@ -547,8 +547,8 @@ struct PracticeSessionView: View {
     @State private var answerText: String = ""
     @State private var recallChecked = false
     @State private var qualitySelection: Int = 3
-    @State private var isSavingSession = false
-    @State private var sessionSaved = false
+    @State private var isUpdatingMemory = false
+    @State private var hasAppliedUpdates = false
 
     struct WarmupResult {
         let correct: Bool
@@ -616,13 +616,13 @@ struct PracticeSessionView: View {
                 case .results:
                     SessionResultsView(cards: cards, warmupScores: warmupScores, recallScores: recallScores)
                     Button {
-                        saveSessionIfNeeded()
+                        applyMemoryUpdatesIfNeeded()
                         dismiss()
                     } label: {
-                        if isSavingSession {
+                        if isUpdatingMemory {
                             ProgressView()
                         } else {
-                            Text("Lưu phiên & quay lại")
+                            Text("Cập nhật mức nhớ & quay lại")
                                 .frame(maxWidth: .infinity)
                         }
                     }
@@ -728,27 +728,50 @@ struct PracticeSessionView: View {
         qualitySelection = recallScores[card.id]?.quality ?? 3
     }
 
-    private func saveSessionIfNeeded() {
-        guard !sessionSaved else { return }
-        sessionSaved = true
-        isSavingSession = true
-        var distribution = Array(repeating: 0, count: 6)
-        var learned = 0
-        let rows = cards.map { card -> APIClient.SessionResultPayload in
+    private func applyMemoryUpdatesIfNeeded() {
+        guard !hasAppliedUpdates else { return }
+        guard !cards.isEmpty else { return }
+        hasAppliedUpdates = true
+        isUpdatingMemory = true
+
+        let baseLevels = memoryBaseLevels()
+        let updates: [(card: DeckCard, final: Int, base: Int?)] = cards.map { card in
             let warmup = warmupScores[card.id]?.score ?? 0
             let recall = recallScores[card.id]?.quality ?? 0
-            let final = Int(round(Double(warmup + recall) / 2.0))
-            if final >= 0 && final < distribution.count {
-                distribution[final] += 1
-                if final >= 3 { learned += 1 }
-            }
-            return APIClient.SessionResultPayload(cardID: card.id, front: card.front, back: card.back, warmup: warmup, recall: recall, final: final)
+            let averaged = Int(round(Double(warmup + recall) / 2.0))
+            let clamped = max(0, min(5, averaged))
+            let base = baseLevels[card.id.lowercased()]
+            return (card, clamped, base)
         }
-        let summary = APIClient.SessionSummaryPayload(total: cards.count, learned: learned, left: max(0, cards.count - learned), distribution: distribution)
+
         Task {
-            await appState.saveSession(type: type.rawValue, cards: rows, summary: summary)
-            isSavingSession = false
+            var encounteredError = false
+            for update in updates {
+                do {
+                    try await appState.updateMemoryLevel(for: update.card, baseLevel: update.base, finalLevel: update.final)
+                } catch {
+                    encounteredError = true
+                }
+            }
+
+            await appState.refreshProgress(for: type.rawValue)
+
+            await MainActor.run {
+                isUpdatingMemory = false
+                if encounteredError {
+                    hasAppliedUpdates = false
+                }
+            }
         }
+    }
+
+    private func memoryBaseLevels() -> [String: Int] {
+        let snapshot = appState.memorySnapshot(for: type.rawValue)
+        var map: [String: Int] = [:]
+        for row in snapshot.rows {
+            map[row.cardID.lowercased()] = row.level
+        }
+        return map
     }
 
     private func scoreForTime(_ seconds: Int) -> Int {
