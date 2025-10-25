@@ -7,6 +7,9 @@ import Combine
 #if canImport(UserNotifications)
 import UserNotifications
 #endif
+#if canImport(UIKit)
+import UIKit
+#endif
 
 @available(iOS 16.0, *)
 struct ContentView: View {
@@ -607,7 +610,7 @@ struct PracticeSessionView: View {
                                 advanceRecall()
                             }
                             .buttonStyle(.borderedProminent)
-                            .disabled(!recallChecked)
+                            .disabled((type != .kanji && answerText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty) || !recallChecked)
                         }
                     }
                 case .results:
@@ -659,6 +662,9 @@ struct PracticeSessionView: View {
         let isCorrect = selectedOption == correctLabel
         let score = isCorrect ? scoreForTime(elapsed) : 0
         warmupScores[card.id] = WarmupResult(correct: isCorrect, time: elapsed, score: score)
+        if !isCorrect {
+            self.selectedOption = correctLabel
+        }
         warmupChecked = true
     }
 
@@ -681,13 +687,17 @@ struct PracticeSessionView: View {
     }
 
     private func handleRecallCheck(for card: DeckCard) {
-        let trimmed = answerText.trimmingCharacters(in: .whitespacesAndNewlines)
-        let isCorrect: Bool
         if type == .kanji {
-            isCorrect = trimmed == card.front
-        } else {
-            isCorrect = trimmed.lowercased() == (card.back ?? "").lowercased()
+            // For kanji recall, we use drawing instead of text input. Default quality to a neutral value and don't compute correctness.
+            let defaultQuality = 3
+            qualitySelection = defaultQuality
+            recallScores[card.id] = RecallResult(quality: defaultQuality, correct: nil, userAnswer: "")
+            recallChecked = true
+            return
         }
+
+        let trimmed = answerText.trimmingCharacters(in: .whitespacesAndNewlines)
+        let isCorrect = trimmed.lowercased() == (card.back ?? "").lowercased()
         let defaultQuality = isCorrect ? 3 : 0
         qualitySelection = defaultQuality
         recallScores[card.id] = RecallResult(quality: defaultQuality, correct: isCorrect, userAnswer: trimmed)
@@ -856,13 +866,53 @@ private struct RecallQuestion: View {
                 Text(prompt)
                     .font(.headline)
                     .foregroundColor(Color("LiquidPrimary"))
-                TextField("Nhập đáp án…", text: $answerText)
-                    .textFieldStyle(.roundedBorder)
+                if type == .kanji {
+                    DrawingCanvas()
+                        .frame(height: 240)
+                        .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
+                    Text("Dùng ngón tay để luyện nét. Nhấn giữ lâu để xoá.")
+                        .font(.footnote)
+                        .foregroundColor(.secondary)
+                } else {
+                    TextField("Nhập đáp án…", text: $answerText)
+                        .textFieldStyle(.roundedBorder)
+                }
                 Button("Chấm điểm") {
                     onCheck()
                 }
                 .buttonStyle(.borderedProminent)
-                .disabled(answerText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || recallChecked)
+                .disabled((type != .kanji && answerText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty) || recallChecked)
+
+                if recallChecked {
+                    let correct: String = {
+                        switch type {
+                        case .kanji:
+                            return card.front
+                        default:
+                            return card.back ?? ""
+                        }
+                    }()
+                    let user = answerText.trimmingCharacters(in: .whitespacesAndNewlines)
+                    let isRight: Bool = {
+                        switch type {
+                        case .kanji:
+                            return user == card.front
+                        default:
+                            return user.lowercased() == (card.back ?? "").lowercased()
+                        }
+                    }()
+
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Đáp án đúng: \(correct)")
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundColor(Color("LiquidPrimary"))
+                        if type != .kanji, !user.isEmpty {
+                            Text("Bạn trả lời: \(user)")
+                                .font(.subheadline)
+                                .foregroundColor(isRight ? .secondary : .red)
+                        }
+                    }
+                }
 
                 if recallChecked {
                     VStack(alignment: .leading, spacing: 12) {
@@ -884,7 +934,7 @@ private struct RecallQuestion: View {
     private var prompt: String {
         switch type {
         case .kanji:
-            return "Điền kanji tương ứng với: \(card.warmupLabel)"
+            return "Vẽ kanji tương ứng với: \(card.warmupLabel)"
         default:
             return "Điền nghĩa cho: \(card.front)"
         }
@@ -966,6 +1016,8 @@ struct ProgressScreen: View {
                 }
                 SessionListView(sessions: appState.sessions(for: selectedType.rawValue)) { session in
                     Task { await appState.deleteSession(id: session.id, type: selectedType.rawValue) }
+                } onQuickReview: { cardID in
+                    startQuickReview(forCardID: cardID)
                 }
             }
             .padding()
@@ -1192,6 +1244,26 @@ struct ProgressScreen: View {
             return appState.deckCard(for: row)
         }
         return appState.deckCard(forID: item.cardID)
+    }
+
+    private func startQuickReview(forCardID cardID: String, total: Int = 10) {
+        guard let main = appState.deckCard(forID: cardID) else {
+            showEmptyReviewAlert = true
+            return
+        }
+        let rows = currentSnapshot.rows.filter { row in
+            row.level == 4 || row.level == 5
+        }
+        var deck: [DeckCard] = [main]
+        var seen: Set<String> = [cardID.lowercased()]
+        for row in rows.shuffled() {
+            guard deck.count < total else { break }
+            let key = row.cardID.lowercased()
+            guard !seen.contains(key), let card = appState.deckCard(for: row) else { continue }
+            deck.append(card)
+            seen.insert(key)
+        }
+        present(deck: deck.shuffled())
     }
 }
 
@@ -1456,9 +1528,9 @@ private struct LeechBoardSection: View {
                                     .padding(.vertical, 6)
                                     .padding(.horizontal, 12)
                                     .background(
-                                        Capsule().fill(Color("LiquidHighlight").opacity(0.2))
+                                        Capsule().fill(Color("LiquidPrimary").opacity(0.2))
                                     )
-                                    .foregroundColor(Color("LiquidHighlight"))
+                                    .foregroundColor(Color("LiquidPrimary"))
 
                                 VStack(alignment: .leading, spacing: 4) {
                                     Text(item.front)
@@ -1504,6 +1576,7 @@ private struct LeechBoardSection: View {
 private struct SessionListView: View {
     let sessions: [StudySession]
     let onDelete: (StudySession) -> Void
+    let onQuickReview: (String) -> Void
     @State private var expandedSession: String? = nil
     @State private var deletingIDs: Set<String> = []
 
@@ -1518,16 +1591,18 @@ private struct SessionListView: View {
                 ForEach(sessions) { session in
                     SessionRow(session: session,
                                isExpanded: expandedSession == session.id,
-                               isDeleting: deletingIDs.contains(session.id))
-                    {
+                               isDeleting: deletingIDs.contains(session.id),
+                               onToggle: {
                         withAnimation { toggle(session: session) }
-                    } onDelete: {
+                    }, onQuickReview: { cardID in
+                        onQuickReview(cardID)
+                    }, onDelete: {
                         deletingIDs.insert(session.id)
                         Task {
                             onDelete(session)
                             deletingIDs.remove(session.id)
                         }
-                    }
+                    })
                 }
             }
         }
@@ -1548,7 +1623,14 @@ private struct SessionRow: View {
     let isExpanded: Bool
     let isDeleting: Bool
     let onToggle: () -> Void
+    let onQuickReview: (String) -> Void
     let onDelete: () -> Void
+
+    @EnvironmentObject private var appState: AppState
+    @State private var showDeleteForCardID: String? = nil
+    @State private var removedCardIDs: Set<String> = []
+    @State private var actionCardID: String? = nil
+    @State private var showActions = false
 
     private var summary: StudySession.SessionSummary {
         session.summary ?? StudySession.SessionSummary(total: session.cards.count, learned: session.cards.count, left: 0, distribution: [])
@@ -1584,21 +1666,41 @@ private struct SessionRow: View {
                         .foregroundColor(.secondary)
                 } else {
                     VStack(alignment: .leading, spacing: 8) {
-                        ForEach(session.cards) { card in
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text(card.front ?? "")
-                                    .font(.subheadline.weight(.semibold))
-                                HStack(spacing: 12) {
-                                    if let warmup = card.warmup { TagLabel(title: "Warm-up", value: warmup) }
-                                    if let recall = card.recall { TagLabel(title: "Recall", value: recall) }
-                                    if let final = card.final { TagLabel(title: "Final", value: final) }
+                        ForEach(session.cards.filter { !removedCardIDs.contains($0.id) }) { card in
+                            VStack(spacing: 6) {
+                                // Card container
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text(card.front ?? "")
+                                        .font(.subheadline.weight(.semibold))
+                                    HStack(spacing: 12) {
+                                        if let warmup = card.warmup { TagLabel(title: "Warm-up", value: warmup) }
+                                        if let recall = card.recall { TagLabel(title: "Recall", value: recall) }
+                                        if let final = card.final { TagLabel(title: "Final", value: final) }
+                                    }
                                 }
+                                .padding(12)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                                        .fill(Color(.secondarySystemBackground))
+                                )
                             }
-                            .padding(12)
-                            .background(
-                                RoundedRectangle(cornerRadius: 16, style: .continuous)
-                                    .fill(Color(.secondarySystemBackground))
-                            )
+                            .onLongPressGesture(minimumDuration: 0.35) {
+                                actionCardID = card.id
+                                showActions = true
+                                UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                            }
+                            .confirmationDialog("Tác vụ thẻ", isPresented: $showActions, presenting: actionCardID) { cardID in
+                                Button("Ôn nhanh") {
+                                    onQuickReview(cardID)
+                                    UINotificationFeedbackGenerator().notificationOccurred(.success)
+                                }
+                                Button("Xoá", role: .destructive) {
+                                    removedCardIDs.insert(cardID)
+                                    UINotificationFeedbackGenerator().notificationOccurred(.warning)
+                                }
+                                .disabled(!canDelete(cardID: card.cardID))
+                                Button("Huỷ", role: .cancel) { }
+                            }
                         }
                     }
                 }
@@ -1621,6 +1723,14 @@ private struct SessionRow: View {
         let learned = summary.learned
         let total = summary.total
         return "Hoàn thành \(learned)/\(total) · Mức cao nhất: \(summary.distribution.enumerated().max(by: { $0.element < $1.element })?.offset ?? 0)"
+    }
+
+    private func canDelete(cardID: String) -> Bool {
+        let rows = appState.memorySnapshot(for: session.type).rows
+        guard let row = rows.first(where: { $0.cardID.lowercased() == cardID.lowercased() }) else { return false }
+        if row.isLeech { return false }
+        if row.level == 0 || row.level == 1 { return false }
+        return true
     }
 }
 
@@ -2398,4 +2508,3 @@ struct GlassContainer<Content: View>: View {
             }
     }
 }
-
