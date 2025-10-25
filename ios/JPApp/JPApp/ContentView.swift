@@ -858,33 +858,9 @@ struct PracticeSessionView: View {
                                                        left: max(0, cards.count - learned),
                                                        distribution: distribution)
         Task {
-            var encounteredError = false
-            for update in updates {
-                do {
-                    try await appState.updateMemoryLevel(for: update.card, baseLevel: update.base, finalLevel: update.final)
-                } catch {
-                    encounteredError = true
-                }
-            }
-
-            await appState.refreshProgress(for: type.rawValue)
-
-            await MainActor.run {
-                isUpdatingMemory = false
-                if encounteredError {
-                    hasAppliedUpdates = false
-                }
-            }
+            await appState.saveSession(type: type.rawValue, cards: rows, summary: summary)
+            await MainActor.run { isSavingSession = false }
         }
-    }
-
-    private func memoryBaseLevels() -> [String: Int] {
-        let snapshot = appState.memorySnapshot(for: type.rawValue)
-        var map: [String: Int] = [:]
-        for row in snapshot.rows {
-            map[row.cardID.lowercased()] = row.level
-        }
-        return map
     }
 
     private func scoreForTime(_ seconds: Int) -> Int {
@@ -1855,21 +1831,6 @@ private struct SessionRow: View {
                         .foregroundColor(.secondary)
                 }
                 Spacer()
-                Button {
-                    let succeeded = onReplay()
-#if canImport(UIKit)
-                    let generator = UINotificationFeedbackGenerator()
-                    generator.notificationOccurred(succeeded ? .success : .warning)
-#endif
-                } label: {
-                    Image(systemName: "bolt.fill")
-                        .font(.headline)
-                        .foregroundColor(Color("LiquidAccent"))
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel("Ôn nhanh session này")
-                .disabled(session.cards.isEmpty)
-                .opacity(session.cards.isEmpty ? 0.4 : 1)
                 Button(action: onToggle) {
                     Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
                         .font(.headline)
@@ -2746,3 +2707,4 @@ struct GlassContainer<Content: View>: View {
             }
     }
 }
+
