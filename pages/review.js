@@ -210,8 +210,12 @@ export default function ReviewPage(){
             .filter(it => it && it.card_id)
             .map(it => {
               const dueStr = it.due || null;
-              const dueTsRaw = dueStr ? Date.parse(dueStr) : NaN;
-              const dueTs = Number.isFinite(dueTsRaw) ? dueTsRaw : null;
+              const dueTs = Number.isFinite(Number(it.due_ts))
+                ? Number(it.due_ts)
+                : (() => {
+                  const parsed = dueStr ? Date.parse(dueStr) : NaN;
+                  return Number.isFinite(parsed) ? parsed : null;
+                })();
               return {
                 id: String(it.card_id),
                 idLower: String(it.card_id).toLowerCase(),
