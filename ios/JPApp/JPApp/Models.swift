@@ -256,6 +256,42 @@ struct MemorySnapshot: Decodable {
     }
 }
 
+extension MemorySnapshot {
+    struct DueSummary {
+        let overdue: Int
+        let today: Int
+        let upcoming: Int
+
+        var dueTodayTotal: Int { overdue + today }
+        var totalDueSoon: Int { overdue + today + upcoming }
+    }
+
+    func dueSummary(calendar: Calendar = .current) -> DueSummary {
+        let startOfToday = calendar.startOfDay(for: Date())
+        guard let upcomingLimit = calendar.date(byAdding: .day, value: 3, to: startOfToday) else {
+            return DueSummary(overdue: 0, today: 0, upcoming: 0)
+        }
+
+        var overdue = 0
+        var todayCount = 0
+        var upcoming = 0
+
+        for row in rows {
+            guard let dueDate = row.due else { continue }
+            let normalized = calendar.startOfDay(for: dueDate)
+            if normalized < startOfToday {
+                overdue += 1
+            } else if normalized == startOfToday {
+                todayCount += 1
+            } else if normalized <= upcomingLimit {
+                upcoming += 1
+            }
+        }
+
+        return DueSummary(overdue: overdue, today: todayCount, upcoming: upcoming)
+    }
+}
+
 struct MemoryRow: Identifiable, Decodable {
     let id: String
     let cardID: String

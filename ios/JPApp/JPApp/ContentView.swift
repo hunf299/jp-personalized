@@ -73,6 +73,10 @@ struct DashboardScreen: View {
     @Binding var selectedTab: ContentView.Tab
     @State private var hasLoadedSnapshot = false
 
+    private var vocabSnapshot: MemorySnapshot {
+        appState.memorySnapshot(for: "vocab")
+    }
+
     var body: some View {
         ScrollView {
             VStack(spacing: 24) {
@@ -105,7 +109,11 @@ struct DashboardScreen: View {
                     StudyShortcutSection(selectedTab: $selectedTab)
                 }
 
-                MemorySnapshotSection(snapshot: appState.memorySnapshot(for: "vocab"))
+                MemorySnapshotSection(snapshot: vocabSnapshot)
+
+                if !vocabSnapshot.rows.isEmpty {
+                    DueReminderSection(snapshot: vocabSnapshot, selectedTab: $selectedTab)
+                }
 
                 if let updated = appState.lastUpdated {
                     Text("Đồng bộ lần cuối: \(updated.formatted(date: .abbreviated, time: .shortened))")
@@ -242,6 +250,66 @@ private struct MemorySnapshotSection: View {
                                 .foregroundColor(.secondary)
                         }
                     }
+                }
+            }
+        }
+    }
+}
+
+@available(iOS 16.0, *)
+private struct DueReminderSection: View {
+    let snapshot: MemorySnapshot
+    @Binding var selectedTab: ContentView.Tab
+
+    private var summary: MemorySnapshot.DueSummary {
+        snapshot.dueSummary()
+    }
+
+    var body: some View {
+        GlassContainer {
+            VStack(alignment: .leading, spacing: 12) {
+                Text("Lịch ôn tập sắp tới")
+                    .font(.headline)
+                    .foregroundColor(Color("LiquidPrimary"))
+
+                HStack {
+                    Label("Đến hạn hôm nay", systemImage: "calendar.badge.clock")
+                        .foregroundColor(.secondary)
+                    Spacer()
+                    Text("\(summary.dueTodayTotal)")
+                        .font(.title3.monospacedDigit())
+                        .foregroundColor(summary.dueTodayTotal > 0 ? .primary : .secondary)
+                }
+
+                HStack {
+                    Label("Trong 3 ngày tới", systemImage: "calendar")
+                        .foregroundColor(.secondary)
+                    Spacer()
+                    Text("\(summary.upcoming)")
+                        .font(.title3.monospacedDigit())
+                        .foregroundColor(summary.upcoming > 0 ? .primary : .secondary)
+                }
+
+                if summary.dueTodayTotal > 0 {
+                    Text("Có \(summary.dueTodayTotal) thẻ đã đến hạn. Ôn ngay để không bị trễ nhé!")
+                        .font(.footnote)
+                        .foregroundColor(.secondary)
+
+                    Button {
+                        selectedTab = .progress
+                    } label: {
+                        Label("Ôn tập ngay", systemImage: "bolt.circle")
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.borderedProminent)
+                } else if summary.upcoming > 0 {
+                    Text("Trong 3 ngày tới sẽ có \(summary.upcoming) thẻ đến hạn. Chuẩn bị sẵn sàng nhé!")
+                        .font(.footnote)
+                        .foregroundColor(.secondary)
+                } else {
+                    Text("Không có thẻ nào đến hạn trong vài ngày tới. Tiếp tục duy trì nhé!")
+                        .font(.footnote)
+                        .foregroundColor(.secondary)
                 }
             }
         }
