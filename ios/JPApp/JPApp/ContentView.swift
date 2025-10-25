@@ -1127,6 +1127,8 @@ struct ProgressScreen: View {
                 }
                 SessionListView(sessions: appState.sessions(for: selectedType.rawValue)) { session in
                     Task { await appState.deleteSession(id: session.id, type: selectedType.rawValue) }
+                } onReplay: { session in
+                    startSessionReplay(session)
                 } onQuickReview: { cardID in
                     startQuickReview(forCardID: cardID)
                 }
@@ -1375,6 +1377,72 @@ struct ProgressScreen: View {
             seen.insert(key)
         }
         present(deck: deck.shuffled())
+    }
+
+    @discardableResult
+    private func startSessionReplay(_ session: StudySession) -> Bool {
+        let deck = deckForSession(session)
+        guard !deck.isEmpty else {
+            showEmptyReviewAlert = true
+            return false
+        }
+        present(deck: deck)
+        return true
+    }
+
+    private func deckForSession(_ session: StudySession) -> [DeckCard] {
+        var deck: [DeckCard] = []
+        var seen: Set<String> = []
+        let fallbackType = session.type?.lowercased() ?? selectedType.rawValue
+        let snapshotRows = currentSnapshot.rows
+
+        for sessionCard in session.cards {
+            var candidates = [sessionCard.cardID, sessionCard.id]
+                .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+                .filter { !$0.isEmpty }
+
+            guard let primaryID = candidates.first else { continue }
+            let normalizedCandidates = Set(candidates.map { $0.lowercased() })
+            guard normalizedCandidates.allSatisfy({ !seen.contains($0) }) else { continue }
+
+            var resolvedCard: DeckCard? = nil
+
+            for candidate in candidates {
+                if let match = appState.deckCard(forID: candidate) {
+                    resolvedCard = match
+                    break
+                }
+
+                if let snapshotRow = snapshotRows.first(where: { $0.cardID.lowercased() == candidate.lowercased() }),
+                   let match = appState.deckCard(for: snapshotRow) {
+                    resolvedCard = match
+                    break
+                }
+            }
+
+            if let resolvedCard {
+                deck.append(resolvedCard)
+                seen.formUnion(normalizedCandidates)
+                continue
+            }
+
+            guard let front = sessionCard.front?.trimmingCharacters(in: .whitespacesAndNewlines), !front.isEmpty else {
+                seen.formUnion(normalizedCandidates)
+                continue
+            }
+
+            let back = sessionCard.back?.trimmingCharacters(in: .whitespacesAndNewlines)
+            let fallbackCard = DeckCard(id: primaryID,
+                                        numericID: Int(primaryID),
+                                        type: fallbackType,
+                                        front: front,
+                                        back: back,
+                                        category: nil)
+            deck.append(fallbackCard)
+            seen.formUnion(normalizedCandidates)
+        }
+
+        return deck
     }
 }
 
@@ -1687,6 +1755,7 @@ private struct LeechBoardSection: View {
 private struct SessionListView: View {
     let sessions: [StudySession]
     let onDelete: (StudySession) -> Void
+    let onReplay: (StudySession) -> Bool
     let onQuickReview: (String) -> Void
     @State private var expandedSession: String? = nil
     @State private var deletingIDs: Set<String> = []
@@ -1705,6 +1774,8 @@ private struct SessionListView: View {
                                isDeleting: deletingIDs.contains(session.id),
                                onToggle: {
                         withAnimation { toggle(session: session) }
+                    }, onReplay: {
+                        onReplay(session)
                     }, onQuickReview: { cardID in
                         onQuickReview(cardID)
                     }, onDelete: {
@@ -1734,6 +1805,7 @@ private struct SessionRow: View {
     let isExpanded: Bool
     let isDeleting: Bool
     let onToggle: () -> Void
+    let onReplay: () -> Bool
     let onQuickReview: (String) -> Void
     let onDelete: () -> Void
 
@@ -1758,6 +1830,21 @@ private struct SessionRow: View {
                         .foregroundColor(.secondary)
                 }
                 Spacer()
+                Button {
+                    let succeeded = onReplay()
+#if canImport(UIKit)
+                    let generator = UINotificationFeedbackGenerator()
+                    generator.notificationOccurred(succeeded ? .success : .warning)
+#endif
+                } label: {
+                    Image(systemName: "bolt.fill")
+                        .font(.headline)
+                        .foregroundColor(Color("LiquidAccent"))
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Ôn nhanh session này")
+                .disabled(session.cards.isEmpty)
+                .opacity(session.cards.isEmpty ? 0.4 : 1)
                 Button(action: onToggle) {
                     Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
                         .font(.headline)
