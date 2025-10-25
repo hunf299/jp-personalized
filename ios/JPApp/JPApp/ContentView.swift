@@ -306,7 +306,7 @@ struct StudyScreen: View {
         }
         .searchable(text: $searchText, placement: .navigationBarDrawer(displayMode: .automatic), prompt: "Tìm thẻ…")
         .navigationDestination(isPresented: $showPractice) {
-            PracticeSessionView(type: selectedType, cards: practiceCards)
+            PracticeSessionView(mode: .study, type: selectedType, cards: practiceCards)
         }
     }
 
@@ -527,6 +527,12 @@ struct PracticeSessionView: View {
     @EnvironmentObject private var appState: AppState
     @Environment(\.dismiss) private var dismiss
 
+    enum Mode {
+        case study
+        case review
+    }
+
+    let mode: Mode
     let type: CardType
     let cards: [DeckCard]
 
@@ -549,6 +555,8 @@ struct PracticeSessionView: View {
     @State private var qualitySelection: Int = 3
     @State private var isUpdatingMemory = false
     @State private var hasAppliedUpdates = false
+    @State private var isSavingSession = false
+    @State private var sessionSaved = false
 
     struct WarmupResult {
         let correct: Bool
@@ -616,13 +624,12 @@ struct PracticeSessionView: View {
                 case .results:
                     SessionResultsView(cards: cards, warmupScores: warmupScores, recallScores: recallScores)
                     Button {
-                        applyMemoryUpdatesIfNeeded()
-                        dismiss()
+                        completeSessionAndDismiss()
                     } label: {
-                        if isUpdatingMemory {
+                        if isCompletingSession {
                             ProgressView()
                         } else {
-                            Text("Cập nhật mức nhớ & quay lại")
+                            Text(completionButtonTitle)
                                 .frame(maxWidth: .infinity)
                         }
                     }
@@ -728,7 +735,32 @@ struct PracticeSessionView: View {
         qualitySelection = recallScores[card.id]?.quality ?? 3
     }
 
+    private var isCompletingSession: Bool {
+        switch mode {
+        case .study: return isSavingSession
+        case .review: return isUpdatingMemory
+        }
+    }
+
+    private var completionButtonTitle: String {
+        switch mode {
+        case .study: return "Lưu phiên & quay lại"
+        case .review: return "Cập nhật mức nhớ & quay lại"
+        }
+    }
+
+    private func completeSessionAndDismiss() {
+        switch mode {
+        case .study:
+            saveSessionIfNeeded()
+        case .review:
+            applyMemoryUpdatesIfNeeded()
+        }
+        dismiss()
+    }
+
     private func applyMemoryUpdatesIfNeeded() {
+        guard mode == .review else { return }
         guard !hasAppliedUpdates else { return }
         guard !cards.isEmpty else { return }
         hasAppliedUpdates = true
@@ -744,6 +776,62 @@ struct PracticeSessionView: View {
             return (card, clamped, base)
         }
 
+        Task {
+            var encounteredError = false
+            for update in updates {
+                do {
+                    try await appState.updateMemoryLevel(for: update.card, baseLevel: update.base, finalLevel: update.final)
+                } catch {
+                    encounteredError = true
+                }
+            }
+
+            await appState.refreshProgress(for: type.rawValue)
+
+            await MainActor.run {
+                isUpdatingMemory = false
+                if encounteredError {
+                    hasAppliedUpdates = false
+                }
+            }
+        }
+    }
+
+    private func memoryBaseLevels() -> [String: Int] {
+        let snapshot = appState.memorySnapshot(for: type.rawValue)
+        var map: [String: Int] = [:]
+        for row in snapshot.rows {
+            map[row.cardID.lowercased()] = row.level
+        }
+        return map
+    }
+
+    private func saveSessionIfNeeded() {
+        guard mode == .study else { return }
+        guard !sessionSaved else { return }
+        sessionSaved = true
+        isSavingSession = true
+        var distribution = Array(repeating: 0, count: 6)
+        var learned = 0
+        let rows = cards.map { card -> APIClient.SessionResultPayload in
+            let warmup = warmupScores[card.id]?.score ?? 0
+            let recall = recallScores[card.id]?.quality ?? 0
+            let final = Int(round(Double(warmup + recall) / 2.0))
+            if final >= 0 && final < distribution.count {
+                distribution[final] += 1
+                if final >= 3 { learned += 1 }
+            }
+            return APIClient.SessionResultPayload(cardID: card.id,
+                                                  front: card.front,
+                                                  back: card.back,
+                                                  warmup: warmup,
+                                                  recall: recall,
+                                                  final: final)
+        }
+        let summary = APIClient.SessionSummaryPayload(total: cards.count,
+                                                       learned: learned,
+                                                       left: max(0, cards.count - learned),
+                                                       distribution: distribution)
         Task {
             var encounteredError = false
             for update in updates {
@@ -1070,7 +1158,7 @@ struct ProgressScreen: View {
         }
         .refreshable { await loadData() }
         .navigationDestination(isPresented: $showReviewSession) {
-            PracticeSessionView(type: selectedType, cards: reviewCards)
+            PracticeSessionView(mode: .review, type: selectedType, cards: reviewCards)
         }
         .alert("Không có thẻ phù hợp", isPresented: $showEmptyReviewAlert) {
             Button("Đóng", role: .cancel) { }
