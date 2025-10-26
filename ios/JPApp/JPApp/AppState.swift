@@ -9,7 +9,9 @@ final class AppState: ObservableObject {
         didSet { rebuildCardLookup() }
     }
     @Published private(set) var sessionsByType: [String: [StudySession]] = [:]
-    @Published private(set) var memorySnapshots: [String: MemorySnapshot] = [:]
+    @Published private(set) var memorySnapshots: [String: MemorySnapshot] = [:] {
+        didSet { scheduleDueReminderNotifications() }
+    }
     @Published private(set) var pomodoroState: PomodoroState?
     @Published private(set) var isRefreshing = false
     @Published private(set) var lastError: String?
@@ -40,6 +42,7 @@ final class AppState: ObservableObject {
     init(api: APIClient = APIClient()) {
         self.api = api
         rebuildCardLookup()
+        scheduleDueReminderNotifications()
     }
 
     func loadInitialDataIfNeeded() async {
@@ -188,6 +191,15 @@ final class AppState: ObservableObject {
     private static func isoString(from date: Date?) -> String? {
         guard let date else { return nil }
         return isoFormatter.string(from: date)
+    }
+
+    private func scheduleDueReminderNotifications() {
+        #if canImport(UserNotifications)
+        let totalDueToday = memorySnapshots.values.reduce(0) { partialResult, snapshot in
+            partialResult + snapshot.dueSummary().dueTodayTotal
+        }
+        DueReminderNotificationScheduler.shared.updateDueReminders(forDueTodayCount: totalDueToday)
+        #endif
     }
 
     func saveSession(type: String, cards: [APIClient.SessionResultPayload], summary: APIClient.SessionSummaryPayload) async {

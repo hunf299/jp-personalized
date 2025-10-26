@@ -6,6 +6,12 @@ import SwiftUI
 struct BackendApp: App {
     @StateObject private var appState = AppState()
 
+    init() {
+        #if canImport(UserNotifications)
+        DueReminderNotificationScheduler.shared.requestAuthorization()
+        #endif
+    }
+
     var body: some Scene {
         WindowGroup {
             if #available(iOS 16.0, *) {
