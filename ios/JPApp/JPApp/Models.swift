@@ -308,8 +308,11 @@ extension MemorySnapshot {
     }
 
     func dueSummary(calendar: Calendar = .current) -> DueSummary {
-        let startOfToday = calendar.startOfDay(for: Date())
-        guard let upcomingLimit = calendar.date(byAdding: .day, value: 3, to: startOfToday) else {
+        let now = Date()
+        let startOfToday = calendar.startOfDay(for: now)
+
+        guard let startOfTomorrow = calendar.date(byAdding: .day, value: 1, to: startOfToday),
+              let upcomingLimit = calendar.date(byAdding: .day, value: 3, to: now) else {
             return DueSummary(overdue: 0, today: 0, upcoming: 0)
         }
 
@@ -319,12 +322,14 @@ extension MemorySnapshot {
 
         for row in rows {
             guard let dueDate = row.due else { continue }
-            let normalized = calendar.startOfDay(for: dueDate)
-            if normalized < startOfToday {
+
+            if dueDate < startOfToday {
                 overdue += 1
-            } else if normalized == startOfToday {
+            } else if dueDate < startOfTomorrow {
                 todayCount += 1
-            } else if normalized <= upcomingLimit {
+            }
+
+            if dueDate > now && dueDate <= upcomingLimit {
                 upcoming += 1
             }
         }
