@@ -1,4 +1,4 @@
-import { countByType, listSessions, supabase } from '../../../lib/server/db';
+import { countByType, countRemainingByType, listSessions, supabase } from '../../../lib/server/db';
 
 const parseBoolean = (value, defaultValue = false) => {
   if (value == null) return defaultValue;
@@ -75,8 +75,11 @@ export default async function handler(req, res) {
     const sinceDays = parseNumber(req.query?.since_days);
     const dueOnly = parseBoolean(req.query?.due_only, false);
 
-    const [stats, sessions, memory] = await Promise.all([
-      countByType(),
+    const statsPromise = countByType();
+
+    const [stats, remainingByType, sessions, memory] = await Promise.all([
+      statsPromise,
+      statsPromise.then((resolvedStats) => countRemainingByType(resolvedStats)),
       listSessions(type || null),
       readMemorySnapshot({ type: type || null, sinceDays, dueOnly }),
     ]);
@@ -92,6 +95,7 @@ export default async function handler(req, res) {
       },
       stats,
       sessions,
+      remaining_by_type: remainingByType,
       memory,
     });
   } catch (error) {
