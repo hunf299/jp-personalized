@@ -338,6 +338,7 @@ extension MemorySnapshot {
     }
 }
 
+
 struct MemoryRow: Identifiable, Decodable {
     let id: String
     let cardID: String

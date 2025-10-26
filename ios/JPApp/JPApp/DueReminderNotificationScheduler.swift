@@ -29,8 +29,8 @@ final class DueReminderNotificationScheduler {
         private var hour: Int {
             switch self {
             case .morning: return 8
-            case .afternoon: return 13
-            case .evening: return 20
+            case .afternoon: return 16
+            case .evening: return 19
             }
         }
 

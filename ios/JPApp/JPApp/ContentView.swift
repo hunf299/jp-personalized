@@ -83,7 +83,7 @@ struct DashboardScreen: View {
                 if let stats = appState.stats {
                     GlassContainer {
                         VStack(alignment: .leading, spacing: 16) {
-                            Text("Tóm tắt tiến độ hiện tại")
+                            Text("Tổng quan dữ liệu hiện tại")
                                 .font(.title3.weight(.semibold))
                                 .foregroundColor(Color("LiquidPrimary"))
                             Text("Thống kê số lượng thẻ theo từng hạng mục học tập.")
@@ -123,7 +123,7 @@ struct DashboardScreen: View {
             }
             .padding()
         }
-        .navigationTitle("JP Personalized")
+        .navigationTitle("Tổng quan học tập")
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 if appState.isRefreshing {
@@ -145,6 +145,12 @@ struct DashboardScreen: View {
                 await appState.refreshProgress(for: "vocab")
             }
         }
+        .onAppear {
+            Task { await appState.refreshAll() }
+        }
+        .onTapGesture {
+            Task { await appState.refreshAll() }
+        }
     }
 }
 
@@ -152,6 +158,9 @@ struct DashboardScreen: View {
 private struct StudyShortcutSection: View {
     @EnvironmentObject private var appState: AppState
     @Binding var selectedTab: ContentView.Tab
+    @State private var hasLoadedSnapshots = false
+    @State private var snapshotVersion: Int = 0
+    @State private var remoteRemaining: [String: Int]? = nil
 
     private struct Item: Identifiable {
         let id = UUID()
@@ -164,26 +173,112 @@ private struct StudyShortcutSection: View {
     }
 
     private var items: [Item] {
-        let counts = countsByType()
+        let counts = remoteRemaining ?? countsByType()
         return [
-            Item(title: "Flashcards", subtitle: "Ôn tập 10 thẻ mới", icon: "bolt.fill", color: Color("LiquidPrimary"), type: "vocab", count: counts["vocab"] ?? 0),
-            Item(title: "Kanji", subtitle: "Luyện bộ thủ và nghĩa", icon: "character.book.closed.fill", color: Color("LiquidAccent"), type: "kanji", count: counts["kanji"] ?? 0),
             Item(title: "Ngữ pháp", subtitle: "Xem liên kết dạng gốc", icon: "list.bullet.rectangle.portrait.fill", color: Color("LiquidHighlight"), type: "grammar", count: counts["grammar"] ?? 0),
+            Item(title: "Kanji", subtitle: "Luyện bộ thủ và nghĩa", icon: "character.book.closed.fill", color: Color("LiquidAccent"), type: "kanji", count: counts["kanji"] ?? 0),
+            Item(title: "Flashcards", subtitle: "Ôn tập 10 thẻ mới", icon: "bolt.fill", color: Color("LiquidPrimary"), type: "vocab", count: counts["vocab"] ?? 0),
             Item(title: "Trợ từ", subtitle: "Tra cứu & so sánh", icon: "textformat.abc", color: Color("LiquidPrimary").opacity(0.8), type: "particle", count: counts["particle"] ?? 0)
         ]
     }
 
     private func countsByType() -> [String: Int] {
-        var counts: [String: Int] = [:]
+        // Total cards per type from the deck
+        var totals: [String: Int] = [:]
         for card in appState.cards {
-            counts[card.type, default: 0] += 1
+            totals[card.type, default: 0] += 1
         }
-        return counts
+
+        // Learned counts per type from memory snapshots (level >= 3 considered learned)
+        var learned: [String: Int] = [:]
+        for (type, _) in totals {
+            learned[type] = learnedCount(for: type)
+        }
+
+        // Remaining = total - learned (clamped at 0)
+        var remaining: [String: Int] = [:]
+        for (type, total) in totals {
+            let learnedCount = learned[type] ?? 0
+            remaining[type] = max(0, total - learnedCount)
+        }
+        return remaining
+    }
+
+    private func learnedCount(for type: String) -> Int {
+        // Reuse the same idea as PracticeSessionView's memory helpers by reading the snapshot
+        // and interpreting levels >= 3 as learned.
+        let snapshot = appState.memorySnapshot(for: type)
+        var count = 0
+        for row in snapshot.rows {
+            if row.level >= 0 { count += 1 }
+        }
+        return count
+    }
+
+    private func preloadSnapshotsIfNeeded() async {
+        guard !hasLoadedSnapshots else { return }
+        hasLoadedSnapshots = true
+        let types = ["vocab", "kanji", "grammar", "particle"]
+        for type in types {
+            if appState.memorySnapshot(for: type).rows.isEmpty {
+                await appState.refreshProgress(for: type)
+            }
+        }
+        await MainActor.run { snapshotVersion &+= 1 }
+    }
+
+    private func fetchRemoteRemaining() async {
+        guard let url = URL(string: "https://jp-personalized.vercel.app/api/progress/export") else { return }
+        do {
+            let (data, response) = try await URLSession.shared.data(from: url)
+            guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else { return }
+
+            let keys = ["vocab", "kanji", "grammar", "particle"]
+            var result: [String: Int]? = nil
+
+            // Try decode as a flat dictionary
+            if let dict = try? JSONDecoder().decode([String: Int].self, from: data) {
+                result = dict.filter { keys.contains($0.key.lowercased()) }
+            } else {
+                struct ExportResponse: Decodable {
+                    let remaining_by_type: [String: Int]?
+                    let remaining: [String: Int]?
+                    let vocab: Int?
+                    let kanji: Int?
+                    let grammar: Int?
+                    let particle: Int?
+                }
+
+                if let resp = try? JSONDecoder().decode(ExportResponse.self, from: data) {
+                    if let byType = resp.remaining_by_type, !byType.isEmpty {
+                        result = byType.filter { keys.contains($0.key.lowercased()) }
+                    } else if let rem = resp.remaining, !rem.isEmpty {
+                        result = rem.filter { keys.contains($0.key.lowercased()) }
+                    } else {
+                        var out: [String: Int] = [:]
+                        if let v = resp.vocab { out["vocab"] = v }
+                        if let k = resp.kanji { out["kanji"] = k }
+                        if let g = resp.grammar { out["grammar"] = g }
+                        if let p = resp.particle { out["particle"] = p }
+                        result = out.isEmpty ? nil : out
+                    }
+                }
+            }
+
+            if let result {
+                await MainActor.run {
+                    self.remoteRemaining = result
+                    self.snapshotVersion &+= 1
+                }
+            }
+        } catch {
+            // Ignore errors and keep fallback to local calculation
+        }
     }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Text("Bắt đầu học ngay")
+            Text("Bắt đầu học thẻ còn lại")
                 .font(.headline)
             LazyVGrid(columns: [GridItem(.adaptive(minimum: 140), spacing: 16)]) {
                 ForEach(items) { item in
@@ -217,6 +312,13 @@ private struct StudyShortcutSection: View {
                     .buttonStyle(.plain)
                 }
             }
+        }
+        .task {
+            await preloadSnapshotsIfNeeded()
+            await fetchRemoteRemaining()
+        }
+        .onChange(of: appState.cards.count) { _ in
+            snapshotVersion &+= 1
         }
     }
 }
@@ -1552,10 +1654,6 @@ private struct MemoryDistributionCard: View {
                                 .foregroundColor(.secondary)
                         }
                     }
-                    Divider()
-                    Text("Thẻ đến hạn ôn: \(dueCount)")
-                        .font(.subheadline)
-                        .foregroundColor(.secondary)
                 }
             }
         }
@@ -2777,3 +2875,4 @@ struct GlassContainer<Content: View>: View {
             }
     }
 }
+
