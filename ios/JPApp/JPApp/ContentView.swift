@@ -2775,4 +2775,3 @@ struct GlassContainer<Content: View>: View {
             }
     }
 }
-

@@ -1,0 +1,33 @@
+{
+  "fill" : "automatic",
+  "groups" : [
+    {
+      "layers" : [
+        {
+          "blend-mode" : "lighten",
+          "fill" : "automatic",
+          "image-name" : "japan-svgrepo-com.svg",
+          "name" : "japan-svgrepo-com",
+          "position" : {
+            "scale" : 1,
+            "translation-in-points" : [
+              7.5,
+              -9.4140625
+            ]
+          }
+        }
+      ],
+      "shadow" : {
+        "kind" : "neutral",
+        "opacity" : 0.5
+      },
+      "translucency" : {
+        "enabled" : true,
+        "value" : 0.5
+      }
+    }
+  ],
+  "supported-platforms" : {
+    "squares" : "shared"
+  }
+}
