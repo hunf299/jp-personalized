@@ -1570,17 +1570,24 @@ private struct ReviewOverviewCard: View {
 
     @State private var reviewCount: Int = 10
 
+    private var dueSummary: MemorySnapshot.DueSummary {
+        snapshot.dueSummary()
+    }
+
     private var maxReviewCount: Int {
         let total = snapshot.rows.count
         return max(5, min(50, max(total, 1)))
     }
 
     private var dueRows: [MemoryRow] {
+        let calendar = Calendar.current
         let now = Date()
+        let startOfToday = calendar.startOfDay(for: now)
+        let startOfTomorrow = calendar.date(byAdding: .day, value: 1, to: startOfToday) ?? now
         return snapshot.rows
             .filter { row in
                 guard let due = row.due else { return false }
-                return due <= now
+                return due < startOfTomorrow
             }
             .sorted { lhs, rhs in
                 let lhsDue = lhs.due ?? .distantPast
@@ -1590,12 +1597,7 @@ private struct ReviewOverviewCard: View {
     }
 
     private var dueSoonCount: Int {
-        let now = Date()
-        guard let threshold = Calendar.current.date(byAdding: .day, value: 3, to: now) else { return 0 }
-        return snapshot.rows.filter { row in
-            guard let due = row.due else { return false }
-            return due > now && due <= threshold
-        }.count
+        dueSummary.upcoming
     }
 
     var body: some View {
@@ -1608,7 +1610,7 @@ private struct ReviewOverviewCard: View {
                     Text("Chưa có dữ liệu ôn tập cho loại này.")
                         .foregroundColor(.secondary)
                 } else {
-                    Text("Thẻ đến hạn: \(dueRows.count)")
+                    Text("Thẻ đến hạn: \(dueSummary.dueTodayTotal)")
                         .font(.subheadline)
                         .foregroundColor(dueRows.isEmpty ? .secondary : Color("LiquidAccent"))
                     if dueSoonCount > 0 {
