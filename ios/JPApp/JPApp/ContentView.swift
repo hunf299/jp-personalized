@@ -695,6 +695,7 @@ enum CardType: String, CaseIterable, Identifiable {
 @available(iOS 16.0, *)
 struct PracticeSessionView: View {
     @EnvironmentObject private var appState: AppState
+    @EnvironmentObject private var reviewSettings: ReviewSettingsStore
     @Environment(\.dismiss) private var dismiss
 
     enum Mode {
@@ -727,6 +728,7 @@ struct PracticeSessionView: View {
     @State private var hasAppliedUpdates = false
     @State private var isSavingSession = false
     @State private var sessionSaved = false
+    @State private var autoFlipTask: Task<Void, Never>? = nil
 
     struct WarmupResult {
         let correct: Bool
@@ -745,13 +747,86 @@ struct PracticeSessionView: View {
         return cards[index]
     }
 
+    private var orientationSetting: ReviewSettingsStore.CardOrientation {
+        reviewSettings.cardOrientation
+    }
+
+    private var autoFlipConfiguration: ReviewSettingsStore.AutoFlipConfiguration? {
+        guard mode == .review else { return nil }
+        guard type != .kanji else { return nil }
+        return reviewSettings.autoFlipConfiguration
+    }
+
+    private func trimmed(_ value: String?) -> String {
+        value?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+    }
+
+    private func normalizedFront(for card: DeckCard) -> String {
+        let front = trimmed(card.front)
+        return front.isEmpty ? card.front : front
+    }
+
+    private func normalizedBack(for card: DeckCard) -> String {
+        let candidates = [card.back, card.displayMeaning]
+        for candidate in candidates {
+            let value = trimmed(candidate)
+            if !value.isEmpty { return value }
+        }
+        return normalizedFront(for: card)
+    }
+
+    private func warmupQuestionValue(for card: DeckCard) -> String {
+        if type == .kanji {
+            return normalizedFront(for: card)
+        }
+        return orientationSetting == .reversed ? normalizedBack(for: card) : normalizedFront(for: card)
+    }
+
+    private func warmupAnswer(for card: DeckCard) -> String {
+        if type == .kanji {
+            return trimmed(card.warmupLabel)
+        }
+        return orientationSetting == .reversed ? normalizedFront(for: card) : normalizedBack(for: card)
+    }
+
+    private func warmupPromptTitle(for card: DeckCard) -> String {
+        if type == .kanji {
+            return "Chọn Hán Việt + on/kun cho \(normalizedFront(for: card))"
+        }
+        let question = warmupQuestionValue(for: card)
+        if orientationSetting == .reversed {
+            return "Chọn từ đúng cho: \(question)"
+        } else {
+            return "Chọn nghĩa đúng cho: \(question)"
+        }
+    }
+
+    private func recallPrompt(for card: DeckCard) -> String {
+        if type == .kanji {
+            return "Vẽ kanji tương ứng với: \(card.warmupLabel)"
+        }
+        let base = orientationSetting == .reversed ? normalizedBack(for: card) : normalizedFront(for: card)
+        if orientationSetting == .reversed {
+            return "Điền từ cho: \(base)"
+        } else {
+            return "Điền nghĩa cho: \(base)"
+        }
+    }
+
+    private func recallExpectedAnswer(for card: DeckCard) -> String {
+        if type == .kanji {
+            return normalizedFront(for: card)
+        }
+        return orientationSetting == .reversed ? normalizedFront(for: card) : normalizedBack(for: card)
+    }
+
     var body: some View {
         ScrollView {
             VStack(spacing: 24) {
                 switch phase {
                 case .warmup:
                     if let card = currentCard {
-                        WarmupQuestion(card: card,
+                        WarmupQuestion(title: warmupPromptTitle(for: card),
                                        options: warmupOptions(for: card),
                                        selectedOption: $selectedOption,
                                        checked: $warmupChecked,
@@ -773,6 +848,8 @@ struct PracticeSessionView: View {
                     if let card = currentCard {
                         RecallQuestion(card: card,
                                        type: type,
+                                       promptText: recallPrompt(for: card),
+                                       expectedAnswer: recallExpectedAnswer(for: card),
                                        answerText: $answerText,
                                        recallChecked: $recallChecked,
                                        qualitySelection: $qualitySelection,
@@ -812,6 +889,10 @@ struct PracticeSessionView: View {
         .navigationBarTitleDisplayMode(.inline)
         .onAppear {
             warmupStart = Date()
+            scheduleAutoFlip()
+        }
+        .onDisappear {
+            cancelAutoFlipTask()
         }
         .onChange(of: qualitySelection, initial: false) { _, newValue in
             guard phase == .recall, let card = currentCard else { return }
@@ -819,24 +900,58 @@ struct PracticeSessionView: View {
             result.quality = newValue
             recallScores[card.id] = result
         }
+        .onChange(of: phase, initial: false) { _, _ in
+            scheduleAutoFlip()
+        }
+        .onChange(of: index, initial: false) { _, _ in
+            scheduleAutoFlip()
+        }
+        .onChange(of: warmupChecked, initial: false) { _, _ in
+            scheduleAutoFlip()
+        }
+        .onChange(of: recallChecked, initial: false) { _, _ in
+            scheduleAutoFlip()
+        }
+        .onChange(of: reviewSettings.autoFlip, initial: false) { _, _ in
+            scheduleAutoFlip()
+        }
+        .onChange(of: reviewSettings.cardOrientation, initial: false) { _, _ in
+            handleOrientationChange()
+        }
     }
 
     private func warmupOptions(for card: DeckCard) -> [String] {
-        let correct = card.warmupLabel
-        let others = cards.filter { $0.id != card.id }.map { $0.warmupLabel }.shuffled().prefix(3)
-        var combined = [correct] + others
-        combined = Array(Set(combined)).shuffled()
-        if combined.count < 4 {
-            combined.append("—")
+        let correct = warmupAnswer(for: card)
+        var options: [String] = []
+
+        func appendOption(_ value: String) {
+            guard !value.isEmpty else { return }
+            if !options.contains(value) {
+                options.append(value)
+            }
         }
-        return combined
+
+        appendOption(correct)
+
+        for other in cards.shuffled() where other.id != card.id {
+            appendOption(warmupAnswer(for: other))
+            if options.count >= 4 { break }
+        }
+
+        while options.count < 4 {
+            options.append("—")
+        }
+
+        return options.shuffled()
     }
 
-    private func handleWarmupCheck(for card: DeckCard) {
-        guard let selectedOption else { return }
-        let correctLabel = card.warmupLabel
+    private func handleWarmupCheck(for card: DeckCard, force: Bool = false) {
+        let correctLabel = warmupAnswer(for: card)
+        let selected = selectedOption ?? ""
+        if !force && selected.isEmpty { return }
+
         let elapsed = Int(Date().timeIntervalSince(warmupStart))
-        let isCorrect = selectedOption == correctLabel
+        let isCorrect = selected == correctLabel
         let score = isCorrect ? scoreForTime(elapsed) : 0
         warmupScores[card.id] = WarmupResult(correct: isCorrect, time: elapsed, score: score)
         if !isCorrect {
@@ -874,11 +989,99 @@ struct PracticeSessionView: View {
         }
 
         let trimmed = answerText.trimmingCharacters(in: .whitespacesAndNewlines)
-        let isCorrect = trimmed.lowercased() == (card.back ?? "").lowercased()
+        let expected = recallExpectedAnswer(for: card)
+        let isCorrect = trimmed.lowercased() == expected.lowercased()
         let defaultQuality = isCorrect ? 3 : 0
         qualitySelection = defaultQuality
         recallScores[card.id] = RecallResult(quality: defaultQuality, correct: isCorrect, userAnswer: trimmed)
         recallChecked = true
+    }
+
+    private func scheduleAutoFlip() {
+        cancelAutoFlipTask()
+        guard let config = autoFlipConfiguration else { return }
+        guard let card = currentCard else { return }
+
+        switch phase {
+        case .warmup:
+            autoFlipTask = Task {
+                let cardID = card.id
+                let delay = UInt64(max(0, config.warmupDelay) * 1_000_000_000)
+                if delay > 0 {
+                    try? await Task.sleep(nanoseconds: delay)
+                }
+                guard !Task.isCancelled else { return }
+                await MainActor.run {
+                    guard self.mode == .review,
+                          self.phase == .warmup,
+                          let current = self.currentCard,
+                          current.id == cardID else { return }
+                    if !self.warmupChecked {
+                        self.handleWarmupCheck(for: current, force: true)
+                    }
+                }
+                guard !Task.isCancelled else { return }
+                try? await Task.sleep(nanoseconds: 2_000_000_000)
+                guard !Task.isCancelled else { return }
+                await MainActor.run {
+                    guard self.mode == .review,
+                          self.phase == .warmup,
+                          let current = self.currentCard,
+                          current.id == cardID else { return }
+                    if self.warmupChecked {
+                        self.advanceWarmup()
+                    }
+                }
+            }
+        case .recall:
+            autoFlipTask = Task {
+                let cardID = card.id
+                let delay = UInt64(max(0, config.recallDelay) * 1_000_000_000)
+                if delay > 0 {
+                    try? await Task.sleep(nanoseconds: delay)
+                }
+                guard !Task.isCancelled else { return }
+                await MainActor.run {
+                    guard self.mode == .review,
+                          self.phase == .recall,
+                          let current = self.currentCard,
+                          current.id == cardID else { return }
+                    if !self.recallChecked {
+                        self.handleRecallCheck(for: current)
+                    }
+                }
+                guard !Task.isCancelled else { return }
+                try? await Task.sleep(nanoseconds: 2_000_000_000)
+                guard !Task.isCancelled else { return }
+                await MainActor.run {
+                    guard self.mode == .review,
+                          self.phase == .recall,
+                          let current = self.currentCard,
+                          current.id == cardID else { return }
+                    if self.recallChecked {
+                        self.advanceRecall()
+                    }
+                }
+            }
+        default:
+            break
+        }
+    }
+
+    private func cancelAutoFlipTask() {
+        autoFlipTask?.cancel()
+        autoFlipTask = nil
+    }
+
+    private func handleOrientationChange() {
+        if phase == .warmup {
+            selectedOption = nil
+            warmupChecked = false
+            warmupStart = Date()
+        } else if phase == .recall {
+            resetRecallState()
+        }
+        scheduleAutoFlip()
     }
 
     private func advanceRecall() {
@@ -1047,7 +1250,7 @@ struct PracticeSessionView: View {
 
 @available(iOS 16.0, *)
 private struct WarmupQuestion: View {
-    let card: DeckCard
+    let title: String
     let options: [String]
     @Binding var selectedOption: String?
     @Binding var checked: Bool
@@ -1056,7 +1259,7 @@ private struct WarmupQuestion: View {
     var body: some View {
         GlassContainer {
             VStack(alignment: .leading, spacing: 12) {
-                Text(card.type == "kanji" ? "Chọn Hán Việt + on/kun cho \(card.front)" : "Chọn nghĩa đúng cho: \(card.front)")
+                Text(title)
                     .font(.headline)
                     .foregroundColor(Color("LiquidPrimary"))
                 VStack(spacing: 8) {
@@ -1080,6 +1283,7 @@ private struct WarmupQuestion: View {
                             )
                         }
                         .buttonStyle(.plain)
+                        .disabled(checked)
                     }
                 }
                 Button("Kiểm tra") {
@@ -1137,6 +1341,8 @@ private struct WarmupSummaryView: View {
 private struct RecallQuestion: View {
     let card: DeckCard
     let type: CardType
+    let promptText: String
+    let expectedAnswer: String
     @Binding var answerText: String
     @Binding var recallChecked: Bool
     @Binding var qualitySelection: Int
@@ -1145,7 +1351,7 @@ private struct RecallQuestion: View {
     var body: some View {
         GlassContainer {
             VStack(alignment: .leading, spacing: 16) {
-                Text(prompt)
+                Text(promptText)
                     .font(.headline)
                     .foregroundColor(Color("LiquidPrimary"))
                 if type == .kanji {
@@ -1166,26 +1372,18 @@ private struct RecallQuestion: View {
                 .disabled((type != .kanji && answerText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty) || recallChecked)
 
                 if recallChecked {
-                    let correct: String = {
-                        switch type {
-                        case .kanji:
-                            return card.front
-                        default:
-                            return card.back ?? ""
-                        }
-                    }()
                     let user = answerText.trimmingCharacters(in: .whitespacesAndNewlines)
                     let isRight: Bool = {
                         switch type {
                         case .kanji:
                             return user == card.front
                         default:
-                            return user.lowercased() == (card.back ?? "").lowercased()
+                            return user.lowercased() == expectedAnswer.lowercased()
                         }
                     }()
 
                     VStack(alignment: .leading, spacing: 8) {
-                        Text("Đáp án đúng: \(correct)")
+                        Text("Đáp án đúng: \(expectedAnswer)")
                             .font(.subheadline.weight(.semibold))
                             .foregroundColor(Color("LiquidPrimary"))
                         if type != .kanji, !user.isEmpty {
@@ -1210,15 +1408,6 @@ private struct RecallQuestion: View {
                     }
                 }
             }
-        }
-    }
-
-    private var prompt: String {
-        switch type {
-        case .kanji:
-            return "Vẽ kanji tương ứng với: \(card.warmupLabel)"
-        default:
-            return "Điền nghĩa cho: \(card.front)"
         }
     }
 }
@@ -2142,8 +2331,42 @@ struct ToolsScreen: View {
                     Label("Pomodoro · 2 giờ", systemImage: "timer")
                 }
             }
+            Section("Cài đặt") {
+                NavigationLink(destination: ReviewSettingsView()) {
+                    Label("Cài đặt Review", systemImage: "gearshape")
+                }
+            }
         }
         .navigationTitle("Công cụ bổ trợ")
+        .listStyle(.insetGrouped)
+    }
+}
+
+@available(iOS 16.0, *)
+private struct ReviewSettingsView: View {
+    @EnvironmentObject private var reviewSettings: ReviewSettingsStore
+
+    var body: some View {
+        List {
+            Section("Auto-flip", footer: Text("Áp dụng cho các phiên ôn tập Omni. Kanji viết tay sẽ không tự động lật.")) {
+                Picker("Auto-flip", selection: $reviewSettings.autoFlip) {
+                    ForEach(ReviewSettingsStore.AutoFlipOption.allCases) { option in
+                        Text(option.title).tag(option)
+                    }
+                }
+                .pickerStyle(.navigationLink)
+            }
+
+            Section("Card Orientation", footer: Text("Đảo mặt sẽ hỏi nghĩa trước và yêu cầu bạn điền từ.")) {
+                Picker("Card Orientation", selection: $reviewSettings.cardOrientation) {
+                    ForEach(ReviewSettingsStore.CardOrientation.allCases) { option in
+                        Text(option.title).tag(option)
+                    }
+                }
+                .pickerStyle(.segmented)
+            }
+        }
+        .navigationTitle("Cài đặt Review")
         .listStyle(.insetGrouped)
     }
 }

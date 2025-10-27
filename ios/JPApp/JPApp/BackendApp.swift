@@ -9,6 +9,7 @@ struct BackendApp: App {
 #endif
     @Environment(\.scenePhase) private var scenePhase
     @StateObject private var appState = AppState()
+    @StateObject private var reviewSettings = ReviewSettingsStore()
 
     init() {
         #if canImport(UserNotifications)
@@ -26,6 +27,7 @@ struct BackendApp: App {
             if #available(iOS 16.0, *) {
                 ContentView()
                     .environmentObject(appState)
+                    .environmentObject(reviewSettings)
             } else {
                 UpgradeView()
             }
