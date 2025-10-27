@@ -55,6 +55,22 @@ final class DueReminderNotificationScheduler {
         self.center = center
     }
 
+    // MARK: - Provider for background refresh
+    /// A provider that returns today's due cards count when refreshing in background.
+    typealias DueTodayCountProvider = () -> Int?
+
+    /// Set this from your data layer so background refresh can obtain the latest due count.
+    static var dueTodayCountProvider: DueTodayCountProvider?
+
+    /// Refresh reminders using the provided count provider. If no count is available, cancels today's reminders.
+    func refreshDueRemindersUsingProvider() {
+        if let count = Self.dueTodayCountProvider?() {
+            updateDueReminders(forDueTodayCount: count)
+        } else {
+            cancelAllDueReminders()
+        }
+    }
+
     /// Yêu cầu quyền gửi thông báo nếu người dùng chưa cấp.
     func requestAuthorization() {
         center.requestAuthorization(options: [.alert, .sound, .badge]) { _, _ in }
@@ -82,18 +98,34 @@ final class DueReminderNotificationScheduler {
     private func scheduleReminders(for dueCount: Int) {
         cancelAllDueReminders()
 
+        let calendar = Calendar.current
+        let now = Date()
+        let today = calendar.dateComponents([.year, .month, .day], from: now)
+
         ReminderSlot.allCases.forEach { slot in
+            // Build components for today at the slot time
+            var components = DateComponents()
+            components.year = today.year
+            components.month = today.month
+            components.day = today.day
+            components.hour = slot.scheduledTime.hour
+            components.minute = slot.scheduledTime.minute
+            components.calendar = calendar
+            components.timeZone = TimeZone.current
+
+            // Create a date from components and skip if it's already passed today
+            if let fireDate = calendar.date(from: components), fireDate <= now {
+                return
+            }
+
             let content = UNMutableNotificationContent()
             content.title = slot.title
             content.body = String(format: slot.bodyFormat, dueCount)
             content.sound = .default
             content.threadIdentifier = "due-reminder"
 
-            var components = slot.scheduledTime
-            components.calendar = Calendar.current
-            components.timeZone = TimeZone.current
-
-            let trigger = UNCalendarNotificationTrigger(dateMatching: components, repeats: true)
+            // Do not repeat; we reschedule each day with the fresh count
+            let trigger = UNCalendarNotificationTrigger(dateMatching: components, repeats: false)
             let request = UNNotificationRequest(identifier: slot.identifier, content: content, trigger: trigger)
             center.add(request, withCompletionHandler: nil)
         }
@@ -105,3 +137,4 @@ final class DueReminderNotificationScheduler {
     }
 }
 #endif
+
