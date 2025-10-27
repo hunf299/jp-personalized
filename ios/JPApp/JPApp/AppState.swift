@@ -195,9 +195,27 @@ final class AppState: ObservableObject {
 
     private func scheduleDueReminderNotifications() {
         #if canImport(UserNotifications)
+        let calendar = Calendar.current
+        let now = Date()
+        let today = calendar.startOfDay(for: now)
+        let tomorrow = calendar.date(byAdding: .day, value: 1, to: today)
+
         let totalDueToday = memorySnapshots.values.reduce(0) { partialResult, snapshot in
-            partialResult + snapshot.dueSummary().dueTodayTotal
+            partialResult + snapshot.dueSummary(calendar: calendar).dueTodayTotal
         }
+
+        let totalDueTomorrow: Int
+        if let tomorrow {
+            totalDueTomorrow = memorySnapshots.values.reduce(0) { partialResult, snapshot in
+                partialResult + snapshot.dueCount(on: tomorrow, calendar: calendar)
+            }
+        } else {
+            totalDueTomorrow = 0
+        }
+
+        DueReminderNotificationScheduler.shared.storeUpcomingDueCounts(todayCount: totalDueToday,
+                                                                        tomorrowCount: totalDueTomorrow,
+                                                                        referenceDate: today)
         DueReminderNotificationScheduler.shared.updateDueReminders(forDueTodayCount: totalDueToday)
         #endif
     }

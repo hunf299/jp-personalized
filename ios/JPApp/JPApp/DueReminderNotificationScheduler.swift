@@ -6,6 +6,8 @@ import UserNotifications
 final class DueReminderNotificationScheduler {
     static let shared = DueReminderNotificationScheduler()
 
+    private let storage = StoredCountsStorage()
+
     private enum ReminderSlot: CaseIterable {
         case morning
         case afternoon
@@ -60,15 +62,35 @@ final class DueReminderNotificationScheduler {
     typealias DueTodayCountProvider = () -> Int?
 
     /// Set this from your data layer so background refresh can obtain the latest due count.
-    static var dueTodayCountProvider: DueTodayCountProvider?
+    static var dueTodayCountProvider: DueTodayCountProvider? = {
+        shared.storedDueCountForToday()
+    }
 
     /// Refresh reminders using the provided count provider. If no count is available, cancels today's reminders.
     func refreshDueRemindersUsingProvider() {
-        if let count = Self.dueTodayCountProvider?() {
+        let providedCount = Self.dueTodayCountProvider?()
+        let resolvedCount = providedCount ?? storedDueCountForToday()
+
+        if let count = resolvedCount {
             updateDueReminders(forDueTodayCount: count)
         } else {
             cancelAllDueReminders()
         }
+    }
+
+    /// Lưu lại số lượng thẻ đến hạn cho hôm nay và ngày tiếp theo để phục vụ background refresh.
+    /// - Parameters:
+    ///   - todayCount: Số lượng thẻ đến hạn của ngày hiện tại.
+    ///   - tomorrowCount: Số lượng thẻ đến hạn của ngày tiếp theo (nếu đã biết).
+    ///   - referenceDate: Thời điểm làm chuẩn cho `todayCount`.
+    func storeUpcomingDueCounts(todayCount: Int, tomorrowCount: Int?, referenceDate: Date = Date()) {
+        storage.save(todayCount: todayCount, tomorrowCount: tomorrowCount, referenceDate: referenceDate)
+    }
+
+    /// Truy xuất số thẻ đến hạn đã lưu trữ cho ngày hiện tại (sử dụng cho background refresh/PushKit).
+    /// - Returns: Số lượng thẻ đến hạn hoặc `nil` nếu không có dữ liệu phù hợp.
+    func storedDueCountForToday(now: Date = Date()) -> Int? {
+        storage.currentCount(for: now)
     }
 
     /// Yêu cầu quyền gửi thông báo nếu người dùng chưa cấp.
@@ -136,5 +158,64 @@ final class DueReminderNotificationScheduler {
         center.removePendingNotificationRequests(withIdentifiers: identifiers)
     }
 }
-#endif
 
+private final class StoredCountsStorage {
+    private struct Snapshot: Codable {
+        var referenceDate: Date
+        var todayCount: Int
+        var tomorrowCount: Int?
+    }
+
+    private let defaults: UserDefaults
+    private let queue = DispatchQueue(label: "due-reminder-counts", qos: .utility)
+    private let storageKey = "jp.dueReminder.storedCounts"
+
+    init(defaults: UserDefaults = .standard) {
+        self.defaults = defaults
+    }
+
+    func save(todayCount: Int, tomorrowCount: Int?, referenceDate: Date, calendar: Calendar = .current) {
+        let startOfDay = calendar.startOfDay(for: referenceDate)
+        let snapshot = Snapshot(referenceDate: startOfDay, todayCount: todayCount, tomorrowCount: tomorrowCount)
+        queue.sync {
+            guard let data = try? JSONEncoder().encode(snapshot) else { return }
+            self.defaults.set(data, forKey: self.storageKey)
+        }
+    }
+
+    func currentCount(for date: Date, calendar: Calendar = .current) -> Int? {
+        queue.sync {
+            guard var snapshot = loadSnapshot() else { return nil }
+
+            let requestedDay = calendar.startOfDay(for: date)
+            let storedDay = calendar.startOfDay(for: snapshot.referenceDate)
+
+            if storedDay == requestedDay {
+                return snapshot.todayCount
+            }
+
+            guard let nextDay = calendar.date(byAdding: .day, value: 1, to: storedDay),
+                  calendar.startOfDay(for: nextDay) == requestedDay,
+                  let tomorrowCount = snapshot.tomorrowCount else {
+                return nil
+            }
+
+            snapshot.referenceDate = requestedDay
+            snapshot.todayCount = tomorrowCount
+            snapshot.tomorrowCount = nil
+            saveSnapshot(snapshot)
+            return tomorrowCount
+        }
+    }
+
+    private func loadSnapshot() -> Snapshot? {
+        guard let data = defaults.data(forKey: storageKey) else { return nil }
+        return try? JSONDecoder().decode(Snapshot.self, from: data)
+    }
+
+    private func saveSnapshot(_ snapshot: Snapshot) {
+        guard let data = try? JSONEncoder().encode(snapshot) else { return }
+        defaults.set(data, forKey: storageKey)
+    }
+}
+#endif

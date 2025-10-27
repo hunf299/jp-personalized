@@ -336,6 +336,20 @@ extension MemorySnapshot {
 
         return DueSummary(overdue: overdue, today: todayCount, upcoming: upcoming)
     }
+
+    func dueCount(on date: Date, calendar: Calendar = .current) -> Int {
+        let start = calendar.startOfDay(for: date)
+        guard let end = calendar.date(byAdding: .day, value: 1, to: start) else {
+            return 0
+        }
+
+        return rows.reduce(into: 0) { partialResult, row in
+            guard let dueDate = row.due else { return }
+            if dueDate >= start && dueDate < end {
+                partialResult += 1
+            }
+        }
+    }
 }
 
 
