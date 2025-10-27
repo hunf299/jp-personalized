@@ -4,10 +4,19 @@ import SwiftUI
 @main
 @MainActor
 struct BackendApp: App {
+#if canImport(UIKit)
+    @UIApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
+#endif
+    @Environment(\.scenePhase) private var scenePhase
     @StateObject private var appState = AppState()
 
     init() {
         #if canImport(UserNotifications)
+        if DueReminderNotificationScheduler.dueTodayCountProvider == nil {
+            DueReminderNotificationScheduler.dueTodayCountProvider = {
+                DueReminderNotificationScheduler.shared.storedDueCountForToday()
+            }
+        }
         DueReminderNotificationScheduler.shared.requestAuthorization()
         #endif
     }
@@ -20,6 +29,18 @@ struct BackendApp: App {
             } else {
                 UpgradeView()
             }
+        }
+        .onChange(of: scenePhase) { newPhase in
+            #if canImport(UserNotifications)
+            if newPhase == .active {
+                DueReminderNotificationScheduler.shared.refreshDueRemindersUsingProvider()
+            }
+            #endif
+            #if canImport(BackgroundTasks)
+            if newPhase == .background || newPhase == .active {
+                DueReminderBackgroundManager.shared.scheduleNextDaily(hour: 0, minute: 5)
+            }
+            #endif
         }
     }
 }
