@@ -33,12 +33,16 @@ struct BackendApp: App {
         .onChange(of: scenePhase) { newPhase in
             #if canImport(UserNotifications)
             if newPhase == .active {
+                #if canImport(BackgroundTasks)
+                DueReminderBackgroundManager.shared.refreshDueRemindersNow()
+                #else
                 DueReminderNotificationScheduler.shared.refreshDueRemindersUsingProvider()
+                #endif
             }
             #endif
             #if canImport(BackgroundTasks)
             if newPhase == .background || newPhase == .active {
-                DueReminderBackgroundManager.shared.scheduleNextDaily(hour: 0, minute: 5)
+                DueReminderBackgroundManager.shared.ensureDailyRefreshScheduled()
             }
             #endif
         }

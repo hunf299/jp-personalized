@@ -6,8 +6,16 @@ import BackgroundTasks
 final class DueReminderBackgroundManager {
     static let shared = DueReminderBackgroundManager()
 
-    /// Đổi lại identifier này cho khớp bundle của bạn.
-    private let taskIdentifier = "com.yourcompany.app.refreshDueReminders"
+    private let fallbackIdentifier = "com.jppersonalized.app.refreshDueReminders"
+    private let refreshHour = 0
+    private let refreshMinute = 5
+
+    private var taskIdentifier: String {
+        if let bundleID = Bundle.main.bundleIdentifier, !bundleID.isEmpty {
+            return "\(bundleID).refreshDueReminders"
+        }
+        return fallbackIdentifier
+    }
 
     private init() {}
 
@@ -53,18 +61,34 @@ final class DueReminderBackgroundManager {
         scheduleAppRefresh(earliestBeginDate: next)
     }
 
+    /// Đảm bảo đã lên lịch chạy nền vào đầu mỗi ngày để cập nhật thông báo.
+    func ensureDailyRefreshScheduled() {
+        scheduleNextDaily(hour: refreshHour, minute: refreshMinute)
+    }
+
+    /// Thực hiện cập nhật thông báo ngay lập tức, sử dụng provider đã cấu hình.
+    /// - Parameter reschedule: Nếu `true` sẽ lên lịch lại phiên chạy nền cho ngày kế tiếp sau khi hoàn tất.
+    func refreshDueRemindersNow(reschedule: Bool = false) {
+        #if canImport(UserNotifications)
+        DueReminderNotificationScheduler.shared.refreshDueRemindersUsingProvider()
+        if reschedule {
+            ensureDailyRefreshScheduled()
+        }
+        #endif
+    }
+
     // MARK: - Handling
     @available(iOS 13.0, *)
     private func handleAppRefresh(task: BGAppRefreshTask) {
         // Lên lịch lại ngay để đảm bảo lần sau vẫn chạy dù app bị kill sớm.
-        scheduleNextDaily()
+        ensureDailyRefreshScheduled()
 
         let queue = OperationQueue()
         queue.maxConcurrentOperationCount = 1
 
         let op = BlockOperation {
             // Gọi scheduler để làm mới thông báo bằng provider do app cung cấp.
-            DueReminderNotificationScheduler.shared.refreshDueRemindersUsingProvider()
+            self.refreshDueRemindersNow()
         }
 
         task.expirationHandler = {

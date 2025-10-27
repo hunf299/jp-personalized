@@ -6,9 +6,9 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
                      didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil) -> Bool {
         #if canImport(BackgroundTasks)
         DueReminderBackgroundManager.shared.register()
-        DueReminderBackgroundManager.shared.scheduleNextDaily(hour: 0, minute: 5)
-        #endif
-        #if canImport(UserNotifications)
+        DueReminderBackgroundManager.shared.ensureDailyRefreshScheduled()
+        DueReminderBackgroundManager.shared.refreshDueRemindersNow()
+        #elseif canImport(UserNotifications)
         DueReminderNotificationScheduler.shared.refreshDueRemindersUsingProvider()
         #endif
         return true
@@ -16,14 +16,16 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
 
     func applicationDidEnterBackground(_ application: UIApplication) {
         #if canImport(BackgroundTasks)
-        DueReminderBackgroundManager.shared.scheduleNextDaily(hour: 0, minute: 5)
+        DueReminderBackgroundManager.shared.ensureDailyRefreshScheduled()
         #endif
     }
 
     func application(_ application: UIApplication,
                      didReceiveRemoteNotification userInfo: [AnyHashable: Any],
                      fetchCompletionHandler completionHandler: @escaping (UIBackgroundFetchResult) -> Void) {
-        #if canImport(UserNotifications)
+        #if canImport(BackgroundTasks)
+        DueReminderBackgroundManager.shared.refreshDueRemindersNow(reschedule: true)
+        #elseif canImport(UserNotifications)
         DueReminderNotificationScheduler.shared.refreshDueRemindersUsingProvider()
         #endif
         completionHandler(.newData)
