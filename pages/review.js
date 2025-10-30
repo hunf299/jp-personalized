@@ -101,15 +101,16 @@ function toNum(v, d = 0) {
 // Tính FINAL an toàn (0..5), thống nhất cho UI & lưu
 // mode = 'level' | 'omni'
 // recProvided: boolean -> có phải recall được explicit cung cấp (bằng tay hoặc auto) hay không
-function calcFinal(mode, base, mcq, rec, recProvided = false, example = null) {
+function calcFinal(mode, base, mcq, rec, recProvided = false, example = null, expectsExample = false) {
   const b = toNum(base, 0);
   const m = toNum(mcq, 0);
   const r = toNum(rec, mode === 'level' ? 0 : b);
 
-  const hasExample = Number.isFinite(Number(example));
-  const e = hasExample ? toNum(example, 0) : null;
-  const divisor = 2 + (hasExample ? 1 : 0);
-  const sum = m + r + (hasExample ? e : 0);
+  const hasExampleScore = Number.isFinite(Number(example));
+  const shouldUseExample = expectsExample || hasExampleScore;
+  const e = shouldUseExample ? toNum(example, 0) : 0;
+  const divisor = shouldUseExample ? 3 : 2;
+  const sum = m + r + (shouldUseExample ? e : 0);
   const avg = Math.floor(sum / (divisor || 1));
   const clamped = Math.max(0, Math.min(5, avg));
 
@@ -365,6 +366,11 @@ export default function ReviewPage(){
   const currentExamples = React.useMemo(() => safeArray(exampleLookup.byCardId?.[String(card?.id)]), [exampleLookup, card]);
   const exampleCard = exampleDeck[exampleIdx] || null;
   const examplePool = React.useMemo(() => safeArray(exampleLookup.pool), [exampleLookup]);
+  const cardHasExamples = React.useCallback((c) => {
+    if (!c) return false;
+    const arr = safeArray(exampleLookup.byCardId?.[String(c.id)]);
+    return arr.length > 0;
+  }, [exampleLookup]);
   React.useEffect(() => {
     const list = [];
     deck.forEach((c) => {
@@ -560,22 +566,23 @@ export default function ReviewPage(){
       const base = toNum(baseLevels[String(c.id).toLowerCase()], -1);
       const mcq = toNum(mcqScores[c.id]?.score, 0);
       const exampleScore = exampleAverages[c.id];
+      const expectsExample = String(c?.type || '').toLowerCase() === 'kanji' && cardHasExamples(c);
 
       const hasProposed = Object.prototype.hasOwnProperty.call(proposed, c.id);
 
       if (isLevelMode) {
         const rec = toNum(proposed[c.id], 0);
-        const fin = calcFinal('level', base, mcq, rec, hasProposed, exampleScore);
+        const fin = calcFinal('level', base, mcq, rec, hasProposed, exampleScore, expectsExample);
         out[c.id] = fin;
       } else {
         // omni: if proposed exists use it (allow decrease), otherwise no explicit recall provided
         const rec = hasProposed ? toNum(proposed[c.id], base) : base;
-        const fin = calcFinal('omni', base, mcq, rec, hasProposed, exampleScore);
+        const fin = calcFinal('omni', base, mcq, rec, hasProposed, exampleScore, expectsExample);
         out[c.id] = fin;
       }
     });
     return out;
-  }, [deck, baseLevels, isLevelMode, mcqScores, proposed, exampleAverages]);
+  }, [deck, baseLevels, isLevelMode, mcqScores, proposed, exampleAverages, cardHasExamples]);
 
   const finalDist = React.useMemo(() => {
     const d = [0,0,0,0,0,0];
@@ -810,6 +817,8 @@ export default function ReviewPage(){
                     const base = toNum(baseLevels[String(c.id).toLowerCase()], 0);
                     const mcq  = toNum(mcqScores[c.id]?.score, 0);
                     const exampleScore = exampleAverages[c.id];
+                    const expectsExample = String(c?.type || '').toLowerCase() === 'kanji' && cardHasExamples(c);
+                    const displayExampleScore = expectsExample ? toNum(exampleScore, 0) : exampleScore;
 
                     // Đếm xem user/auto có thực sự đưa ra proposal không
                     const hasProposed = Object.prototype.hasOwnProperty.call(proposed, c.id);
@@ -821,7 +830,7 @@ export default function ReviewPage(){
 
                     // Truyền hasProposed để calcFinal biết đây có phải là recall "explicit" hay không
                     const source = proposedSource[c.id]; // 'auto' | 'manual' | undefined
-                    let fin  = calcFinal(isLevelMode ? 'level' : 'omni', base, mcq, rec, hasProposed, exampleScore);
+                    let fin  = calcFinal(isLevelMode ? 'level' : 'omni', base, mcq, rec, hasProposed, exampleScore, expectsExample);
                     if (autoNoDowngrade && source === 'auto' && fin < base) fin = base;
 
                     return (
@@ -834,7 +843,7 @@ export default function ReviewPage(){
                             <Chip size="small" label={`Base: ${base}`} />
                             <Chip size="small" label={`MCQ: ${mcq}`} />
                             <Chip size="small" label={`Recall: ${rec}`} />
-                            <Chip size="small" label={`Ví dụ: ${exampleScore != null ? exampleScore : '—'}`} />
+                            <Chip size="small" label={`Ví dụ: ${displayExampleScore != null ? displayExampleScore : '—'}`} />
                             <Chip size="small" color="success" label={`Final: ${fin}`} />
                           </Stack>
                         </Stack>
@@ -854,13 +863,14 @@ export default function ReviewPage(){
                             const base = toNum(baseLevels[String(c.id).toLowerCase()], 0);
                             const mcq  = toNum(mcqScores[c.id]?.score, 0);
                             const exampleScore = exampleAverages[c.id];
+                            const expectsExample = String(c?.type || '').toLowerCase() === 'kanji' && cardHasExamples(c);
 
                             const hasProposed = Object.prototype.hasOwnProperty.call(proposed, c.id);
                             const rec = isLevelMode ? (hasProposed ? toNum(proposed[c.id], 0) : 0)
                                 : (hasProposed ? toNum(proposed[c.id], base) : base);
 
                             // Final level shown to user
-                            let lvl = calcFinal(isLevelMode ? 'level' : 'omni', base, mcq, rec, hasProposed, exampleScore);
+                            let lvl = calcFinal(isLevelMode ? 'level' : 'omni', base, mcq, rec, hasProposed, exampleScore, expectsExample);
 
                             // Chỉ giữ mức cũ nếu auto-flip (omni) đề xuất mức thấp hơn.
                             const source = proposedSource[c.id]; // 'auto' | 'manual' | undefined

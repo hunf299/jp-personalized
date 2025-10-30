@@ -1,6 +1,11 @@
 import React from 'react';
 import { Card, CardContent, Typography, Stack, Button, Divider } from '@mui/material';
 
+const isExampleEntry = (item) => {
+  const type = String(item?.type || '').toLowerCase();
+  return type.includes('example') || type.includes('sentence');
+};
+
 export default function ExampleMCQ({ example, pool, onCheck, scoreFunc }) {
   const startRef = React.useRef(Date.now());
   const firstHitRef = React.useRef(null);
@@ -8,7 +13,7 @@ export default function ExampleMCQ({ example, pool, onCheck, scoreFunc }) {
   const [checked, setChecked] = React.useState(false);
   const [result, setResult] = React.useState(null);
 
-  const correct = example?.back ?? '';
+  const correct = example?.back != null ? String(example.back) : '';
 
   const options = React.useMemo(() => {
     startRef.current = Date.now();
@@ -16,11 +21,14 @@ export default function ExampleMCQ({ example, pool, onCheck, scoreFunc }) {
 
     const basePool = Array.isArray(pool) ? pool : [];
     const others = basePool
-        .filter((item) => item && item.back != null && item.back !== correct)
+        .filter((item) => isExampleEntry(item) && item && item.back != null && item.back !== correct)
         .sort(() => Math.random() - 0.5)
         .slice(0, 3)
-        .map((item) => item.back);
-    const raw = [correct, ...others].filter(Boolean).sort(() => Math.random() - 0.5);
+        .map((item) => String(item.back));
+    const raw = [correct, ...others]
+        .map((opt) => (opt != null ? String(opt) : ''))
+        .filter(Boolean)
+        .sort(() => Math.random() - 0.5);
     const unique = [];
     const seen = new Set();
     raw.forEach((opt) => {

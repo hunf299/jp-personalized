@@ -394,14 +394,14 @@ export default function FlashcardsPage() {
       // đảm bảo lấy score là number
       const w = Number.isFinite(Number(warmupScores[b.id]?.score)) ? Number(warmupScores[b.id].score) : 0;
       const r = Number.isFinite(Number(recallScores[b.id]?.score)) ? Number(recallScores[b.id].score) : 0;
-      const exampleList = safeArray(exampleScoresByCard[b.id]);
-      const e = exampleList.length
-          ? Math.round(exampleList.reduce((sum, val) => sum + Number(val || 0), 0) / exampleList.length)
-          : null;
-      const componentCount = 2 + (e != null ? 1 : 0);
-      const divisor = componentCount > 0 ? componentCount : 1;
-      const total = Number(w) + Number(r) + (e != null ? Number(e) : 0);
-      const final = Math.round(total / divisor);
+      const exampleScores = safeArray(exampleScoresByCard[b.id]);
+      const expectsExample = String(b?.type || '').toLowerCase() === 'kanji' && safeArray(b?.exampleCards).length > 0;
+      const e = exampleScores.length
+          ? Math.round(exampleScores.reduce((sum, val) => sum + Number(val || 0), 0) / exampleScores.length)
+          : (expectsExample ? 0 : null);
+      const divisor = expectsExample ? 3 : (2 + (e != null ? 1 : 0));
+      const total = Number(w) + Number(r) + (expectsExample ? Number(e ?? 0) : (e != null ? Number(e) : 0));
+      const final = Math.round(total / (divisor || 1));
 
       return {
         id: String(b.id),
