@@ -36,7 +36,7 @@ export default function Home() {
   return (
     <Container>
       <Typography variant="h5" sx={{ fontWeight:700, mb:1 }}>Cập nhật dữ liệu trước khi học</Typography>
-      <Typography sx={{ mb:2, color:'text.secondary' }}>Tải CSV (headers: <b>front,back,category</b>). Có thể chỉ định type ở ô chọn.</Typography>
+      <Typography sx={{ mb:2, color:'text.secondary' }}>Tải CSV (headers: <b>front,back,example,category</b>). Có thể chỉ định type ở ô chọn.</Typography>
 
       <Stack direction={{ xs:'column', md:'row' }} spacing={2}>
         {['vocab','kanji','grammar','particle'].map(key => (
