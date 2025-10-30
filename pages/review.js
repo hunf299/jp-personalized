@@ -6,6 +6,8 @@ import {
   LinearProgress, Chip, ToggleButtonGroup, ToggleButton, TextField, Divider
 } from '@mui/material';
 import HandwritingCanvas from '../components/HandwritingCanvas';
+import ExampleMCQ from '../components/ExampleMCQ';
+import { createExampleLookup, exampleKey } from '../lib/example-utils';
 
 // Busy (fallback an toàn nếu không có GlobalBusy)
 import { useBusy as _useBusy } from '../components/GlobalBusy';
@@ -99,12 +101,17 @@ function toNum(v, d = 0) {
 // Tính FINAL an toàn (0..5), thống nhất cho UI & lưu
 // mode = 'level' | 'omni'
 // recProvided: boolean -> có phải recall được explicit cung cấp (bằng tay hoặc auto) hay không
-function calcFinal(mode, base, mcq, rec, recProvided = false) {
+function calcFinal(mode, base, mcq, rec, recProvided = false, example = null, expectsExample = false) {
   const b = toNum(base, 0);
   const m = toNum(mcq, 0);
   const r = toNum(rec, mode === 'level' ? 0 : b);
 
-  const avg = Math.floor((m + r) / 2);
+  const hasExampleScore = Number.isFinite(Number(example));
+  const shouldUseExample = expectsExample || hasExampleScore;
+  const e = shouldUseExample ? toNum(example, 0) : 0;
+  const divisor = shouldUseExample ? 3 : 2;
+  const sum = m + r + (shouldUseExample ? e : 0);
+  const avg = Math.floor(sum / (divisor || 1));
   const clamped = Math.max(0, Math.min(5, avg));
 
   if (mode === 'level') {
@@ -151,8 +158,9 @@ export default function ReviewPage(){
   // ----- State chính -----
   const [deck, setDeck] = React.useState([]);     // [{id, type, front, back, baseLv}]
   const [idx, setIdx] = React.useState(0);
-  const [stage, setStage] = React.useState('mcq'); // 'mcq'|'recall'|'done'
-  const total = deck.length, cur = Math.min(idx+1, total);
+  const [stage, setStage] = React.useState('mcq'); // 'mcq'|'recall'|'example'|'done'
+  const total = deck.length;
+  const cur = stage === 'example' ? total : Math.min(idx + 1, total);
 
   // input mode
   const [modeInput, setModeInput] = React.useState(type === 'kanji' ? 'handwrite' : 'typing');
@@ -181,6 +189,11 @@ export default function ReviewPage(){
   const [proposed, setProposed] = React.useState({});     // id -> level (recall)
   const [proposedSource, setProposedSource] = React.useState({}); // id -> 'auto' | 'manual'
   const [mcqScores, setMcqScores] = React.useState({});   // id -> { timeSec, score }
+  const [exampleLookup, setExampleLookup] = React.useState({ byCardId: {}, pool: [], refsByCardId: {} });
+  const [examplesReady, setExamplesReady] = React.useState(false);
+  const [exampleDeck, setExampleDeck] = React.useState([]);
+  const [exampleIdx, setExampleIdx] = React.useState(0);
+  const [exampleAnswers, setExampleAnswers] = React.useState({});
 
   // Chấm thời gian ở MCQ
   const [mcqStartTs, setMcqStartTs] = React.useState(null);
@@ -191,8 +204,27 @@ export default function ReviewPage(){
   const autoNoDowngrade = (autoVal !== 'off') && !disableAuto && !isLevelMode;
 
   // ----- Load deck (từ /api/memory/all – nguồn sự thật) -----
+  React.useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const rows = safeArray(await getJSON('/api/cards'));
+        if (cancelled) return;
+        setExampleLookup(createExampleLookup(rows));
+      } catch (e) {
+        console.warn('Không thể tải cards cho ví dụ', e);
+      } finally {
+        if (!cancelled) {
+          setExamplesReady(true);
+        }
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
   React.useEffect(()=>{
     if(!ready) return;
+    if(type === 'kanji' && !examplesReady) return;
     let cancelled = false;
     (async()=>{
       try{
@@ -322,30 +354,55 @@ export default function ReviewPage(){
     })();
     return ()=> { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ready, type, isLevelMode, levelParam, count, settings?.recency_days, router.query?.since_days, orientation, dueMode, qp?.levels, qp?.card_ids]);
+  }, [ready, type, isLevelMode, levelParam, count, settings?.recency_days, router.query?.since_days, orientation, dueMode, qp?.levels, qp?.card_ids, examplesReady, exampleLookup]);
 
   const card = deck[idx] || null;
+  const currentExamples = React.useMemo(() => safeArray(exampleLookup.byCardId?.[String(card?.id)]), [exampleLookup, card]);
+  const exampleCard = exampleDeck[exampleIdx] || null;
+  const examplePool = React.useMemo(() => safeArray(exampleLookup.pool), [exampleLookup]);
+  const cardHasExamples = React.useCallback((c) => {
+    if (!c) return false;
+    const arr = safeArray(exampleLookup.byCardId?.[String(c.id)]);
+    return arr.length > 0;
+  }, [exampleLookup]);
+  React.useEffect(() => {
+    const list = [];
+    deck.forEach((c) => {
+      const examples = safeArray(exampleLookup.byCardId?.[String(c.id)]);
+      examples.forEach((ex) => {
+        list.push({
+          ...ex,
+          parentId: c.id,
+          parentFront: c.front,
+          parentBack: c.back,
+        });
+      });
+    });
+    setExampleDeck(list);
+    setExampleIdx(0);
+    setExampleAnswers({});
+  }, [deck, exampleLookup]);
 
   // ======= Helper: chọn mặt hỏi/đáp theo orientation & loại =======
   // Trả về {q: question, a: answer} cho MCQ
-  function qaForMCQ(c){
-    if (!c) return { q:'', a:'' };
-    if (type==='kanji') {
+  const qaForMCQ = React.useCallback((c) => {
+    if (!c) return { q: '', a: '' };
+    if (type === 'kanji') {
       // MCQ hỏi front, đáp án back (luôn vậy)
       return { q: c.front, a: c.back };
     }
-    if (orientation==='reversed') return { q: c.back, a: c.front };
+    if (orientation === 'reversed') return { q: c.back, a: c.front };
     return { q: c.front, a: c.back };
-  }
+  }, [type, orientation]);
   // Trả về {q: question, a: answer} cho RECALL
-  function qaForRecall(c){
-    if (!c) return { q:'', a:'' };
-    if (type==='kanji') {
+  const qaForRecall = React.useCallback((c) => {
+    if (!c) return { q: '', a: '' };
+    if (type === 'kanji') {
       return { q: c.back, a: c.front };
     }
-    if (orientation==='reversed') return { q: c.back, a: c.front };
+    if (orientation === 'reversed') return { q: c.back, a: c.front };
     return { q: c.front, a: c.back };
-  }
+  }, [type, orientation]);
 
   // MCQ options
   const mcq = React.useMemo(()=>{
@@ -356,7 +413,7 @@ export default function ReviewPage(){
     const pick = [...others].sort(()=>Math.random()-0.5).slice(0,3);
     const opts = [a, ...pick.map(x=> qaForMCQ(x).a)].sort(()=>Math.random()-0.5);
     return { question:q, correct:a, opts };
-  }, [card, deck, orientation, type]);
+  }, [card, deck, qaForMCQ]);
 
   // ----- Auto-flip -----
   React.useEffect(()=>{
@@ -394,11 +451,21 @@ export default function ReviewPage(){
           }
         }
         setAnswer(''); setShowAns(false);
-        if(idx+1<deck.length) setIdx(i=>i+1); else setStage('done');
+        if(idx+1<deck.length) {
+          setIdx(i=>i+1);
+        } else {
+          setIdx(0);
+          if (exampleDeck.length > 0) {
+            setExampleIdx(0);
+            setStage('example');
+          } else {
+            setStage('done');
+          }
+        }
       }
     }, 2000);
     return ()=> clearTimeout(t);
-  }, [autoCfg, showAns, stage, card, idx, deck.length, selected, answer, isLevelMode, mcq, mcqStartTs, baseLevels, autoGain]);
+  }, [autoCfg, showAns, stage, card, idx, deck.length, selected, answer, isLevelMode, mcq, mcqStartTs, baseLevels, autoGain, exampleDeck.length, qaForRecall]);
 
   // ----- Manual actions -----
   React.useEffect(()=>{ if(stage==='mcq') setMcqStartTs(Date.now()); }, [stage, idx]);
@@ -422,28 +489,94 @@ export default function ReviewPage(){
 
   const checkRecall_Manual = ()=> setShowAns(true);
 
+  const handleExampleChecked = (payload) => {
+    if (!exampleCard) return;
+    const key = exampleKey(exampleCard);
+    if (!key) return;
+    setExampleAnswers(prev => ({
+      ...prev,
+      [key]: {
+        ...(payload || {}),
+        parentId: exampleCard.parentId,
+      },
+    }));
+  };
+
+  const ensureExampleRecorded = (entry) => {
+    if (!entry) return;
+    const key = exampleKey(entry);
+    if (!key) return;
+    setExampleAnswers(prev => {
+      if (prev[key]) return prev;
+      return {
+        ...prev,
+        [key]: {
+          score: 0,
+          ok: false,
+          timeSec: null,
+          skipped: true,
+          parentId: entry.parentId,
+        },
+      };
+    });
+  };
+
+  const nextExampleStage = () => {
+    if (!exampleCard) return;
+    ensureExampleRecorded(exampleCard);
+    if (exampleIdx + 1 < exampleDeck.length) setExampleIdx(i => i + 1);
+    else setStage('done');
+  };
+
+  const exampleScoresByCard = React.useMemo(() => {
+    const map = {};
+    exampleDeck.forEach((entry) => {
+      const key = exampleKey(entry);
+      if (!key) return;
+      const res = exampleAnswers[key];
+      if (!res) return;
+      if (!map[entry.parentId]) map[entry.parentId] = [];
+      const sc = Number.isFinite(Number(res.score)) ? Number(res.score) : 0;
+      map[entry.parentId].push(sc);
+    });
+    return map;
+  }, [exampleDeck, exampleAnswers]);
+
+  const exampleAverages = React.useMemo(() => {
+    const map = {};
+    deck.forEach((c) => {
+      const arr = safeArray(exampleScoresByCard[c.id]);
+      if (!arr.length) return;
+      const avg = Math.round(arr.reduce((sum, val) => sum + Number(val || 0), 0) / arr.length);
+      map[c.id] = avg;
+    });
+    return map;
+  }, [deck, exampleScoresByCard]);
+
   // --- FINAL LEVELS (UI & summary) ---
   const finalLevels = React.useMemo(() => {
     const out = {};
     deck.forEach((c) => {
       const base = toNum(baseLevels[String(c.id).toLowerCase()], -1);
       const mcq = toNum(mcqScores[c.id]?.score, 0);
+      const exampleScore = exampleAverages[c.id];
+      const expectsExample = String(c?.type || '').toLowerCase() === 'kanji' && cardHasExamples(c);
 
       const hasProposed = Object.prototype.hasOwnProperty.call(proposed, c.id);
 
       if (isLevelMode) {
         const rec = toNum(proposed[c.id], 0);
-        const fin = calcFinal('level', base, mcq, rec, hasProposed);
+        const fin = calcFinal('level', base, mcq, rec, hasProposed, exampleScore, expectsExample);
         out[c.id] = fin;
       } else {
         // omni: if proposed exists use it (allow decrease), otherwise no explicit recall provided
         const rec = hasProposed ? toNum(proposed[c.id], base) : base;
-        const fin = calcFinal('omni', base, mcq, rec, hasProposed);
+        const fin = calcFinal('omni', base, mcq, rec, hasProposed, exampleScore, expectsExample);
         out[c.id] = fin;
       }
     });
     return out;
-  }, [deck, baseLevels, isLevelMode, mcqScores, proposed]);
+  }, [deck, baseLevels, isLevelMode, mcqScores, proposed, exampleAverages, cardHasExamples]);
 
   const finalDist = React.useMemo(() => {
     const d = [0,0,0,0,0,0];
@@ -517,6 +650,16 @@ export default function ReviewPage(){
                   {showAns && mcqScores[card.id] &&
                       <Chip sx={{ ml:1 }} size="small" color="info"
                             label={`MCQ: ${mcqScores[card.id].score}${mcqScores[card.id].timeSec!=null?` (${mcqScores[card.id].timeSec.toFixed(1)}s)`:''}`} />}
+                  {showAns && currentExamples.length>0 && (
+                      <Stack spacing={0.5} sx={{ ml:1, mt:1 }}>
+                        <Typography variant="subtitle2">Ví dụ liên quan:</Typography>
+                        {currentExamples.map((ex, i) => (
+                            <Typography key={i} sx={{ fontSize: 14 }}>
+                              <b>{ex.front}</b>{ex.back ? ` · ${ex.back}` : ''}
+                            </Typography>
+                        ))}
+                      </Stack>
+                  )}
                 </Stack>
               </CardContent>
             </Card>
@@ -569,6 +712,16 @@ export default function ReviewPage(){
                     <>
                       <Divider sx={{ my:2 }} />
                       <Typography>Chọn mức nhớ (Recall) cho thẻ này:</Typography>
+                      {currentExamples.length>0 && (
+                          <Stack spacing={0.5} sx={{ mt:1 }}>
+                            <Typography variant="subtitle2">Ví dụ liên quan:</Typography>
+                            {currentExamples.map((ex, i) => (
+                                <Typography key={i} sx={{ fontSize: 14 }}>
+                                  <b>{ex.front}</b>{ex.back ? ` · ${ex.back}` : ''}
+                                </Typography>
+                            ))}
+                          </Stack>
+                      )}
                       <Stack className="responsive-stack" direction="row" spacing={1} sx={{ mt:1 }} flexWrap="wrap">
                         {[0,1,2,3,4,5].map(v=>(
                             <Button
@@ -587,13 +740,51 @@ export default function ReviewPage(){
                       <Stack className="responsive-stack" direction="row" spacing={1} sx={{ mt:2 }}>
                         <Button variant="outlined" onClick={()=>{
                           setAnswer(''); setShowAns(false);
-                          if(idx+1<deck.length) setIdx(i=>i+1); else setStage('done');
+                          if(idx+1<deck.length) {
+                            setIdx(i=>i+1);
+                          } else {
+                            setIdx(0);
+                            if (exampleDeck.length > 0) {
+                              setExampleIdx(0);
+                              setStage('example');
+                            } else {
+                              setStage('done');
+                            }
+                          }
                         }}>
                           {idx+1<deck.length ? 'Lưu & Tiếp' : 'Lưu & Kết thúc'}
                         </Button>
                       </Stack>
                     </>
                 )}
+              </CardContent>
+            </Card>
+        )}
+
+        {stage==='example' && exampleDeck.length>0 && exampleCard && (
+            <Card sx={{ borderRadius:3, mt:2 }}>
+              <CardContent>
+                <Typography variant="h6" sx={{ mb:1 }}>
+                  Ví dụ {exampleIdx + 1}/{exampleDeck.length}
+                </Typography>
+                {exampleCard.parentFront && (
+                    <Typography sx={{ mb:1 }}>
+                      Thuộc Kanji: <b>{exampleCard.parentFront}</b>
+                      {exampleCard.parentBack ? ` · ${exampleCard.parentBack}` : ''}
+                    </Typography>
+                )}
+                <ExampleMCQ
+                    key={exampleKey(exampleCard) || `example-${exampleIdx}`}
+                    example={exampleCard}
+                    pool={examplePool}
+                    onCheck={handleExampleChecked}
+                    scoreFunc={timeToScoreSec}
+                />
+                <Stack className="responsive-stack" direction="row" spacing={1} sx={{ mt:2 }}>
+                  <Button variant="outlined" onClick={nextExampleStage} fullWidth>
+                    {exampleIdx + 1 < exampleDeck.length ? 'Tiếp ví dụ' : 'Hoàn thành ví dụ'}
+                  </Button>
+                </Stack>
               </CardContent>
             </Card>
         )}
@@ -613,12 +804,15 @@ export default function ReviewPage(){
 
                 {/* Bảng chi tiết: Base · MCQ · Recall · Final */}
                 <Typography variant="subtitle2" sx={{ mb:1 }}>
-                  Chi tiết (mỗi thẻ: Base · MCQ · Recall · <b>Final</b>):
+                  Chi tiết (mỗi thẻ: Base · MCQ · Recall · Ví dụ · <b>Final</b>):
                 </Typography>
                 <Stack spacing={1}>
                   {deck.map((c) => {
                     const base = toNum(baseLevels[String(c.id).toLowerCase()], 0);
                     const mcq  = toNum(mcqScores[c.id]?.score, 0);
+                    const exampleScore = exampleAverages[c.id];
+                    const expectsExample = String(c?.type || '').toLowerCase() === 'kanji' && cardHasExamples(c);
+                    const displayExampleScore = expectsExample ? toNum(exampleScore, 0) : exampleScore;
 
                     // Đếm xem user/auto có thực sự đưa ra proposal không
                     const hasProposed = Object.prototype.hasOwnProperty.call(proposed, c.id);
@@ -630,7 +824,7 @@ export default function ReviewPage(){
 
                     // Truyền hasProposed để calcFinal biết đây có phải là recall "explicit" hay không
                     const source = proposedSource[c.id]; // 'auto' | 'manual' | undefined
-                    let fin  = calcFinal(isLevelMode ? 'level' : 'omni', base, mcq, rec, hasProposed);
+                    let fin  = calcFinal(isLevelMode ? 'level' : 'omni', base, mcq, rec, hasProposed, exampleScore, expectsExample);
                     if (autoNoDowngrade && source === 'auto' && fin < base) fin = base;
 
                     return (
@@ -643,6 +837,7 @@ export default function ReviewPage(){
                             <Chip size="small" label={`Base: ${base}`} />
                             <Chip size="small" label={`MCQ: ${mcq}`} />
                             <Chip size="small" label={`Recall: ${rec}`} />
+                            <Chip size="small" label={`Ví dụ: ${displayExampleScore != null ? displayExampleScore : '—'}`} />
                             <Chip size="small" color="success" label={`Final: ${fin}`} />
                           </Stack>
                         </Stack>
@@ -661,13 +856,15 @@ export default function ReviewPage(){
                           const rows = deck.map((c) => {
                             const base = toNum(baseLevels[String(c.id).toLowerCase()], 0);
                             const mcq  = toNum(mcqScores[c.id]?.score, 0);
+                            const exampleScore = exampleAverages[c.id];
+                            const expectsExample = String(c?.type || '').toLowerCase() === 'kanji' && cardHasExamples(c);
 
                             const hasProposed = Object.prototype.hasOwnProperty.call(proposed, c.id);
                             const rec = isLevelMode ? (hasProposed ? toNum(proposed[c.id], 0) : 0)
                                 : (hasProposed ? toNum(proposed[c.id], base) : base);
 
                             // Final level shown to user
-                            let lvl = calcFinal(isLevelMode ? 'level' : 'omni', base, mcq, rec, hasProposed);
+                            let lvl = calcFinal(isLevelMode ? 'level' : 'omni', base, mcq, rec, hasProposed, exampleScore, expectsExample);
 
                             // Chỉ giữ mức cũ nếu auto-flip (omni) đề xuất mức thấp hơn.
                             const source = proposedSource[c.id]; // 'auto' | 'manual' | undefined
