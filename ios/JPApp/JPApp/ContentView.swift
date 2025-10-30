@@ -177,7 +177,7 @@ private struct StudyShortcutSection: View {
         return [
             Item(title: "Ngữ pháp", subtitle: "Xem liên kết dạng gốc", icon: "list.bullet.rectangle.portrait.fill", color: Color("LiquidHighlight"), type: "grammar", count: counts["grammar"] ?? 0),
             Item(title: "Kanji", subtitle: "Luyện bộ thủ và nghĩa", icon: "character.book.closed.fill", color: Color("LiquidAccent"), type: "kanji", count: counts["kanji"] ?? 0),
-            Item(title: "Flashcards", subtitle: "Ôn tập 10 thẻ mới", icon: "bolt.fill", color: Color("LiquidPrimary"), type: "vocab", count: counts["vocab"] ?? 0),
+            Item(title: "Từ vựng", subtitle: "Ôn tập 10 thẻ mới", icon: "bolt.fill", color: Color("LiquidPrimary"), type: "vocab", count: counts["vocab"] ?? 0),
             Item(title: "Trợ từ", subtitle: "Tra cứu & so sánh", icon: "textformat.abc", color: Color("LiquidPrimary").opacity(0.8), type: "particle", count: counts["particle"] ?? 0)
         ]
     }
@@ -366,6 +366,17 @@ private struct DueReminderSection: View {
     private var summary: MemorySnapshot.DueSummary {
         snapshot.dueSummary()
     }
+    private var dueSoonExcludingToday: Int {
+        let calendar = Calendar.current
+        let now = Date()
+        let startOfToday = calendar.startOfDay(for: now)
+        guard let startOfTomorrow = calendar.date(byAdding: .day, value: 1, to: startOfToday) else { return 0 }
+        guard let endDate = calendar.date(byAdding: .day, value: 3, to: startOfTomorrow) else { return 0 }
+        return snapshot.rows.filter { row in
+            guard let due = row.due else { return false }
+            return due >= startOfTomorrow && due < endDate
+        }.count
+    }
 
     var body: some View {
         GlassContainer {
@@ -387,9 +398,9 @@ private struct DueReminderSection: View {
                     Label("Trong 3 ngày tới", systemImage: "calendar")
                         .foregroundColor(.secondary)
                     Spacer()
-                    Text("\(summary.upcoming)")
+                    Text("\(dueSoonExcludingToday)")
                         .font(.title3.monospacedDigit())
-                        .foregroundColor(summary.upcoming > 0 ? .primary : .secondary)
+                        .foregroundColor(dueSoonExcludingToday > 0 ? .primary : .secondary)
                 }
 
                 if summary.dueTodayTotal > 0 {
@@ -404,8 +415,8 @@ private struct DueReminderSection: View {
                             .frame(maxWidth: .infinity)
                     }
                     .buttonStyle(.borderedProminent)
-                } else if summary.upcoming > 0 {
-                    Text("Trong 3 ngày tới sẽ có \(summary.upcoming) thẻ đến hạn. Chuẩn bị sẵn sàng nhé!")
+                } else if dueSoonExcludingToday > 0 {
+                    Text("Trong 3 ngày tới sẽ có \(dueSoonExcludingToday) thẻ đến hạn. Chuẩn bị sẵn sàng nhé!")
                         .font(.footnote)
                         .foregroundColor(.secondary)
                 } else {
@@ -1884,15 +1895,30 @@ private struct ReviewOverviewCard: View {
     }
 
     private var dueSoonCount: Int {
-        dueSummary.upcoming
+        let calendar = Calendar.current
+        let now = Date()
+        let startOfToday = calendar.startOfDay(for: now)
+        guard let startOfTomorrow = calendar.date(byAdding: .day, value: 1, to: startOfToday) else { return 0 }
+        guard let endDate = calendar.date(byAdding: .day, value: 3, to: startOfTomorrow) else { return 0 }
+        return snapshot.rows.filter { row in
+            guard let due = row.due else { return false }
+            return due >= startOfTomorrow && due < endDate
+        }.count
     }
 
     var body: some View {
         GlassContainer {
             VStack(alignment: .leading, spacing: 12) {
-                Text("Ôn tập · \(type.displayName)")
-                    .font(.headline)
-                    .foregroundColor(Color("LiquidPrimary"))
+                HStack {
+                    Text("Ôn tập · \(type.displayName)")
+                        .font(.headline)
+                        .foregroundColor(Color("LiquidPrimary"))
+                    Spacer()
+                    NavigationLink(destination: ReviewSettingsView()) {
+                        Label("Cài đặt", systemImage: "gearshape")
+                    }
+                    .buttonStyle(.borderedProminent)
+                }
                 if snapshot.rows.isEmpty {
                     Text("Chưa có dữ liệu ôn tập cho loại này.")
                         .foregroundColor(.secondary)
@@ -2034,7 +2060,7 @@ private struct LeechBoardSection: View {
                     }
                     Spacer()
                     Button(action: onReviewAll) {
-                        Label("Ôn nhanh leech", systemImage: "bolt.fill")
+                        Label("Ôn nhanh", systemImage: "bolt.fill")
                     }
                     .buttonStyle(.borderedProminent)
                     .disabled(items.isEmpty)
@@ -2315,7 +2341,7 @@ private struct TagLabel: View {
 struct ToolsScreen: View {
     var body: some View {
         List {
-            Section("Học tập") {
+            Section(header: Text("Học tập")) {
                 NavigationLink(destination: KanjiToolsView()) {
                     Label("Kanji · Bộ thủ & luyện viết", systemImage: "character.book.closed")
                 }
@@ -2326,14 +2352,9 @@ struct ToolsScreen: View {
                     Label("Trợ từ · Tra cứu", systemImage: "text.book.closed")
                 }
             }
-            Section("Tiện ích") {
+            Section(header: Text("Tiện ích")) {
                 NavigationLink(destination: PomodoroScreen()) {
                     Label("Pomodoro · 2 giờ", systemImage: "timer")
-                }
-            }
-            Section("Cài đặt") {
-                NavigationLink(destination: ReviewSettingsView()) {
-                    Label("Cài đặt Review", systemImage: "gearshape")
                 }
             }
         }
@@ -2348,7 +2369,7 @@ private struct ReviewSettingsView: View {
 
     var body: some View {
         List {
-            Section("Auto-flip", footer: Text("Áp dụng cho các phiên ôn tập Omni. Kanji viết tay sẽ không tự động lật.")) {
+            Section(header: Text("Auto-flip"), footer: Text("Áp dụng cho các phiên ôn tập Omni. Kanji viết tay sẽ không tự động lật.")) {
                 Picker("Auto-flip", selection: $reviewSettings.autoFlip) {
                     ForEach(ReviewSettingsStore.AutoFlipOption.allCases) { option in
                         Text(option.title).tag(option)
@@ -2357,7 +2378,7 @@ private struct ReviewSettingsView: View {
                 .pickerStyle(.navigationLink)
             }
 
-            Section("Card Orientation", footer: Text("Đảo mặt sẽ hỏi nghĩa trước và yêu cầu bạn điền từ.")) {
+            Section(header: Text("Card Orientation"), footer: Text("Đảo mặt sẽ hỏi nghĩa trước và yêu cầu bạn điền từ.")) {
                 Picker("Card Orientation", selection: $reviewSettings.cardOrientation) {
                     ForEach(ReviewSettingsStore.CardOrientation.allCases) { option in
                         Text(option.title).tag(option)

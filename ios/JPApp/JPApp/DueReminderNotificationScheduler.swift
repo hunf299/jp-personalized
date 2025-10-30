@@ -1,8 +1,16 @@
 #if canImport(UserNotifications)
+#if canImport(BackgroundTasks)
+import BackgroundTasks
+#endif
 import Foundation
 import UserNotifications
 
-/// Quản lý lịch thông báo nhắc nhở ôn tập các thẻ đến hạn trong ngày.
+/// Schedules user notifications for due reminders and arranges a background pre-refresh 1 hour before each slot.
+/// Integration notes:
+/// - Call `DueReminderNotificationScheduler.registerBackgroundTasks()` at app launch (App/Scene delegate) to register BG tasks.
+/// - The scheduler will submit BGAppRefreshTask requests automatically when reminders are (re)schedule.
+/// - Optionally call `DueReminderNotificationScheduler.setupBackgroundPreRefreshOnLaunch()` to both register and schedule pre-refresh tasks at app launch.
+/// - Optionally call `DueReminderNotificationScheduler.shared.applicationDidEnterBackgroundHook()` when app enters background to ensure BG tasks are submitted before suspension.
 final class DueReminderNotificationScheduler {
     static let shared = DueReminderNotificationScheduler()
 
@@ -47,15 +55,152 @@ final class DueReminderNotificationScheduler {
         }
 
         var bodyFormat: String {
-            "Hôm nay vẫn còn %d thẻ đến hạn chờ bạn ôn tập."
+            "Hôm nay có %d thẻ đến hạn chờ bạn ôn tập."
+        }
+
+        // Identifier for background pre-refresh (1 hour before the slot time)
+        var preRefreshIdentifier: String {
+            switch self {
+            case .morning: return "due-reminder-refresh-morning"
+            case .afternoon: return "due-reminder-refresh-afternoon"
+            case .evening: return "due-reminder-refresh-evening"
+            }
+        }
+
+        // Returns the date components for the pre-refresh time (1 hour before scheduledTime)
+        func preRefreshDateComponents(calendar: Calendar) -> DateComponents {
+            var components = scheduledTime
+            if let hour = components.hour {
+                components.hour = max(0, hour - 1)
+            }
+            return components
         }
     }
 
     private let center: UNUserNotificationCenter
 
+    #if canImport(BackgroundTasks)
+    // Background task identifiers must also be registered at app launch.
+    // Call `DueReminderNotificationScheduler.registerBackgroundTasks()` from App/Scene delegate.
+    static func registerBackgroundTasks() {
+        if #available(iOS 13.0, macOS 13.0, *) {
+            ReminderSlot.allCases.forEach { slot in
+                BGTaskScheduler.shared.register(forTaskWithIdentifier: slot.preRefreshIdentifier, using: nil) { task in
+                    guard let appRefresh = task as? BGAppRefreshTask else {
+                        task.setTaskCompleted(success: false)
+                        return
+                    }
+                    // Handle refresh and reschedule next pre-refresh
+                    shared.handlePreRefresh(appRefresh, for: slot)
+                }
+            }
+        }
+    }
+    #endif
+
     private init(center: UNUserNotificationCenter = .current()) {
         self.center = center
     }
+
+    // MARK: - Pre-refresh scheduling (1 hour before slots)
+    #if canImport(BackgroundTasks)
+    @available(iOS 13.0, macOS 13.0, *)
+    private func nextPreRefreshDate(for slot: ReminderSlot, now: Date = Date(), calendar: Calendar = .current) -> Date? {
+        // Build today at slot time minus 1 hour
+        let today = calendar.dateComponents([.year, .month, .day], from: now)
+        var comps = DateComponents()
+        comps.year = today.year
+        comps.month = today.month
+        comps.day = today.day
+        comps.hour = slot.preRefreshDateComponents(calendar: calendar).hour
+        comps.minute = slot.preRefreshDateComponents(calendar: calendar).minute
+        comps.calendar = calendar
+        comps.timeZone = TimeZone.current
+
+        // Today pre-refresh time
+        guard let todayPreRefresh = calendar.date(from: comps) else { return nil }
+        if todayPreRefresh > now { return todayPreRefresh }
+
+        // Otherwise schedule for tomorrow
+        guard let tomorrow = calendar.date(byAdding: .day, value: 1, to: now) else { return nil }
+        let tmr = calendar.dateComponents([.year, .month, .day], from: tomorrow)
+        var tmrComps = DateComponents()
+        tmrComps.year = tmr.year
+        tmrComps.month = tmr.month
+        tmrComps.day = tmr.day
+        tmrComps.hour = slot.preRefreshDateComponents(calendar: calendar).hour
+        tmrComps.minute = slot.preRefreshDateComponents(calendar: calendar).minute
+        tmrComps.calendar = calendar
+        tmrComps.timeZone = TimeZone.current
+        return calendar.date(from: tmrComps)
+    }
+
+    /// Schedule BGAppRefreshTask one hour before each reminder slot.
+    @available(iOS 13.0, macOS 13.0, *)
+    private func schedulePreRefreshTasks(now: Date = Date()) {
+        ReminderSlot.allCases.forEach { slot in
+            guard let date = nextPreRefreshDate(for: slot, now: now) else { return }
+            let request = BGAppRefreshTaskRequest(identifier: slot.preRefreshIdentifier)
+            // Earliest begin date is our target pre-refresh time
+            request.earliestBeginDate = date
+            do {
+                try BGTaskScheduler.shared.submit(request)
+            } catch {
+                // Ignore submission errors; system may throttle
+            }
+        }
+    }
+
+    /// Cancel all pre-refresh tasks (e.g., when canceling reminders).
+    @available(iOS 13.0, macOS 13.0, *)
+    private func cancelPreRefreshTasks() {
+        let ids = ReminderSlot.allCases.map { $0.preRefreshIdentifier }
+        ids.forEach { BGTaskScheduler.shared.cancel(taskRequestWithIdentifier: $0) }
+    }
+
+    /// Convenience: Call at app launch to register and schedule pre-refresh tasks for the next slots.
+    @available(iOS 13.0, macOS 13.0, *)
+    static func setupBackgroundPreRefreshOnLaunch() {
+        registerBackgroundTasks()
+        shared.schedulePreRefreshTasks()
+    }
+
+    /// Public helper to (re)schedule pre-refresh tasks independently of notification scheduling.
+    @available(iOS 13.0, macOS 13.0, *)
+    func ensurePreRefreshScheduled() {
+        schedulePreRefreshTasks()
+    }
+
+    /// Call this from AppDelegate/ScenePhase when the app enters background to ensure tasks are submitted.
+    @available(iOS 13.0, macOS 13.0, *)
+    func applicationDidEnterBackgroundHook() {
+        schedulePreRefreshTasks()
+    }
+
+    /// Handle a fired BGAppRefreshTask: refresh counts and reschedule reminders and next pre-refresh.
+    @available(iOS 13.0, macOS 13.0, *)
+    private func handlePreRefresh(_ task: BGAppRefreshTask, for slot: ReminderSlot) {
+        schedulePreRefreshTasks() // Schedule the next cycle early
+
+        let queue = OperationQueue()
+        queue.maxConcurrentOperationCount = 1
+
+        let op = BlockOperation { [weak self] in
+            guard let self else { return }
+            self.refreshDueRemindersUsingProvider()
+        }
+
+        task.expirationHandler = {
+            queue.cancelAllOperations()
+        }
+
+        op.completionBlock = {
+            task.setTaskCompleted(success: true)
+        }
+
+        queue.addOperation(op)
+    }
+    #endif
 
     // MARK: - Provider for background refresh
     /// A provider that returns today's due cards count when refreshing in background.
@@ -111,6 +256,11 @@ final class DueReminderNotificationScheduler {
             switch settings.authorizationStatus {
             case .authorized, .provisional, .ephemeral:
                 self.scheduleReminders(for: dueCount)
+                #if canImport(BackgroundTasks)
+                if #available(iOS 13.0, macOS 13.0, *) {
+                    self.schedulePreRefreshTasks()
+                }
+                #endif
             default:
                 break
             }
@@ -156,6 +306,11 @@ final class DueReminderNotificationScheduler {
     private func cancelAllDueReminders() {
         let identifiers = ReminderSlot.allCases.map { $0.identifier }
         center.removePendingNotificationRequests(withIdentifiers: identifiers)
+        #if canImport(BackgroundTasks)
+        if #available(iOS 13.0, macOS 13.0, *) {
+            cancelPreRefreshTasks()
+        }
+        #endif
     }
 }
 
@@ -219,3 +374,4 @@ private final class StoredCountsStorage {
     }
 }
 #endif
+

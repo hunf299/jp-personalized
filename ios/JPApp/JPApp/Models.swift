@@ -249,6 +249,17 @@ struct DeckCard: Identifiable, Decodable, Hashable {
         if let value = extra["on"]?.stringValue, !value.isEmpty {
             return value
         }
+        // Fallback: infer from katakana runs
+        let generated = generatedReadings()
+        if !generated.katakana.isEmpty {
+            return generated.katakana.joined(separator: ", ")
+        }
+        // Final fallback: small built-in dictionary by kanji
+        if type == "kanji", let first = front.first {
+            let key = String(first)
+            let dictVals = KanjiReadingsProvider.shared.onReadings(for: key)
+            if !dictVals.isEmpty { return dictVals.joined(separator: ", ") }
+        }
         return "—"
     }
 
@@ -261,6 +272,17 @@ struct DeckCard: Identifiable, Decodable, Hashable {
         if let value = extra["kun"]?.stringValue, !value.isEmpty {
             return value
         }
+        // Fallback: infer from hiragana runs
+        let generated = generatedReadings()
+        if !generated.hiragana.isEmpty {
+            return generated.hiragana.joined(separator: ", ")
+        }
+        // Final fallback: small built-in dictionary by kanji
+        if type == "kanji", let first = front.first {
+            let key = String(first)
+            let dictVals = KanjiReadingsProvider.shared.kunReadings(for: key)
+            if !dictVals.isEmpty { return dictVals.joined(separator: ", ") }
+        }
         return "—"
     }
 
@@ -272,6 +294,139 @@ struct DeckCard: Identifiable, Decodable, Hashable {
             return value.split(separator: ",").map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
         }
         return []
+    }
+}
+
+extension DeckCard {
+    var warmupLabel: String {
+        if type == "kanji" {
+            return "\(hanViet) · on: \(onReading) · kun: \(kunReading)"
+        }
+        return displayMeaning
+    }
+}
+
+extension DeckCard {
+    // Attempt to generate readings from available text fields when explicit on/kun readings are missing.
+    private var readingSourceTexts: [String] {
+        var texts: [String] = []
+        // Do NOT use `back` here because it contains Han-Viet only.
+        texts.append(front)
+        // Common keys that might store reading-like info
+        let candidateKeys = [
+            "reading", "readings", "kana", "furigana", "yomi", "ruby",
+            "pronunciation", "pronounce", "reading_kana", "kana_reading"
+        ]
+        for key in candidateKeys {
+            if let value = extra[key]?.stringValue, !value.isEmpty {
+                texts.append(value)
+            }
+            if let arr = extra[key]?.arrayValue {
+                let joined = arr.compactMap { $0.stringValue }.joined(separator: ", ")
+                if !joined.isEmpty { texts.append(joined) }
+            }
+            if let obj = extra[key]?.objectValue {
+                let joined = obj.values.compactMap { $0.stringValue }.joined(separator: ", ")
+                if !joined.isEmpty { texts.append(joined) }
+            }
+        }
+        return texts
+    }
+
+    private enum KanaKind { case hiragana, katakana, none }
+
+    // Unicode helpers
+    private func kanaKind(of scalar: Unicode.Scalar) -> KanaKind {
+        switch scalar.value {
+        case 0x3040...0x309F: // Hiragana block
+            return .hiragana
+        case 0x30A0...0x30FF: // Katakana block
+            return .katakana
+        case 0x31F0...0x31FF: // Katakana Phonetic Extensions
+            return .katakana
+        case 0xFF66...0xFF9F: // Halfwidth Katakana
+            return .katakana
+        default:
+            return .none
+        }
+    }
+
+    private func extractKanaRuns(from text: String) -> (hiragana: [String], katakana: [String]) {
+        var hira: [String] = []
+        var kata: [String] = []
+
+        var current = String.UnicodeScalarView()
+        var currentKind: KanaKind = .none
+
+        func flush() {
+            guard !current.isEmpty else { return }
+            let s = String(String.UnicodeScalarView(current))
+            switch currentKind {
+            case .hiragana:
+                hira.append(s)
+            case .katakana:
+                kata.append(s)
+            case .none:
+                break
+            }
+            current.removeAll()
+            currentKind = .none
+        }
+
+        for scalar in text.unicodeScalars {
+            let kind = kanaKind(of: scalar)
+            if kind == .none {
+                flush()
+                continue
+            }
+            if currentKind == .none {
+                currentKind = kind
+                current.append(scalar)
+            } else if currentKind == kind {
+                current.append(scalar)
+            } else {
+                flush()
+                currentKind = kind
+                current.append(scalar)
+            }
+        }
+        flush()
+
+        func normalizeAndSplit(_ items: [String]) -> [String] {
+            // Split by common separators inside a run just in case (・, ・, spaces, commas, slashes, semicolons, pipes)
+            let seps = CharacterSet(charactersIn: "・・,;|/ ")
+            return items
+                .flatMap { $0.components(separatedBy: seps) }
+                .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+                .filter { !$0.isEmpty }
+        }
+
+        let hiraN = Array(Set(normalizeAndSplit(hira))).sorted()
+        let kataN = Array(Set(normalizeAndSplit(kata))).sorted()
+        return (hiraN, kataN)
+    }
+
+    private func generatedReadings() -> (hiragana: [String], katakana: [String]) {
+        var hira: [String] = []
+        var kata: [String] = []
+        for text in readingSourceTexts {
+            let runs = extractKanaRuns(from: text)
+            if !runs.hiragana.isEmpty { hira.append(contentsOf: runs.hiragana) }
+            if !runs.katakana.isEmpty { kata.append(contentsOf: runs.katakana) }
+        }
+        // Deduplicate while preserving order
+        func unique(_ array: [String]) -> [String] {
+            var seen = Set<String>()
+            var result: [String] = []
+            for item in array where !item.isEmpty {
+                if !seen.contains(item) {
+                    seen.insert(item)
+                    result.append(item)
+                }
+            }
+            return result
+        }
+        return (unique(hira), unique(kata))
     }
 }
 
@@ -625,15 +780,6 @@ extension Dictionary where Key == String, Value == JSONValue {
     init(from decoder: Decoder) throws {
         let container = try decoder.singleValueContainer()
         self = try container.decode([String: JSONValue].self)
-    }
-}
-
-extension DeckCard {
-    var warmupLabel: String {
-        if type == "kanji" {
-            return "\(hanViet) · on: \(onReading) · kun: \(kunReading)"
-        }
-        return displayMeaning
     }
 }
 
