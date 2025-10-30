@@ -221,32 +221,10 @@ export default function FlashcardsPage() {
   useEffect(() => {
     const next = safeArray(allCards).filter((c) => {
       if (!c || c.type !== typeFilter) return false;
-      if (typeFilter === 'kanji') {
-        const refs = safeArray(c.exampleRefs || parseExampleRefs(c.example));
-        return refs.length > 0;
-      }
       return true;
     });
     setOrder(next);
   }, [allCards, typeFilter]);
-
-  useEffect(() => {
-    const list = [];
-    safeArray(batch).forEach((item) => {
-      const examples = safeArray(item?.exampleCards);
-      examples.forEach((ex) => {
-        list.push({
-          ...ex,
-          parentId: item.id,
-          parentFront: item.front ?? '',
-          parentBack: item.back ?? '',
-        });
-      });
-    });
-    setExampleDeck(list);
-    setExampleIndex(0);
-    setExampleAnswers({});
-  }, [batch]);
 
   useEffect(() => {
     const list = [];
