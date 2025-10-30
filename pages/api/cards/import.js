@@ -39,12 +39,14 @@ export default async function handler(req, res) {
     const kBack  = findKey(keys, ['back','meaning','translation','vi','en']);
     const kType  = findKey(keys, ['type','deck_type']);
     const kCat   = findKey(keys, ['category','categories','deck','topic','group']);
+    const kExample = findKey(keys, ['example', 'examples']);
 
     if (!kFront || !kBack) {
       return res.status(400).json({ ok:false, error: `CSV must include front/back (aliases supported). Got headers: ${keys.join(', ')}` });
     }
 
     const hasCategoryColumn = await tableHasColumn('cards', 'category');
+    const hasExampleColumn = await tableHasColumn('cards', 'example');
 
     const rows = [];
     for (const r of records) {
@@ -56,6 +58,11 @@ export default async function handler(req, res) {
       if (hasCategoryColumn && kCat) {
         const category = (r[kCat]?.toString().trim()) || null;
         row.category = category || null;
+      }
+      if (hasExampleColumn && kExample && (type || '').toLowerCase() === 'kanji') {
+        const exampleRaw = r[kExample];
+        const example = exampleRaw == null ? '' : exampleRaw.toString().trim();
+        row.example = example || null;
       }
       rows.push(row);
     }
