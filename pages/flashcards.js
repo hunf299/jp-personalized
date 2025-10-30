@@ -8,7 +8,7 @@ import {
 } from '@mui/material';
 import HandwritingCanvas from '../components/HandwritingCanvas';
 import ExampleMCQ from '../components/ExampleMCQ';
-import { createExampleLookup, exampleKey } from '../lib/example-utils';
+import { createExampleLookup, exampleKey, parseExampleRefs } from '../lib/example-utils';
 
 const CHUNK_SIZE = 10;
 
@@ -159,7 +159,7 @@ export default function FlashcardsPage() {
   // scoring
   const [warmupScores, setWarmupScores] = useState({});
   const [recallScores, setRecallScores] = useState({});
-  const [exampleLookup, setExampleLookup] = useState({ byCardId: {}, pool: [] });
+  const [exampleLookup, setExampleLookup] = useState({ byCardId: {}, pool: [], refsByCardId: {} });
   const [exampleDeck, setExampleDeck] = useState([]);
   const [exampleIndex, setExampleIndex] = useState(0);
   const [exampleAnswers, setExampleAnswers] = useState({});
@@ -170,6 +170,7 @@ export default function FlashcardsPage() {
     const enriched = arr.map((card) => ({
       ...card,
       exampleCards: lookup.byCardId?.[String(card.id)] || [],
+      exampleRefs: lookup.refsByCardId?.[String(card.id)] || parseExampleRefs(card?.example),
     }));
     setAllCards(enriched);
     setExampleLookup(lookup);
@@ -217,7 +218,35 @@ export default function FlashcardsPage() {
   }, [typeFilter]); // eslint-disable-line
 
   // pool theo loại
-  useEffect(() => { setOrder(safeArray(allCards).filter(c => c.type === typeFilter)); }, [allCards, typeFilter]);
+  useEffect(() => {
+    const next = safeArray(allCards).filter((c) => {
+      if (!c || c.type !== typeFilter) return false;
+      if (typeFilter === 'kanji') {
+        const refs = safeArray(c.exampleRefs || parseExampleRefs(c.example));
+        return refs.length > 0;
+      }
+      return true;
+    });
+    setOrder(next);
+  }, [allCards, typeFilter]);
+
+  useEffect(() => {
+    const list = [];
+    safeArray(batch).forEach((item) => {
+      const examples = safeArray(item?.exampleCards);
+      examples.forEach((ex) => {
+        list.push({
+          ...ex,
+          parentId: item.id,
+          parentFront: item.front ?? '',
+          parentBack: item.back ?? '',
+        });
+      });
+    });
+    setExampleDeck(list);
+    setExampleIndex(0);
+    setExampleAnswers({});
+  }, [batch]);
 
   useEffect(() => {
     const list = [];

@@ -188,7 +188,8 @@ export default function ReviewPage(){
   const [proposed, setProposed] = React.useState({});     // id -> level (recall)
   const [proposedSource, setProposedSource] = React.useState({}); // id -> 'auto' | 'manual'
   const [mcqScores, setMcqScores] = React.useState({});   // id -> { timeSec, score }
-  const [exampleLookup, setExampleLookup] = React.useState({ byCardId: {}, pool: [] });
+  const [exampleLookup, setExampleLookup] = React.useState({ byCardId: {}, pool: [], refsByCardId: {} });
+  const [examplesReady, setExamplesReady] = React.useState(false);
   const [exampleDeck, setExampleDeck] = React.useState([]);
   const [exampleIdx, setExampleIdx] = React.useState(0);
   const [exampleAnswers, setExampleAnswers] = React.useState({});
@@ -211,6 +212,10 @@ export default function ReviewPage(){
         setExampleLookup(createExampleLookup(rows));
       } catch (e) {
         console.warn('Không thể tải cards cho ví dụ', e);
+      } finally {
+        if (!cancelled) {
+          setExamplesReady(true);
+        }
       }
     })();
     return () => { cancelled = true; };
@@ -218,6 +223,7 @@ export default function ReviewPage(){
 
   React.useEffect(()=>{
     if(!ready) return;
+    if(type === 'kanji' && !examplesReady) return;
     let cancelled = false;
     (async()=>{
       try{
@@ -258,6 +264,12 @@ export default function ReviewPage(){
 
         // Lọc theo cardIdsParam (ưu tiên)
         let pool = items;
+        if (type === 'kanji') {
+          pool = pool.filter((entry) => {
+            const refs = safeArray(exampleLookup.refsByCardId?.[String(entry.id)]);
+            return refs.length > 0;
+          });
+        }
         if (Array.isArray(cardIdsParam) && cardIdsParam.length) {
           const idSet = new Set(cardIdsParam.map(x => x.toLowerCase()));
           pool = items.filter(c => idSet.has(c.idLower));
@@ -347,7 +359,7 @@ export default function ReviewPage(){
     })();
     return ()=> { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ready, type, isLevelMode, levelParam, count, settings?.recency_days, router.query?.since_days, orientation, dueMode, qp?.levels, qp?.card_ids]);
+  }, [ready, type, isLevelMode, levelParam, count, settings?.recency_days, router.query?.since_days, orientation, dueMode, qp?.levels, qp?.card_ids, examplesReady, exampleLookup]);
 
   const card = deck[idx] || null;
   const currentExamples = React.useMemo(() => safeArray(exampleLookup.byCardId?.[String(card?.id)]), [exampleLookup, card]);
