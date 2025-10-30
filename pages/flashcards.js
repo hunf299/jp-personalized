@@ -248,6 +248,24 @@ export default function FlashcardsPage() {
     setExampleAnswers({});
   }, [batch]);
 
+  useEffect(() => {
+    const list = [];
+    safeArray(batch).forEach((item) => {
+      const examples = safeArray(item?.exampleCards);
+      examples.forEach((ex) => {
+        list.push({
+          ...ex,
+          parentId: item.id,
+          parentFront: item.front ?? '',
+          parentBack: item.back ?? '',
+        });
+      });
+    });
+    setExampleDeck(list);
+    setExampleIndex(0);
+    setExampleAnswers({});
+  }, [batch]);
+
   const hasAnyData = allCards.length > 0;
   const hasTypeData = order.length > 0;
 
