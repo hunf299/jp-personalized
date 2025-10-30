@@ -264,6 +264,12 @@ export default function ReviewPage(){
 
         // Lọc theo cardIdsParam (ưu tiên)
         let pool = items;
+        if (type === 'kanji') {
+          pool = pool.filter((entry) => {
+            const refs = safeArray(exampleLookup.refsByCardId?.[String(entry.id)]);
+            return refs.length > 0;
+          });
+        }
         if (Array.isArray(cardIdsParam) && cardIdsParam.length) {
           const idSet = new Set(cardIdsParam.map(x => x.toLowerCase()));
           pool = items.filter(c => idSet.has(c.idLower));
