@@ -101,17 +101,13 @@ function toNum(v, d = 0) {
 // Tính FINAL an toàn (0..5), thống nhất cho UI & lưu
 // mode = 'level' | 'omni'
 // recProvided: boolean -> có phải recall được explicit cung cấp (bằng tay hoặc auto) hay không
-function calcFinal(mode, base, mcq, rec, recProvided = false, example = null, expectsExample = false) {
+function calcFinal(mode, base, mcq, rec, recProvided = false) {
   const b = toNum(base, 0);
   const m = toNum(mcq, 0);
   const r = toNum(rec, mode === 'level' ? 0 : b);
 
-  const hasExampleScore = Number.isFinite(Number(example));
-  const shouldUseExample = expectsExample || hasExampleScore;
-  const e = shouldUseExample ? toNum(example, 0) : 0;
-  const divisor = shouldUseExample ? 3 : 2;
-  const sum = m + r + (shouldUseExample ? e : 0);
-  const avg = Math.floor(sum / (divisor || 1));
+  const sum = m + r;
+  const avg = Math.floor(sum / 2);
   const clamped = Math.max(0, Math.min(5, avg));
 
   if (mode === 'level') {
@@ -145,6 +141,7 @@ export default function ReviewPage(){
   const dueMode = String(settings?.due_mode || 'due-priority');
 
   const isLevelMode = mode === 'level';
+  const enableExamples = type === 'kanji';
 
   const multiLevels = qp?.levels
       ? qp.levels.split(',').map(n => Number(n)).filter(n => n >= 0 && n <= 5)
@@ -367,11 +364,17 @@ export default function ReviewPage(){
   const exampleCard = exampleDeck[exampleIdx] || null;
   const examplePool = React.useMemo(() => safeArray(exampleLookup.pool), [exampleLookup]);
   const cardHasExamples = React.useCallback((c) => {
-    if (!c) return false;
+    if (!enableExamples || !c) return false;
     const arr = safeArray(exampleLookup.byCardId?.[String(c.id)]);
     return arr.length > 0;
-  }, [exampleLookup]);
+  }, [exampleLookup, enableExamples]);
   React.useEffect(() => {
+    if (!enableExamples) {
+      setExampleDeck([]);
+      setExampleIdx(0);
+      setExampleAnswers({});
+      return;
+    }
     const list = [];
     deck.forEach((c) => {
       const examples = safeArray(exampleLookup.byCardId?.[String(c.id)]);
@@ -387,7 +390,7 @@ export default function ReviewPage(){
     setExampleDeck(list);
     setExampleIdx(0);
     setExampleAnswers({});
-  }, [deck, exampleLookup]);
+  }, [deck, exampleLookup, enableExamples]);
 
   // ======= Helper: chọn mặt hỏi/đáp theo orientation & loại =======
   // Trả về {q: question, a: answer} cho MCQ
@@ -461,7 +464,7 @@ export default function ReviewPage(){
           setIdx(i=>i+1);
         } else {
           setIdx(0);
-          if (exampleDeck.length > 0) {
+          if (enableExamples && exampleDeck.length > 0) {
             setExampleIdx(0);
             setStage('example');
           } else {
@@ -565,24 +568,22 @@ export default function ReviewPage(){
     deck.forEach((c) => {
       const base = toNum(baseLevels[String(c.id).toLowerCase()], -1);
       const mcq = toNum(mcqScores[c.id]?.score, 0);
-      const exampleScore = exampleAverages[c.id];
-      const expectsExample = String(c?.type || '').toLowerCase() === 'kanji' && cardHasExamples(c);
 
       const hasProposed = Object.prototype.hasOwnProperty.call(proposed, c.id);
 
       if (isLevelMode) {
         const rec = toNum(proposed[c.id], 0);
-        const fin = calcFinal('level', base, mcq, rec, hasProposed, exampleScore, expectsExample);
+        const fin = calcFinal('level', base, mcq, rec, hasProposed);
         out[c.id] = fin;
       } else {
         // omni: if proposed exists use it (allow decrease), otherwise no explicit recall provided
         const rec = hasProposed ? toNum(proposed[c.id], base) : base;
-        const fin = calcFinal('omni', base, mcq, rec, hasProposed, exampleScore, expectsExample);
+        const fin = calcFinal('omni', base, mcq, rec, hasProposed);
         out[c.id] = fin;
       }
     });
     return out;
-  }, [deck, baseLevels, isLevelMode, mcqScores, proposed, exampleAverages, cardHasExamples]);
+  }, [deck, baseLevels, isLevelMode, mcqScores, proposed]);
 
   const finalDist = React.useMemo(() => {
     const d = [0,0,0,0,0,0];
@@ -767,7 +768,7 @@ export default function ReviewPage(){
             </Card>
         )}
 
-        {stage==='example' && exampleDeck.length>0 && exampleCard && (
+        {enableExamples && stage==='example' && exampleDeck.length>0 && exampleCard && (
             <Card sx={{ borderRadius:3, mt:2 }}>
               <CardContent>
                 <Typography variant="h6" sx={{ mb:1 }}>
@@ -810,7 +811,7 @@ export default function ReviewPage(){
 
                 {/* Bảng chi tiết: Base · MCQ · Recall · Final */}
                 <Typography variant="subtitle2" sx={{ mb:1 }}>
-                  Chi tiết (mỗi thẻ: Base · MCQ · Recall · Ví dụ · <b>Final</b>):
+                  Chi tiết (mỗi thẻ: Base · MCQ · Recall{enableExamples ? ' · Ví dụ' : ''} · <b>Final</b>):
                 </Typography>
                 <Stack spacing={1}>
                   {deck.map((c) => {
@@ -830,7 +831,7 @@ export default function ReviewPage(){
 
                     // Truyền hasProposed để calcFinal biết đây có phải là recall "explicit" hay không
                     const source = proposedSource[c.id]; // 'auto' | 'manual' | undefined
-                    let fin  = calcFinal(isLevelMode ? 'level' : 'omni', base, mcq, rec, hasProposed, exampleScore, expectsExample);
+                    let fin  = calcFinal(isLevelMode ? 'level' : 'omni', base, mcq, rec, hasProposed);
                     if (autoNoDowngrade && source === 'auto' && fin < base) fin = base;
 
                     return (
@@ -843,7 +844,9 @@ export default function ReviewPage(){
                             <Chip size="small" label={`Base: ${base}`} />
                             <Chip size="small" label={`MCQ: ${mcq}`} />
                             <Chip size="small" label={`Recall: ${rec}`} />
-                            <Chip size="small" label={`Ví dụ: ${displayExampleScore != null ? displayExampleScore : '—'}`} />
+                            {enableExamples && (
+                                <Chip size="small" label={`Ví dụ: ${displayExampleScore != null ? displayExampleScore : '—'}`} />
+                            )}
                             <Chip size="small" color="success" label={`Final: ${fin}`} />
                           </Stack>
                         </Stack>
@@ -870,7 +873,7 @@ export default function ReviewPage(){
                                 : (hasProposed ? toNum(proposed[c.id], base) : base);
 
                             // Final level shown to user
-                            let lvl = calcFinal(isLevelMode ? 'level' : 'omni', base, mcq, rec, hasProposed, exampleScore, expectsExample);
+                            let lvl = calcFinal(isLevelMode ? 'level' : 'omni', base, mcq, rec, hasProposed);
 
                             // Chỉ giữ mức cũ nếu auto-flip (omni) đề xuất mức thấp hơn.
                             const source = proposedSource[c.id]; // 'auto' | 'manual' | undefined
