@@ -46,6 +46,43 @@ function kanjiLabel(card) {
   return hv ? `${hv} · ${onPart} · ${kunPart}` : `${onPart} · ${kunPart}`;
 }
 
+function normalizeSpellLabel(spell) {
+  if (spell == null) return '';
+  const raw = String(spell || '');
+  const parts = raw
+      .split(/[\n,;|·•・／、]/)
+      .map((item) => item.trim())
+      .filter(Boolean);
+  if (!parts.length) return '';
+  const seen = new Set();
+  const uniq = [];
+  parts.forEach((part) => {
+    const key = part.toLowerCase();
+    if (!seen.has(key)) {
+      seen.add(key);
+      uniq.push(part);
+    }
+  });
+  return uniq.join(' · ');
+}
+
+function makeMcqOptions(answer, otherOptions = []) {
+  const list = [answer, ...otherOptions]
+      .map((opt) => (opt == null ? '' : String(opt)))
+      .filter(Boolean);
+  if (!list.length) list.push('—');
+  const seen = new Set();
+  const uniq = [];
+  list.forEach((opt) => {
+    if (!seen.has(opt)) {
+      seen.add(opt);
+      uniq.push(opt);
+    }
+  });
+  if (uniq.length < 2) uniq.push('—');
+  return uniq.sort(() => Math.random() - 0.5);
+}
+
 // ---------- Warmup MCQ ----------
 function WarmupMCQ({ card, deck, isKanji, onCheck, examples }) {
   const startRef = React.useRef(Date.now());
@@ -147,8 +184,25 @@ export default function FlashcardsPage() {
   const [allCards, setAllCards] = useState([]);
   const [order, setOrder] = useState([]);
   const [batch, setBatch] = useState([]);
-  const [phase, setPhase] = useState('idle'); // idle | warmup | warmup_summary | recall | done
+  const [phase, setPhase] = useState('idle'); // idle | write1 | warmup | warmup_summary | example | on_kun | recall | context | done
   const [index, setIndex] = useState(0);
+
+  const [writePass1Scores, setWritePass1Scores] = useState({});
+  const [showWrite1Answer, setShowWrite1Answer] = useState(false);
+
+  const [onKunScores, setOnKunScores] = useState({});
+  const [onKunSelected, setOnKunSelected] = useState(null);
+  const [onKunChecked, setOnKunChecked] = useState(false);
+  const [onKunResult, setOnKunResult] = useState(null);
+  const [onKunStartTs, setOnKunStartTs] = useState(null);
+
+  const [contextDeck, setContextDeck] = useState([]);
+  const [contextIndex, setContextIndex] = useState(0);
+  const [contextAnswers, setContextAnswers] = useState({});
+  const [contextSelected, setContextSelected] = useState(null);
+  const [contextChecked, setContextChecked] = useState(false);
+  const [contextResult, setContextResult] = useState(null);
+  const [contextStartTs, setContextStartTs] = useState(null);
 
   // recall input
   const [mode, setMode] = useState(isKanji ? 'handwrite' : 'typing'); // typing | handwrite (only kanji)
@@ -213,25 +267,50 @@ export default function FlashcardsPage() {
   useEffect(() => {
     setPhase('idle'); setBatch([]); setIndex(0);
     setWarmupScores({}); setRecallScores({});
+    setWritePass1Scores({});
+    setOnKunScores({});
+    setContextDeck([]);
+    setContextIndex(0);
+    setContextAnswers({});
     setAnswer('');
     setMode(isKanji ? 'handwrite' : 'typing');
     setExampleDeck([]); setExampleIndex(0); setExampleAnswers({});
+    setShowWrite1Answer(false);
+    setOnKunSelected(null);
+    setOnKunChecked(false);
+    setOnKunResult(null);
+    setOnKunStartTs(null);
+    setContextSelected(null);
+    setContextChecked(false);
+    setContextResult(null);
+    setContextStartTs(null);
   }, [typeFilter]); // eslint-disable-line
 
   // pool theo loại
   useEffect(() => {
     const next = safeArray(allCards).filter((c) => {
       if (!c || c.type !== typeFilter) return false;
+      if (isKanji) {
+        const examples = safeArray(c?.exampleCards);
+        if (!examples.length) return false;
+      }
       return true;
     });
     setOrder(next);
-  }, [allCards, typeFilter]);
+  }, [allCards, typeFilter, isKanji]);
 
   useEffect(() => {
     if (!enableExamples) {
       setExampleDeck([]);
       setExampleIndex(0);
       setExampleAnswers({});
+      setContextDeck([]);
+      setContextIndex(0);
+      setContextAnswers({});
+      setContextSelected(null);
+      setContextChecked(false);
+      setContextResult(null);
+      setContextStartTs(null);
       return;
     }
 
@@ -241,7 +320,7 @@ export default function FlashcardsPage() {
       examples.forEach((ex) => {
         list.push({
           ...ex,
-          parentId: item.id,
+          parentId: item.id != null ? String(item.id) : null,
           parentFront: item.front ?? '',
           parentBack: item.back ?? '',
         });
@@ -250,6 +329,14 @@ export default function FlashcardsPage() {
     setExampleDeck(list);
     setExampleIndex(0);
     setExampleAnswers({});
+    const contextList = list.filter((entry) => normalizeSpellLabel(entry?.spell ?? '').length > 0);
+    setContextDeck(contextList);
+    setContextIndex(0);
+    setContextAnswers({});
+    setContextSelected(null);
+    setContextChecked(false);
+    setContextResult(null);
+    setContextStartTs(null);
   }, [batch, enableExamples]);
 
   const hasAnyData = allCards.length > 0;
@@ -265,8 +352,10 @@ export default function FlashcardsPage() {
         const s = sessions.find(x => String(x.id) === String(sessionIdFromQuery));
         if (s) {
           const cards = safeArray(s.cards).map(row => order.find(c => c.id === row.card_id)).filter(Boolean);
-          setBatch(cards); setPhase('warmup'); setIndex(0);
+          setBatch(cards); setPhase(isKanji ? 'write1' : 'warmup'); setIndex(0);
           setWarmupScores({}); setRecallScores({});
+          setWritePass1Scores({});
+          setOnKunScores({});
           return;
         }
       }
@@ -275,15 +364,79 @@ export default function FlashcardsPage() {
       const ids = [];
       for (let i=0;i<CHUNK_SIZE;i++){ const idx=(offset+i)%order.length; if(order[idx]) ids.push(order[idx].id); }
       const cards = ids.map(id => order.find(c => c.id === id)).filter(Boolean);
-      setBatch(cards); setPhase('warmup'); setIndex(0);
+      setBatch(cards); setPhase(isKanji ? 'write1' : 'warmup'); setIndex(0);
       setWarmupScores({}); setRecallScores({});
+      setWritePass1Scores({});
+      setOnKunScores({});
     })();
-  }, [router.isReady, router.query?.sessionId, hasTypeData, order, typeFilter]);
+  }, [router.isReady, router.query?.sessionId, hasTypeData, order, typeFilter, isKanji]);
 
   const card = batch[index] || null;
   const currentExamples = useMemo(() => safeArray(card?.exampleCards), [card]);
   const exampleCard = exampleDeck[exampleIndex] || null;
   const examplePool = useMemo(() => safeArray(exampleLookup?.pool), [exampleLookup]);
+  const contextCard = contextDeck[contextIndex] || null;
+  const contextCardKey = contextCard ? exampleKey(contextCard) : null;
+
+  const onKunMcq = useMemo(() => {
+    if (!isKanji) return null;
+    if (!card) return null;
+    const answer = normalizeSpellLabel(card?.spell ?? '') || '—';
+    const pool = safeArray(batch)
+        .filter((entry) => entry && entry.id !== card.id)
+        .map((entry) => normalizeSpellLabel(entry?.spell ?? ''))
+        .filter(Boolean)
+        .sort(() => Math.random() - 0.5)
+        .slice(0, 3);
+    const opts = makeMcqOptions(answer, pool);
+    return { question: card.front, correct: answer, opts };
+  }, [isKanji, card, batch]);
+
+  const contextMcq = useMemo(() => {
+    if (!isKanji) return null;
+    if (!contextCard) return null;
+    const answer = normalizeSpellLabel(contextCard?.spell ?? '') || '—';
+    const pool = safeArray(contextDeck)
+        .filter((entry) => entry && entry !== contextCard)
+        .map((entry) => normalizeSpellLabel(entry?.spell ?? ''))
+        .filter(Boolean)
+        .sort(() => Math.random() - 0.5)
+        .slice(0, 3);
+    const opts = makeMcqOptions(answer, pool);
+    return {
+      question: contextCard.front,
+      correct: answer,
+      opts,
+      parentId: contextCard.parentId != null ? String(contextCard.parentId) : null,
+      key: exampleKey(contextCard) || null,
+      parentFront: contextCard.parentFront,
+      parentBack: contextCard.parentBack,
+    };
+  }, [isKanji, contextCard, contextDeck]);
+
+  useEffect(() => {
+    if (phase === 'write1') {
+      setShowWrite1Answer(false);
+    }
+  }, [phase, card?.id]);
+
+  useEffect(() => {
+    if (phase === 'on_kun') {
+      setOnKunSelected(null);
+      setOnKunChecked(false);
+      setOnKunResult(null);
+      setOnKunStartTs(Date.now());
+    }
+  }, [phase, card?.id]);
+
+  useEffect(() => {
+    if (phase === 'context') {
+      setContextSelected(null);
+      setContextChecked(false);
+      setContextResult(null);
+      setContextStartTs(Date.now());
+    }
+  }, [phase, contextCardKey]);
 
   // warm-up
   const onWarmupChecked = async ({ ok, timeSec, score }) => {
@@ -303,6 +456,30 @@ export default function FlashcardsPage() {
     else setPhase('warmup_summary');
   };
 
+  const handleWrite1Check = () => {
+    setShowWrite1Answer(true);
+  };
+
+  const handleWrite1Score = (score) => {
+    if (!card) return;
+    const value = Number.isFinite(Number(score)) ? Number(score) : 0;
+    setWritePass1Scores((prev) => ({ ...prev, [card.id]: value }));
+  };
+
+  const handleWrite1Next = () => {
+    if (!card) return;
+    if (!Object.prototype.hasOwnProperty.call(writePass1Scores, card.id)) {
+      setWritePass1Scores((prev) => ({ ...prev, [card.id]: 0 }));
+    }
+    setShowWrite1Answer(false);
+    if (index + 1 < batch.length) {
+      setIndex((i) => i + 1);
+    } else {
+      setIndex(0);
+      setPhase('warmup');
+    }
+  };
+
   const handleExampleChecked = (payload) => {
     if (!exampleCard) return;
     const key = exampleKey(exampleCard);
@@ -311,7 +488,7 @@ export default function FlashcardsPage() {
       ...prev,
       [key]: {
         ...(payload || {}),
-        parentId: exampleCard.parentId,
+        parentId: exampleCard.parentId != null ? String(exampleCard.parentId) : null,
       },
     }));
   };
@@ -329,7 +506,7 @@ export default function FlashcardsPage() {
           ok: false,
           timeSec: null,
           skipped: true,
-          parentId: entry.parentId,
+          parentId: entry.parentId != null ? String(entry.parentId) : null,
         },
       };
     });
@@ -339,7 +516,124 @@ export default function FlashcardsPage() {
     if (!exampleCard) return;
     ensureExampleRecorded(exampleCard);
     if (exampleIndex + 1 < exampleDeck.length) setExampleIndex(i => i + 1);
-    else setPhase('done');
+    else if (isKanji) {
+      setPhase('on_kun');
+      setIndex(0);
+    } else {
+      setPhase('done');
+    }
+  };
+
+  const handleOnKunPick = (opt) => {
+    setOnKunSelected(opt);
+  };
+
+  const ensureOnKunRecorded = () => {
+    if (!card) return;
+    if (onKunScores[card.id]) return;
+    setOnKunScores((prev) => ({
+      ...prev,
+      [card.id]: {
+        score: 0,
+        ok: false,
+        timeSec: null,
+        skipped: true,
+      },
+    }));
+  };
+
+  const handleOnKunCheck = () => {
+    if (!card || !onKunMcq) return;
+    const ok = onKunSelected === onKunMcq.correct;
+    const sec = Math.max(0, Math.floor(((Date.now() - (onKunStartTs || Date.now())) / 1000)));
+    const score = ok ? timeToScoreSec(sec) : 0;
+    const payload = {
+      ok,
+      score,
+      timeSec: sec,
+      chosen: onKunSelected,
+      correct: onKunMcq.correct,
+    };
+    setOnKunChecked(true);
+    setOnKunResult(payload);
+    setOnKunScores((prev) => ({ ...prev, [card.id]: payload }));
+  };
+
+  const nextOnKun = () => {
+    if (!card) return;
+    if (!onKunChecked) {
+      ensureOnKunRecorded();
+    }
+    setOnKunSelected(null);
+    setOnKunChecked(false);
+    setOnKunResult(null);
+    setOnKunStartTs(Date.now());
+    if (index + 1 < batch.length) {
+      setIndex((i) => i + 1);
+    } else {
+      setIndex(0);
+      setPhase('recall');
+      setAnswer('');
+    }
+  };
+
+  const ensureContextRecorded = (entry) => {
+    if (!entry) return;
+    const key = exampleKey(entry);
+    if (!key) return;
+    setContextAnswers((prev) => {
+      if (prev[key]) return prev;
+      return {
+        ...prev,
+        [key]: {
+          score: 0,
+          ok: false,
+          timeSec: null,
+          skipped: true,
+          parentId: entry.parentId != null ? String(entry.parentId) : null,
+        },
+      };
+    });
+  };
+
+  const handleContextPick = (opt) => {
+    setContextSelected(opt);
+  };
+
+  const handleContextCheck = () => {
+    if (!contextCard || !contextMcq) return;
+    const ok = contextSelected === contextMcq.correct;
+    const sec = Math.max(0, Math.floor(((Date.now() - (contextStartTs || Date.now())) / 1000)));
+    const score = ok ? timeToScoreSec(sec) : 0;
+    const payload = {
+      ok,
+      score,
+      timeSec: sec,
+      chosen: contextSelected,
+      correct: contextMcq.correct,
+      parentId: contextMcq.parentId,
+    };
+    setContextChecked(true);
+    setContextResult(payload);
+    if (contextMcq.key) {
+      setContextAnswers((prev) => ({ ...prev, [contextMcq.key]: payload }));
+    }
+  };
+
+  const nextContext = () => {
+    if (!contextCard) return;
+    if (!contextChecked) {
+      ensureContextRecorded(contextCard);
+    }
+    setContextSelected(null);
+    setContextChecked(false);
+    setContextResult(null);
+    setContextStartTs(Date.now());
+    if (contextIndex + 1 < contextDeck.length) {
+      setContextIndex((i) => i + 1);
+    } else {
+      setPhase('done');
+    }
   };
 
   // recall
@@ -373,7 +667,14 @@ export default function FlashcardsPage() {
     if (index + 1 < batch.length) { setIndex(i=>i+1); setAnswer(''); }
     else {
       setAnswer('');
-      if (enableExamples && exampleDeck.length > 0) {
+      if (isKanji) {
+        if (contextDeck.length > 0) {
+          setContextIndex(0);
+          setPhase('context');
+        } else {
+          setPhase('done');
+        }
+      } else if (enableExamples && exampleDeck.length > 0) {
         setExampleIndex(0);
         setPhase('example');
       } else {
@@ -390,40 +691,109 @@ export default function FlashcardsPage() {
       if (!key) return;
       const res = exampleAnswers[key];
       if (!res) return;
-      if (!map[entry.parentId]) map[entry.parentId] = [];
+      const parentKey = entry.parentId != null ? String(entry.parentId) : null;
+      if (!parentKey) return;
+      if (!map[parentKey]) map[parentKey] = [];
       const sc = Number.isFinite(Number(res.score)) ? Number(res.score) : 0;
-      map[entry.parentId].push(sc);
+      map[parentKey].push(sc);
     });
     return map;
   }, [exampleDeck, exampleAnswers]);
 
+  const contextScoresByCard = useMemo(() => {
+    const map = {};
+    Object.values(contextAnswers).forEach((entry) => {
+      if (!entry) return;
+      const parentKey = entry.parentId != null ? String(entry.parentId) : null;
+      if (!parentKey) return;
+      if (!map[parentKey]) map[parentKey] = [];
+      const sc = Number.isFinite(Number(entry.score)) ? Number(entry.score) : 0;
+      map[parentKey].push(sc);
+    });
+    return map;
+  }, [contextAnswers]);
+
+  const contextParentSet = useMemo(() => {
+    const set = new Set();
+    safeArray(contextDeck).forEach((entry) => {
+      if (!entry) return;
+      const key = entry.parentId != null ? String(entry.parentId) : null;
+      if (key) set.add(key);
+    });
+    return set;
+  }, [contextDeck]);
+
   const aggregated = useMemo(() => {
     const rows = batch.map(b => {
       // đảm bảo lấy score là number
+      const idStr = String(b.id);
       const w = Number.isFinite(Number(warmupScores[b.id]?.score)) ? Number(warmupScores[b.id].score) : 0;
       const r = Number.isFinite(Number(recallScores[b.id]?.score)) ? Number(recallScores[b.id].score) : 0;
-      const exampleScores = safeArray(exampleScoresByCard[b.id]);
-      const expectsExample = enableExamples && String(b?.type || '').toLowerCase() === 'kanji' && safeArray(b?.exampleCards).length > 0;
+
+      if (isKanji) {
+        const write1 = Number.isFinite(Number(writePass1Scores[b.id])) ? Number(writePass1Scores[b.id]) : 0;
+        const exampleScores = safeArray(exampleScoresByCard[idStr]);
+        const expectsExample = safeArray(b?.exampleCards).length > 0;
+        const exampleAvg = exampleScores.length
+            ? Math.round(exampleScores.reduce((sum, val) => sum + Number(val || 0), 0) / exampleScores.length)
+            : (expectsExample ? 0 : null);
+        const onKunScore = Number.isFinite(Number(onKunScores[b.id]?.score)) ? Number(onKunScores[b.id].score) : 0;
+        const contextScores = safeArray(contextScoresByCard[idStr]);
+        const expectsContext = contextParentSet.has(idStr);
+        const contextAvg = contextScores.length
+            ? Math.round(contextScores.reduce((sum, val) => sum + Number(val || 0), 0) / contextScores.length)
+            : (expectsContext ? 0 : null);
+        const exampleVal = Number.isFinite(Number(exampleAvg)) ? Number(exampleAvg) : 0;
+        const contextVal = Number.isFinite(Number(contextAvg)) ? Number(contextAvg) : 0;
+        const weighted = (
+            write1 * 15 +
+            w * 20 +
+            exampleVal * 20 +
+            onKunScore * 10 +
+            r * 20 +
+            contextVal * 5
+        ) / 100;
+        const final = Math.max(0, Math.min(5, Math.round(weighted)));
+
+        return {
+          id: idStr,
+          card_id: idStr,
+          front: b.front ?? null,
+          back: b.back ?? null,
+          write1,
+          warmup: Number(w),
+          example: exampleAvg != null ? Number(exampleAvg) : null,
+          onKun: Number(onKunScore),
+          recall: Number(r),
+          context: contextAvg != null ? Number(contextAvg) : null,
+          final,
+        };
+      }
+
+      const exampleScores = safeArray(exampleScoresByCard[idStr]);
       const e = exampleScores.length
           ? Math.round(exampleScores.reduce((sum, val) => sum + Number(val || 0), 0) / exampleScores.length)
-          : (expectsExample ? 0 : null);
+          : null;
       const final = floorAvg(w, r);
 
       return {
-        id: String(b.id),
-        card_id: String(b.id),   // **bắt buộc**: server dùng card_id
+        id: idStr,
+        card_id: idStr,   // **bắt buộc**: server dùng card_id
         front: b.front ?? null,
         back: b.back ?? null,
+        write1: null,
         warmup: Number(w),
-        recall: Number(r),
         example: e != null ? Number(e) : null,
+        onKun: null,
+        recall: Number(r),
+        context: null,
         final: Number(final)
       };
     });
 
     const dist = [0,1,2,3,4,5].map(v => rows.filter(x => x.final === v).length);
     return { rows, dist };
-  }, [batch, warmupScores, recallScores, exampleScoresByCard]);
+  }, [batch, warmupScores, recallScores, exampleScoresByCard, isKanji, writePass1Scores, onKunScores, contextScoresByCard, contextParentSet]);
 
   const warmupDist = useMemo(() => {
     const dist = [0,1,2,3,4,5].map(()=>0);
@@ -453,13 +823,31 @@ export default function FlashcardsPage() {
     })();
   }, [phase, batch.length, aggregated, order.length, typeFilter]);
 
-  const totalSteps = (batch.length * 2) + (enableExamples ? exampleDeck.length : 0);
+  const totalSteps = (() => {
+    if (!batch.length) return 0;
+    if (isKanji) {
+      return (batch.length * 4) + exampleDeck.length + contextDeck.length;
+    }
+    return (batch.length * 2) + (enableExamples ? exampleDeck.length : 0);
+  })();
+
   const completedSteps = (() => {
     if (!batch.length) return 0;
-    if (phase === 'warmup') return index + 1;
+    if (isKanji) {
+      if (phase === 'write1') return Math.min(index + 1, Math.max(batch.length, 1));
+      if (phase === 'warmup') return batch.length + Math.min(index + 1, Math.max(batch.length, 1));
+      if (phase === 'warmup_summary') return batch.length * 2;
+      if (phase === 'example') return (batch.length * 2) + Math.min(exampleIndex + 1, Math.max(exampleDeck.length, 1));
+      if (phase === 'on_kun') return (batch.length * 2) + exampleDeck.length + Math.min(index + 1, Math.max(batch.length, 1));
+      if (phase === 'recall') return (batch.length * 3) + exampleDeck.length + Math.min(index + 1, Math.max(batch.length, 1));
+      if (phase === 'context') return (batch.length * 4) + exampleDeck.length + Math.min(contextIndex + 1, Math.max(contextDeck.length, 1));
+      if (phase === 'done') return totalSteps;
+      return 0;
+    }
+    if (phase === 'warmup') return Math.min(index + 1, Math.max(batch.length, 1));
     if (phase === 'warmup_summary') return batch.length;
-    if (phase === 'recall') return batch.length + index + 1;
-    if (phase === 'example') return (batch.length * 2) + Math.min(exampleIndex + 1, exampleDeck.length || 0);
+    if (phase === 'recall') return batch.length + Math.min(index + 1, Math.max(batch.length, 1));
+    if (phase === 'example') return (batch.length * 2) + Math.min(exampleIndex + 1, Math.max(exampleDeck.length, 1));
     if (phase === 'done') return totalSteps;
     return 0;
   })();
@@ -495,10 +883,74 @@ export default function FlashcardsPage() {
             <>
               <LinearProgress variant="determinate" value={progressPct} sx={{ mb:2, height:8, borderRadius:10 }} />
               <Typography sx={{ mb:1, color:'text.secondary' }}>
-                {phase==='warmup' && <>Warm-up {index+1}/{batch.length}</>}
-                {phase==='recall' && <>Điền đáp án {index+1}/{batch.length}</>}
-                {phase==='example' && <>Ví dụ {exampleIndex+1}/{exampleDeck.length}</>}
+                {isKanji && phase==='write1' && <>Phần 1 – Viết nét lần 1 {batch.length ? `${index+1}/${batch.length}` : ''}</>}
+                {phase==='warmup' && (
+                    isKanji
+                        ? <>Phần 2 – MCQ nghĩa {batch.length ? `${index+1}/${batch.length}` : ''}</>
+                        : <>Warm-up {batch.length ? `${index+1}/${batch.length}` : ''}</>
+                )}
+                {phase==='warmup_summary' && (
+                    isKanji ? 'Tổng kết phần 2' : 'Tổng kết Warm-up'
+                )}
+                {phase==='example' && <>Phần 3 – Ví dụ {exampleDeck.length ? `${exampleIndex+1}/${exampleDeck.length}` : ''}</>}
+                {isKanji && phase==='on_kun' && <>Phần 4 – On/Kun {batch.length ? `${index+1}/${batch.length}` : ''}</>}
+                {phase==='recall' && (
+                    isKanji
+                        ? <>Phần 5 – Viết nét lần 2 {batch.length ? `${index+1}/${batch.length}` : ''}</>
+                        : <>Điền đáp án {batch.length ? `${index+1}/${batch.length}` : ''}</>
+                )}
+                {isKanji && phase==='context' && <>Phần 6 – Ngữ cảnh {contextDeck.length ? `${contextIndex+1}/${contextDeck.length}` : ''}</>}
               </Typography>
+
+              {phase==='write1' && card && (
+                  <Card sx={{ borderRadius:3, border:'1px solid #ffe0e0', background:'#fff' }}>
+                    <CardContent>
+                      <Typography variant="h6" sx={{ mb:1, color:'#a33b3b' }}>
+                        Phần 1 – Viết nét lần 1: <b>{card.front}</b>
+                      </Typography>
+                      <Stack spacing={1}>
+                        <HandwritingCanvas width={320} height={220} showGrid />
+                        {showWrite1Answer && (
+                            <Stack spacing={0.5}>
+                              <Typography>Đáp án đúng: <b>{card.front}</b></Typography>
+                              {card.back && <Typography>Nghĩa: <b>{card.back}</b></Typography>}
+                            </Stack>
+                        )}
+                      </Stack>
+                      <Stack className="responsive-stack" direction="row" spacing={1} sx={{ mt:2 }}>
+                        <Button variant="contained" onClick={handleWrite1Check} fullWidth>Kiểm tra</Button>
+                      </Stack>
+                      {showWrite1Answer && (
+                          <>
+                            <Divider sx={{ my:2 }} />
+                            <Typography>Chọn điểm tự chấm (0–5):</Typography>
+                            <Stack className="responsive-stack" direction="row" spacing={1} sx={{ mt:1 }} flexWrap="wrap">
+                              {[0,1,2,3,4,5].map(v => (
+                                  <Button
+                                      key={v}
+                                      variant={(writePass1Scores[card.id] ?? null) === v ? 'contained' : 'outlined'}
+                                      onClick={() => handleWrite1Score(v)}
+                                      fullWidth
+                                  >
+                                    {v}
+                                  </Button>
+                              ))}
+                            </Stack>
+                            <Stack className="responsive-stack" direction="row" spacing={1} sx={{ mt:2 }}>
+                              <Button
+                                  variant="outlined"
+                                  onClick={handleWrite1Next}
+                                  disabled={writePass1Scores[card.id] == null}
+                                  fullWidth
+                              >
+                                {index + 1 < batch.length ? 'Lưu & tiếp Kanji' : 'Lưu & sang MCQ (Phần 2)'}
+                              </Button>
+                            </Stack>
+                          </>
+                      )}
+                    </CardContent>
+                  </Card>
+              )}
 
               {phase==='warmup' && card && (
                   <>
@@ -519,13 +971,34 @@ export default function FlashcardsPage() {
               {phase==='warmup_summary' && (
                   <Card sx={{ borderRadius:3, border:'1px solid #ffe0e0', background:'#fff' }}>
                     <CardContent>
-                      <Typography variant="h6" sx={{ mb:1, color:'#a33b3b' }}>Tổng quan Warm-up (10 thẻ)</Typography>
+                      <Typography variant="h6" sx={{ mb:1, color:'#a33b3b' }}>
+                        {isKanji ? 'Tổng quan phần 2 – MCQ (20%)' : 'Tổng quan Warm-up (10 thẻ)'}
+                      </Typography>
                       <Stack direction="row" spacing={1} flexWrap="wrap">
                         {[0,1,2,3,4,5].map(v => <Chip key={v} label={`Mức ${v}: ${warmupDist[v]}`} />)}
                       </Stack>
                       <Divider sx={{ my:2 }} />
-                      <Button variant="contained" onClick={()=>{ setPhase('recall'); setIndex(0); setAnswer(''); }}>
-                        Bắt đầu (lặp lại 10 thẻ)
+                      <Button
+                          variant="contained"
+                          onClick={() => {
+                            if (isKanji) {
+                              if (exampleDeck.length > 0) {
+                                setPhase('example');
+                                setExampleIndex(0);
+                              } else {
+                                setPhase('on_kun');
+                                setIndex(0);
+                              }
+                            } else {
+                              setPhase('recall');
+                              setIndex(0);
+                              setAnswer('');
+                            }
+                          }}
+                      >
+                        {isKanji
+                            ? (exampleDeck.length > 0 ? 'Sang MCQ Ví dụ (Phần 3)' : 'Sang MCQ On/Kun (Phần 4)')
+                            : 'Bắt đầu (lặp lại 10 thẻ)'}
                       </Button>
                     </CardContent>
                   </Card>
@@ -537,7 +1010,7 @@ export default function FlashcardsPage() {
                       <Stack className="responsive-stack" direction="row" justifyContent="space-between" alignItems="center" sx={{ mb:1 }}>
                         {isKanji ? (
                             <Typography variant="h6" sx={{ color:'#a33b3b', textAlign: { xs: 'center', sm: 'left' } }}>
-                              Điền KANJI cho: <b>{kanjiLabel(card)}</b>
+                              Phần 5 – Viết nét lần 2: <b>{kanjiLabel(card)}</b>
                             </Typography>
                         ) : (
                             <Typography variant="h6" sx={{ color:'#a33b3b', textAlign: { xs: 'center', sm: 'left' } }}>{card.front}</Typography>
@@ -620,11 +1093,61 @@ export default function FlashcardsPage() {
                   </Card>
               )}
 
+              {phase==='context' && contextDeck.length > 0 && contextCard && contextMcq && (
+                  <Card sx={{ borderRadius:3, border:'1px solid #ffe0e0', background:'#fff' }}>
+                    <CardContent>
+                      <Typography variant="h6" sx={{ mb:1, color:'#a33b3b' }}>
+                        Phần 6 – MCQ ngữ cảnh
+                      </Typography>
+                      {contextMcq.parentFront && (
+                          <Typography sx={{ mb:1 }}>
+                            Thuộc Kanji: <b>{contextMcq.parentFront}</b>
+                            {contextMcq.parentBack ? ` · ${contextMcq.parentBack}` : ''}
+                          </Typography>
+                      )}
+                      <Typography sx={{ mb:2, fontStyle:'italic' }}>
+                        {contextMcq.question}
+                      </Typography>
+                      <Stack spacing={1}>
+                        {contextMcq.opts.map((opt, idx) => (
+                            <Button
+                                key={idx}
+                                variant={contextSelected === opt ? 'contained' : 'outlined'}
+                                onClick={() => handleContextPick(opt)}
+                            >
+                              {opt}
+                            </Button>
+                        ))}
+                      </Stack>
+                      <Stack className="responsive-stack" direction="row" spacing={1} sx={{ mt:2 }}>
+                        <Button variant="contained" onClick={handleContextCheck} disabled={!contextSelected} fullWidth>Kiểm tra</Button>
+                        <Button variant="outlined" onClick={nextContext} fullWidth>Tiếp</Button>
+                      </Stack>
+                      {contextChecked && (
+                          <>
+                            <Divider sx={{ my:2 }} />
+                            <Typography>
+                              {contextResult?.ok ? 'Đúng' : <>Sai · Đáp án đúng: <b>{contextMcq.correct}</b></>}
+                            </Typography>
+                            {contextResult && (
+                                <Chip
+                                    sx={{ mt:1 }}
+                                    size="small"
+                                    color="info"
+                                    label={`Điểm: ${contextResult.score}${contextResult.timeSec != null ? ` (${contextResult.timeSec}s)` : ''}`}
+                                />
+                            )}
+                          </>
+                      )}
+                    </CardContent>
+                  </Card>
+              )}
+
               {phase==='example' && exampleDeck.length > 0 && exampleCard && (
                   <Card sx={{ borderRadius:3, border:'1px solid #ffe0e0', background:'#fff' }}>
                     <CardContent>
                       <Typography variant="h6" sx={{ mb:1, color:'#a33b3b' }}>
-                        Ví dụ {exampleIndex + 1}/{exampleDeck.length}
+                        Phần 3 – Ví dụ {exampleIndex + 1}/{exampleDeck.length}
                       </Typography>
                       {exampleCard.parentFront && (
                           <Typography sx={{ mb:1 }}>
@@ -648,11 +1171,54 @@ export default function FlashcardsPage() {
                   </Card>
               )}
 
+              {phase==='on_kun' && card && onKunMcq && (
+                  <Card sx={{ borderRadius:3, border:'1px solid #ffe0e0', background:'#fff' }}>
+                    <CardContent>
+                      <Typography variant="h6" sx={{ mb:1, color:'#a33b3b' }}>
+                        Phần 4 – Chọn âm On/Kun cho: <b>{card.front}</b>
+                      </Typography>
+                      <Stack spacing={1}>
+                        {onKunMcq.opts.map((opt, idx) => (
+                            <Button
+                                key={idx}
+                                variant={onKunSelected === opt ? 'contained' : 'outlined'}
+                                onClick={() => handleOnKunPick(opt)}
+                            >
+                              {opt}
+                            </Button>
+                        ))}
+                      </Stack>
+                      <Stack className="responsive-stack" direction="row" spacing={1} sx={{ mt:2 }}>
+                        <Button variant="contained" onClick={handleOnKunCheck} disabled={!onKunSelected} fullWidth>Kiểm tra</Button>
+                        <Button variant="outlined" onClick={nextOnKun} fullWidth>Tiếp</Button>
+                      </Stack>
+                      {onKunChecked && (
+                          <>
+                            <Divider sx={{ my:2 }} />
+                            <Typography>
+                              {onKunResult?.ok ? 'Đúng' : <>Sai · Đáp án đúng: <b>{onKunMcq.correct}</b></>}
+                            </Typography>
+                            {onKunResult && (
+                                <Chip
+                                    sx={{ mt:1 }}
+                                    size="small"
+                                    color="info"
+                                    label={`Điểm: ${onKunResult.score}${onKunResult.timeSec != null ? ` (${onKunResult.timeSec}s)` : ''}`}
+                                />
+                            )}
+                          </>
+                      )}
+                    </CardContent>
+                  </Card>
+              )}
+
               {phase==='done' && (
                   <Card sx={{ borderRadius:3, border:'1px solid #ffe0e0', background:'#fff' }}>
                     <CardContent>
                       <Typography variant="h6" sx={{ mb:1, color:'#a33b3b' }}>
-                        Tổng quan session (10 thẻ · Warm-up + Recall{enableExamples ? ' + Ví dụ' : ''})
+                        {isKanji
+                            ? `Tổng quan session Kanji (${aggregated.rows.length} thẻ · 6 phần trọng số)`
+                            : `Tổng quan session (${aggregated.rows.length} thẻ · Warm-up + Recall${enableExamples ? ' + Ví dụ' : ''})`}
                       </Typography>
 
                       <Typography variant="subtitle2" sx={{ mt:1, mb:1 }}>Từ trong session & mức nhớ gộp:</Typography>
@@ -660,7 +1226,9 @@ export default function FlashcardsPage() {
                         {aggregated.rows.map(row => (
                             <Chip
                                 key={row.id}
-                                label={`${row.front ?? '—'} (${row.final})${row.example != null ? ` · Ví dụ:${row.example}` : ''}`}
+                                label={isKanji
+                                    ? `${row.front ?? '—'} (Final: ${row.final})`
+                                    : `${row.front ?? '—'} (${row.final})${row.example != null ? ` · Ví dụ:${row.example}` : ''}`}
                                 sx={{ mr:1, mb:1 }}
                             />
                         ))}
@@ -670,6 +1238,31 @@ export default function FlashcardsPage() {
                       <Stack direction="row" spacing={1} flexWrap="wrap" sx={{ mb:1 }}>
                         {[0,1,2,3,4,5].map(v => <Chip key={v} label={`Mức ${v}: ${aggregated.dist[v]}`} />)}
                       </Stack>
+
+                      {isKanji && (
+                          <>
+                            <Typography variant="subtitle2" sx={{ mt:1 }}>Điểm chi tiết theo từng phần:</Typography>
+                            <Stack spacing={1} sx={{ mb:2 }}>
+                              {aggregated.rows.map((row) => (
+                                  <Stack key={row.id} direction={{ xs:'column', md:'row' }} spacing={1}
+                                         sx={{ border:'1px solid #eee', borderRadius:2, p:1 }}>
+                                    <Typography sx={{ flex:1, textAlign:{ xs:'center', md:'left' } }}>
+                                      <b>{row.front ?? '—'}</b>{row.back ? ` · ${row.back}` : ''}
+                                    </Typography>
+                                    <Stack direction="row" spacing={1} flexWrap="wrap" justifyContent={{ xs:'center', md:'flex-start' }}>
+                                      <Chip size="small" label={`Viết1: ${Number.isFinite(Number(row.write1)) ? Number(row.write1) : '—'}`} />
+                                      <Chip size="small" label={`MCQ: ${Number.isFinite(Number(row.warmup)) ? Number(row.warmup) : '—'}`} />
+                                      <Chip size="small" label={`Ví dụ: ${Number.isFinite(Number(row.example)) ? Number(row.example) : '—'}`} />
+                                      <Chip size="small" label={`On/Kun: ${Number.isFinite(Number(row.onKun)) ? Number(row.onKun) : '—'}`} />
+                                      <Chip size="small" label={`Viết2: ${Number.isFinite(Number(row.recall)) ? Number(row.recall) : '—'}`} />
+                                      <Chip size="small" label={`Ngữ cảnh: ${Number.isFinite(Number(row.context)) ? Number(row.context) : '—'}`} />
+                                      <Chip size="small" color="primary" label={`Final: ${Number.isFinite(Number(row.final)) ? Number(row.final) : '—'}`} />
+                                    </Stack>
+                                  </Stack>
+                              ))}
+                            </Stack>
+                          </>
+                      )}
 
                       <Divider sx={{ my:2 }} />
                       <Stack className="responsive-stack" direction="row" spacing={1}>
@@ -682,13 +1275,36 @@ export default function FlashcardsPage() {
                               const ids = [];
                               for (let i=0;i<CHUNK_SIZE;i++){ const idx=(offset+i)%order.length; if(order[idx]) ids.push(order[idx].id); }
                               const cards = ids.map(id => order.find(c => c.id === id)).filter(Boolean);
-                              setBatch(cards); setPhase('warmup'); setIndex(0);
+                              setBatch(cards); setPhase(isKanji ? 'write1' : 'warmup'); setIndex(0);
                               setWarmupScores({}); setRecallScores({}); setAnswer('');
                               setExampleDeck([]); setExampleIndex(0); setExampleAnswers({});
+                              setWritePass1Scores({}); setOnKunScores({});
+                              setContextDeck([]); setContextIndex(0); setContextAnswers({});
+                              setShowWrite1Answer(false);
+                              setOnKunSelected(null); setOnKunChecked(false); setOnKunResult(null); setOnKunStartTs(null);
+                              setContextSelected(null); setContextChecked(false); setContextResult(null); setContextStartTs(null);
                             }}
                             fullWidth
                         >Tiếp 20 lượt (10 thẻ mới)</Button>
-                        <Button onClick={()=>{ setPhase('warmup'); setIndex(0); setWarmupScores({}); setRecallScores({}); setAnswer(''); setExampleIndex(0); setExampleAnswers({}); }} fullWidth>
+                        <Button onClick={()=>{
+                          setPhase(isKanji ? 'write1' : 'warmup');
+                          setIndex(0);
+                          setWarmupScores({});
+                          setRecallScores({});
+                          setWritePass1Scores({});
+                          setOnKunScores({});
+                          setContextAnswers({});
+                          if (!isKanji) {
+                            setContextDeck([]);
+                          }
+                          setContextIndex(0);
+                          setAnswer('');
+                          setExampleIndex(0);
+                          setExampleAnswers({});
+                          setShowWrite1Answer(false);
+                          setOnKunSelected(null); setOnKunChecked(false); setOnKunResult(null); setOnKunStartTs(null);
+                          setContextSelected(null); setContextChecked(false); setContextResult(null); setContextStartTs(null);
+                        }} fullWidth>
                           Học lại phiên này
                         </Button>
                       </Stack>
