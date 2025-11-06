@@ -141,6 +141,7 @@ export default function FlashcardsPage() {
 
   const [typeFilter, setTypeFilter] = useState('vocab');
   const isKanji = typeFilter === 'kanji';
+  const enableExamples = isKanji;
 
   // data + session
   const [allCards, setAllCards] = useState([]);
@@ -227,6 +228,13 @@ export default function FlashcardsPage() {
   }, [allCards, typeFilter]);
 
   useEffect(() => {
+    if (!enableExamples) {
+      setExampleDeck([]);
+      setExampleIndex(0);
+      setExampleAnswers({});
+      return;
+    }
+
     const list = [];
     safeArray(batch).forEach((item) => {
       const examples = safeArray(item?.exampleCards);
@@ -242,7 +250,7 @@ export default function FlashcardsPage() {
     setExampleDeck(list);
     setExampleIndex(0);
     setExampleAnswers({});
-  }, [batch]);
+  }, [batch, enableExamples]);
 
   const hasAnyData = allCards.length > 0;
   const hasTypeData = order.length > 0;
@@ -365,7 +373,7 @@ export default function FlashcardsPage() {
     if (index + 1 < batch.length) { setIndex(i=>i+1); setAnswer(''); }
     else {
       setAnswer('');
-      if (exampleDeck.length > 0) {
+      if (enableExamples && exampleDeck.length > 0) {
         setExampleIndex(0);
         setPhase('example');
       } else {
@@ -395,13 +403,11 @@ export default function FlashcardsPage() {
       const w = Number.isFinite(Number(warmupScores[b.id]?.score)) ? Number(warmupScores[b.id].score) : 0;
       const r = Number.isFinite(Number(recallScores[b.id]?.score)) ? Number(recallScores[b.id].score) : 0;
       const exampleScores = safeArray(exampleScoresByCard[b.id]);
-      const expectsExample = String(b?.type || '').toLowerCase() === 'kanji' && safeArray(b?.exampleCards).length > 0;
+      const expectsExample = enableExamples && String(b?.type || '').toLowerCase() === 'kanji' && safeArray(b?.exampleCards).length > 0;
       const e = exampleScores.length
           ? Math.round(exampleScores.reduce((sum, val) => sum + Number(val || 0), 0) / exampleScores.length)
           : (expectsExample ? 0 : null);
-      const divisor = expectsExample ? 3 : (2 + (e != null ? 1 : 0));
-      const total = Number(w) + Number(r) + (expectsExample ? Number(e ?? 0) : (e != null ? Number(e) : 0));
-      const final = Math.round(total / (divisor || 1));
+      const final = floorAvg(w, r);
 
       return {
         id: String(b.id),
@@ -447,7 +453,7 @@ export default function FlashcardsPage() {
     })();
   }, [phase, batch.length, aggregated, order.length, typeFilter]);
 
-  const totalSteps = (batch.length * 2) + exampleDeck.length;
+  const totalSteps = (batch.length * 2) + (enableExamples ? exampleDeck.length : 0);
   const completedSteps = (() => {
     if (!batch.length) return 0;
     if (phase === 'warmup') return index + 1;
@@ -645,7 +651,9 @@ export default function FlashcardsPage() {
               {phase==='done' && (
                   <Card sx={{ borderRadius:3, border:'1px solid #ffe0e0', background:'#fff' }}>
                     <CardContent>
-                      <Typography variant="h6" sx={{ mb:1, color:'#a33b3b' }}>Tổng quan session (10 thẻ · Warm-up + Recall + Ví dụ)</Typography>
+                      <Typography variant="h6" sx={{ mb:1, color:'#a33b3b' }}>
+                        Tổng quan session (10 thẻ · Warm-up + Recall{enableExamples ? ' + Ví dụ' : ''})
+                      </Typography>
 
                       <Typography variant="subtitle2" sx={{ mt:1, mb:1 }}>Từ trong session & mức nhớ gộp:</Typography>
                       <Stack direction="row" spacing={1} flexWrap="wrap" sx={{ mb:1 }}>
