@@ -1,10 +1,8 @@
 import React from 'react';
 import { Card, CardContent, Typography, Stack, Button, Divider } from '@mui/material';
 
-const isExampleEntry = (item) => {
-  const type = String(item?.type || '').toLowerCase();
-  return type.includes('example') || type.includes('sentence');
-};
+const normalizeType = (value) => (value == null ? '' : String(value).trim().toLowerCase());
+const isExampleEntry = (item) => normalizeType(item?.type) === 'example';
 
 export default function ExampleMCQ({ example, pool, onCheck, scoreFunc }) {
   const startRef = React.useRef(Date.now());

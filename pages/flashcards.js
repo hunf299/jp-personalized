@@ -179,8 +179,9 @@ export default function FlashcardsPage() {
   const router = useRouter();
 
   const [typeFilter, setTypeFilter] = useState('vocab');
-  const isKanji = typeFilter === 'kanji';
-  const recallFirst = !isKanji && RECALL_FIRST_TYPES.has(normalizeType(typeFilter));
+  const normalizedTypeFilter = normalizeType(typeFilter);
+  const isKanji = normalizedTypeFilter === 'kanji';
+  const recallFirst = !isKanji && RECALL_FIRST_TYPES.has(normalizedTypeFilter);
   const enableExamples = isKanji;
 
   // data + session
@@ -291,11 +292,15 @@ export default function FlashcardsPage() {
 
   // pool theo loại
   useEffect(() => {
-    const targetType = normalizeType(typeFilter);
+    const targetType = normalizedTypeFilter;
     const next = safeArray(allCards).filter((c) => {
       if (!c) return false;
       const cardType = normalizeType(c.type);
-      if (cardType !== targetType) return false;
+      if (targetType === 'kanji') {
+        if (cardType !== 'kanji') return false;
+      } else if (cardType !== targetType) {
+        return false;
+      }
       if (targetType === 'kanji') {
         const examples = safeArray(c?.exampleCards);
         if (!examples.length) return false;
@@ -303,7 +308,7 @@ export default function FlashcardsPage() {
       return true;
     });
     setOrder(next);
-  }, [allCards, typeFilter, isKanji]);
+  }, [allCards, normalizedTypeFilter, isKanji]);
 
   useEffect(() => {
     if (!enableExamples) {
