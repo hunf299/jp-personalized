@@ -1159,7 +1159,6 @@ export default function FlashcardsPage() {
                       {exampleCard.parentFront && (
                           <Typography sx={{ mb:1 }}>
                             Thuộc Kanji: <b>{exampleCard.parentFront}</b>
-                            {exampleCard.parentBack ? ` · ${exampleCard.parentBack}` : ''}
                           </Typography>
                       )}
                       <ExampleMCQ
