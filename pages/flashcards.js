@@ -11,6 +11,7 @@ import ExampleMCQ from '../components/ExampleMCQ';
 import { createExampleLookup, exampleKey, parseExampleRefs } from '../lib/example-utils';
 
 const CHUNK_SIZE = 10;
+const RECALL_FIRST_TYPES = new Set(['vocab', 'vocal', 'grammar', 'particle']);
 
 // ---------- helpers ----------
 const safeArray = (x) => (Array.isArray(x) ? x : []);
@@ -179,6 +180,7 @@ export default function FlashcardsPage() {
 
   const [typeFilter, setTypeFilter] = useState('vocab');
   const isKanji = typeFilter === 'kanji';
+  const recallFirst = !isKanji && RECALL_FIRST_TYPES.has(normalizeType(typeFilter));
   const enableExamples = isKanji;
 
   // data + session
@@ -359,7 +361,7 @@ export default function FlashcardsPage() {
         const s = sessions.find(x => String(x.id) === String(sessionIdFromQuery));
         if (s) {
           const cards = safeArray(s.cards).map(row => order.find(c => c.id === row.card_id)).filter(Boolean);
-          setBatch(cards); setPhase(isKanji ? 'write1' : 'warmup'); setIndex(0);
+          setBatch(cards); setPhase(isKanji ? 'write1' : (recallFirst ? 'recall' : 'warmup')); setIndex(0);
           setWarmupScores({}); setRecallScores({});
           setWritePass1Scores({});
           setOnKunScores({});
@@ -371,12 +373,12 @@ export default function FlashcardsPage() {
       const ids = [];
       for (let i=0;i<CHUNK_SIZE;i++){ const idx=(offset+i)%order.length; if(order[idx]) ids.push(order[idx].id); }
       const cards = ids.map(id => order.find(c => c.id === id)).filter(Boolean);
-      setBatch(cards); setPhase(isKanji ? 'write1' : 'warmup'); setIndex(0);
+      setBatch(cards); setPhase(isKanji ? 'write1' : (recallFirst ? 'recall' : 'warmup')); setIndex(0);
       setWarmupScores({}); setRecallScores({});
       setWritePass1Scores({});
       setOnKunScores({});
     })();
-  }, [router.isReady, router.query?.sessionId, hasTypeData, order, typeFilter, isKanji]);
+  }, [router.isReady, router.query?.sessionId, hasTypeData, order, typeFilter, isKanji, recallFirst]);
 
   const card = batch[index] || null;
   const currentExamples = useMemo(() => safeArray(card?.exampleCards), [card]);
@@ -681,6 +683,9 @@ export default function FlashcardsPage() {
         } else {
           setPhase('done');
         }
+      } else if (recallFirst) {
+        setIndex(0);
+        setPhase('warmup');
       } else if (enableExamples && exampleDeck.length > 0) {
         setExampleIndex(0);
         setPhase('example');
@@ -851,6 +856,13 @@ export default function FlashcardsPage() {
       if (phase === 'done') return totalSteps;
       return 0;
     }
+    if (recallFirst) {
+      if (phase === 'recall') return Math.min(index + 1, Math.max(batch.length, 1));
+      if (phase === 'warmup') return batch.length + Math.min(index + 1, Math.max(batch.length, 1));
+      if (phase === 'warmup_summary') return batch.length * 2;
+      if (phase === 'done') return totalSteps;
+      return 0;
+    }
     if (phase === 'warmup') return Math.min(index + 1, Math.max(batch.length, 1));
     if (phase === 'warmup_summary') return batch.length;
     if (phase === 'recall') return batch.length + Math.min(index + 1, Math.max(batch.length, 1));
@@ -996,6 +1008,8 @@ export default function FlashcardsPage() {
                                 setPhase('on_kun');
                                 setIndex(0);
                               }
+                            } else if (recallFirst) {
+                              setPhase('done');
                             } else {
                               setPhase('recall');
                               setIndex(0);
@@ -1005,7 +1019,7 @@ export default function FlashcardsPage() {
                       >
                         {isKanji
                             ? (exampleDeck.length > 0 ? 'Sang MCQ Ví dụ (Phần 3)' : 'Sang MCQ On/Kun (Phần 4)')
-                            : 'Bắt đầu (lặp lại 10 thẻ)'}
+                            : (recallFirst ? 'Hoàn thành phiên' : 'Bắt đầu (lặp lại 10 thẻ)')}
                       </Button>
                     </CardContent>
                   </Card>
@@ -1281,7 +1295,7 @@ export default function FlashcardsPage() {
                               const ids = [];
                               for (let i=0;i<CHUNK_SIZE;i++){ const idx=(offset+i)%order.length; if(order[idx]) ids.push(order[idx].id); }
                               const cards = ids.map(id => order.find(c => c.id === id)).filter(Boolean);
-                              setBatch(cards); setPhase(isKanji ? 'write1' : 'warmup'); setIndex(0);
+                              setBatch(cards); setPhase(isKanji ? 'write1' : (recallFirst ? 'recall' : 'warmup')); setIndex(0);
                               setWarmupScores({}); setRecallScores({}); setAnswer('');
                               setExampleDeck([]); setExampleIndex(0); setExampleAnswers({});
                               setWritePass1Scores({}); setOnKunScores({});
@@ -1293,7 +1307,7 @@ export default function FlashcardsPage() {
                             fullWidth
                         >Tiếp 20 lượt (10 thẻ mới)</Button>
                         <Button onClick={()=>{
-                          setPhase(isKanji ? 'write1' : 'warmup');
+                          setPhase(isKanji ? 'write1' : (recallFirst ? 'recall' : 'warmup'));
                           setIndex(0);
                           setWarmupScores({});
                           setRecallScores({});

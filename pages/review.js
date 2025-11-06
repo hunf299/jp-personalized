@@ -26,6 +26,7 @@ const getJSON = async (u) => { const r = await fetch(u); try { return await r.js
 const msToSec = (ms) => Math.max(0, Math.round(ms/100)/10);
 const DAY_MS = 86400000;
 const DUE_SOON_DAYS = 3;
+const RECALL_FIRST_TYPES = new Set(['vocab', 'vocal', 'grammar', 'particle']);
 
 function shuffle(arr) {
   const copy = Array.isArray(arr) ? [...arr] : [];
@@ -172,6 +173,7 @@ export default function ReviewPage(){
   const levelParam = qp?.level!=null ? Number(qp.level) : null;
   const count = Number(qp?.n || settings?.cards_per_session || 10);
   const auto  = (qp?.auto || settings?.auto_flip || 'off') + '';
+  const recallFirst = RECALL_FIRST_TYPES.has(normalizeType(type));
 
   const orientation = ((settings?.card_orientation || 'normal') + '').toLowerCase(); // normal|reversed
   const recencyDays = qp?.since_days!=null ? Number(qp.since_days) :
@@ -406,7 +408,7 @@ export default function ReviewPage(){
           };
         }));
         setIdx(0);
-        const initialStage = pick.length ? (type === 'kanji' ? 'write1' : 'mcq') : 'done';
+        const initialStage = pick.length ? (type === 'kanji' ? 'write1' : (recallFirst ? 'recall' : 'mcq')) : 'done';
         setStage(initialStage);
         setSelected(null);
         setAnswer('');
@@ -430,7 +432,7 @@ export default function ReviewPage(){
     })();
     return ()=> { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ready, type, isLevelMode, levelParam, count, settings?.recency_days, router.query?.since_days, orientation, dueMode, qp?.levels, qp?.card_ids, examplesReady, exampleLookup, cardMetaMap]);
+  }, [ready, type, isLevelMode, levelParam, count, settings?.recency_days, router.query?.since_days, orientation, dueMode, qp?.levels, qp?.card_ids, examplesReady, exampleLookup, cardMetaMap, recallFirst]);
 
   const exampleTotal = exampleDeck.length;
   const contextDeck = React.useMemo(
@@ -590,6 +592,9 @@ export default function ReviewPage(){
           } else if (hasOnKunStage) {
             setStage('mcqOnKun');
             setIdx(0);
+          } else if (recallFirst) {
+            setStage('done');
+            setIdx(0);
           } else {
             setStage('recall');
             setIdx(0);
@@ -652,7 +657,11 @@ export default function ReviewPage(){
           setIdx((i) => i + 1);
         } else {
           setIdx(0);
-          if (hasContextStage) {
+          if (recallFirst) {
+            setSelected(null);
+            setStage('mcq');
+            setMcqStartTs(Date.now());
+          } else if (hasContextStage) {
             setStage('mcqContext');
             setContextIdx(0);
           } else {
@@ -662,7 +671,7 @@ export default function ReviewPage(){
       }
     }, 2000);
     return () => clearTimeout(handle);
-  }, [autoCfg, showAns, stage, card, mcq, onKunMcq, contextMcq, idx, deck.length, selected, hasExampleStage, hasOnKunStage, exampleDeck.length, onKunScores, contextDeck.length, contextIdx, contextCard, mcqStartTs, isLevelMode, autoGain, answer, qaForRecall, baseLevels, hasContextStage]);
+  }, [autoCfg, showAns, stage, card, mcq, onKunMcq, contextMcq, idx, deck.length, selected, hasExampleStage, hasOnKunStage, exampleDeck.length, onKunScores, contextDeck.length, contextIdx, contextCard, mcqStartTs, isLevelMode, autoGain, answer, qaForRecall, baseLevels, hasContextStage, recallFirst]);
 
   // ----- Manual actions -----
   React.useEffect(() => {
@@ -721,6 +730,9 @@ export default function ReviewPage(){
           setExampleIdx(0);
         } else if (hasOnKunStage) {
           setStage('mcqOnKun');
+          setIdx(0);
+        } else if (recallFirst) {
+          setStage('done');
           setIdx(0);
         } else {
           setStage('recall');
@@ -914,7 +926,7 @@ export default function ReviewPage(){
 
   const detailLabel = type === 'kanji'
       ? 'Chi tiết (Kanji: Base · Viết1 · MCQ · Ví dụ · On/Kun · Viết 2 · Ngữ cảnh'
-      : `Chi tiết (mỗi thẻ: Base · MCQ · Recall${enableExamples ? ' · Ví dụ' : ''}`;
+      : `Chi tiết (mỗi thẻ: Base · ${recallFirst ? 'Recall · MCQ' : 'MCQ · Recall'}${enableExamples ? ' · Ví dụ' : ''}`;
 
   // ===== Render =====
   return (
@@ -1133,7 +1145,11 @@ export default function ReviewPage(){
                             setIdx(i=>i+1);
                           } else {
                             setIdx(0);
-                            if (hasContextStage) {
+                            if (recallFirst) {
+                              setSelected(null);
+                              setStage('mcq');
+                              setMcqStartTs(Date.now());
+                            } else if (hasContextStage) {
                               setContextIdx(0);
                               setStage('mcqContext');
                             } else {
@@ -1141,7 +1157,7 @@ export default function ReviewPage(){
                             }
                           }
                         }}>
-                          {idx+1<deck.length ? 'Lưu & Tiếp' : (hasContextStage ? 'Lưu & MCQ Ngữ cảnh' : 'Lưu & Kết thúc')}
+                          {idx+1<deck.length ? 'Lưu & Tiếp' : (recallFirst ? 'Lưu & MCQ' : (hasContextStage ? 'Lưu & MCQ Ngữ cảnh' : 'Lưu & Kết thúc'))}
                         </Button>
                       </Stack>
                     </>
@@ -1288,8 +1304,17 @@ export default function ReviewPage(){
                           </Typography>
                           <Stack className="responsive-stack" direction="row" spacing={1} flexWrap="wrap" alignItems="center">
                             <Chip size="small" label={`Base: ${base}`} />
-                            <Chip size="small" label={`MCQ: ${mcqVal}`} />
-                            <Chip size="small" label={`Recall: ${rec}`} />
+                            {recallFirst ? (
+                                <>
+                                  <Chip size="small" label={`Recall: ${rec}`} />
+                                  <Chip size="small" label={`MCQ: ${mcqVal}`} />
+                                </>
+                            ) : (
+                                <>
+                                  <Chip size="small" label={`MCQ: ${mcqVal}`} />
+                                  <Chip size="small" label={`Recall: ${rec}`} />
+                                </>
+                            )}
                             {enableExamples && (
                                 <Chip size="small" label={`Ví dụ: ${displayExampleScore != null ? displayExampleScore : '—'}`} />
                             )}
