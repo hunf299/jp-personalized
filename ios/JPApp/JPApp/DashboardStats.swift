@@ -3,30 +3,41 @@ import Foundation
 /// The JSON from the new API matches this schema:
 /// {"total": Int, "kanji": Int, "particle": Int, "grammar": Int, "vocab": Int}
 struct DashboardStats: Codable {
+    private enum CodingKeys: String, CodingKey {
+        case total
+        case kanji
+        case particle
+        case grammar
+        case vocab
+    }
+
     let total: Int
     let kanji: Int
     let particle: Int
     let grammar: Int
     let vocab: Int
 
-    init(total: Int, kanji: Int, particle: Int, grammar: Int, vocab: Int) {
-        self.total = total
+    init(total _total: Int, kanji: Int, particle: Int, grammar: Int, vocab: Int) {
         self.kanji = kanji
         self.particle = particle
         self.grammar = grammar
         self.vocab = vocab
+        self.total = kanji + particle + grammar + vocab
     }
 
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
 
-        let total = try container.decodeIfPresent(Int.self, forKey: .total) ?? 0
         let kanji = try container.decodeIfPresent(Int.self, forKey: .kanji) ?? 0
         let particle = try container.decodeIfPresent(Int.self, forKey: .particle) ?? 0
         let grammar = try container.decodeIfPresent(Int.self, forKey: .grammar) ?? 0
         let vocab = try container.decodeIfPresent(Int.self, forKey: .vocab) ?? 0
 
-        self.init(total: total, kanji: kanji, particle: particle, grammar: grammar, vocab: vocab)
+        self.kanji = kanji
+        self.particle = particle
+        self.grammar = grammar
+        self.vocab = vocab
+        self.total = kanji + particle + grammar + vocab
     }
 
     func encode(to encoder: Encoder) throws {
