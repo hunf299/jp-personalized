@@ -307,6 +307,112 @@ extension DeckCard {
 }
 
 extension DeckCard {
+    struct ExampleItem: Hashable {
+        let front: String
+        let back: String
+        let spell: String
+    }
+
+    var exampleItems: [ExampleItem] {
+        var results: [ExampleItem] = []
+
+        func appendExample(front: String?, back: String?, spell: String?) {
+            let trimmedFront = front?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+            let trimmedBack = back?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+            let trimmedSpell = spell?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+            if trimmedFront.isEmpty && trimmedBack.isEmpty && trimmedSpell.isEmpty {
+                return
+            }
+            let item = ExampleItem(front: trimmedFront, back: trimmedBack, spell: trimmedSpell)
+            if !results.contains(item) {
+                results.append(item)
+            }
+        }
+
+        if let array = extra["examples"]?.arrayValue {
+            for element in array {
+                if let object = element.objectValue {
+                    let front = object["front"]?.stringValue ?? object["question"]?.stringValue
+                    let back = object["back"]?.stringValue ?? object["answer"]?.stringValue ?? object["meaning"]?.stringValue
+                    let spell = object["spell"]?.stringValue ?? object["reading"]?.stringValue ?? object["hv"]?.stringValue
+                    appendExample(front: front, back: back, spell: spell)
+                } else if let text = element.stringValue {
+                    let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+                    guard !trimmed.isEmpty else { continue }
+                    let separators = ["→", "=>", "->", "｜", "|", "——", "—"]
+                    var components: [String] = [trimmed]
+                    for separator in separators {
+                        let parts = trimmed.components(separatedBy: separator)
+                        if parts.count >= 2 {
+                            components = parts
+                            break
+                        }
+                    }
+                    let front = components.first
+                    let back = components.dropFirst().joined(separator: " → ")
+                    appendExample(front: front, back: back, spell: nil)
+                }
+            }
+        }
+
+        if results.isEmpty, let object = extra["examples"]?.objectValue {
+            for (_, value) in object {
+                if let entry = value.objectValue {
+                    let front = entry["front"]?.stringValue ?? entry["question"]?.stringValue
+                    let back = entry["back"]?.stringValue ?? entry["answer"]?.stringValue ?? entry["meaning"]?.stringValue
+                    let spell = entry["spell"]?.stringValue ?? entry["reading"]?.stringValue ?? entry["hv"]?.stringValue
+                    appendExample(front: front, back: back, spell: spell)
+                }
+            }
+        }
+
+        if results.isEmpty {
+            let fallbackFront = extra["example_front"]?.stringValue ?? extra["example"]?.stringValue
+            let fallbackBack = extra["example_back"]?.stringValue ?? extra["example_meaning"]?.stringValue
+            let fallbackSpell = extra["example_spell"]?.stringValue ?? extra["example_reading"]?.stringValue
+            appendExample(front: fallbackFront, back: fallbackBack, spell: fallbackSpell)
+        }
+
+        return results
+    }
+
+    var spellVariants: [String] {
+        var values: [String] = []
+
+        func append(_ candidate: String?) {
+            guard let candidate, !candidate.isEmpty else { return }
+            let trimmed = candidate.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !trimmed.isEmpty else { return }
+            if !values.contains(trimmed) {
+                values.append(trimmed)
+            }
+        }
+
+        for item in extra["spell"]?.stringList ?? [] {
+            append(item)
+        }
+        append(extra["spell"]?.stringValue)
+
+        if values.isEmpty {
+            let readings = extra["readings"]?.objectValue
+            if let onList = readings?["on"]?.stringList {
+                for value in onList { append(value) }
+            }
+            if let kunList = readings?["kun"]?.stringList {
+                for value in kunList { append(value) }
+            }
+        }
+
+        if values.isEmpty {
+            append(onReading == "—" ? nil : onReading)
+            append(kunReading == "—" ? nil : kunReading)
+        }
+
+        return values
+    }
+}
+
+extension DeckCard {
     // Attempt to generate readings from available text fields when explicit on/kun readings are missing.
     private var readingSourceTexts: [String] {
         var texts: [String] = []
