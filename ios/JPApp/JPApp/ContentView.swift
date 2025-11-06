@@ -1983,7 +1983,15 @@ private struct RecallQuestion: View {
                         Text("Đáp án đúng: \(expectedAnswer)")
                             .font(.subheadline.weight(.semibold))
                             .foregroundColor(Color("LiquidPrimary"))
-                        if type != .kanji, !user.isEmpty {
+                        if type == .kanji {
+                            let meaning = (card.back ?? card.displayMeaning)
+                                .trimmingCharacters(in: .whitespacesAndNewlines)
+                            if !meaning.isEmpty {
+                                Text("Nghĩa: \(meaning)")
+                                    .font(.subheadline)
+                                    .foregroundColor(.secondary)
+                            }
+                        } else if !user.isEmpty {
                             Text("Bạn trả lời: \(user)")
                                 .font(.subheadline)
                                 .foregroundColor(isRight ? .secondary : .red)
