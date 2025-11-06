@@ -718,6 +718,20 @@ struct PracticeSessionView: View {
     let type: CardType
     let cards: [DeckCard]
 
+    init(mode: Mode, type: CardType, cards: [DeckCard]) {
+        self.mode = mode
+        self.type = type
+        self.cards = cards
+        let initialPhase: Phase
+        switch type {
+        case .kanji:
+            initialPhase = .warmup
+        case .vocab, .grammar, .particle:
+            initialPhase = .recall
+        }
+        _phase = State(initialValue: initialPhase)
+    }
+
     private enum Phase {
         case warmup
         case warmupSummary
@@ -725,7 +739,31 @@ struct PracticeSessionView: View {
         case results
     }
 
-    @State private var phase: Phase = .warmup
+    private enum KanjiPhase: Int, CaseIterable {
+        case writePass1
+        case mcqMeaning
+        case mcqExample
+        case mcqReading
+        case writePass2
+        case mcqContext
+        case results
+
+        var next: KanjiPhase? {
+            guard let currentIndex = KanjiPhase.allCases.firstIndex(of: self), currentIndex + 1 < KanjiPhase.allCases.count else {
+                return nil
+            }
+            return KanjiPhase.allCases[currentIndex + 1]
+        }
+    }
+
+    private struct KanjiMCQConfiguration {
+        let title: String
+        let options: [String]
+        let correct: String
+    }
+
+    @State private var phase: Phase
+    @State private var kanjiPhase: KanjiPhase = .writePass1
     @State private var index: Int = 0
     @State private var warmupScores: [String: WarmupResult] = [:]
     @State private var recallScores: [String: RecallResult] = [:]
@@ -740,6 +778,22 @@ struct PracticeSessionView: View {
     @State private var isSavingSession = false
     @State private var sessionSaved = false
     @State private var autoFlipTask: Task<Void, Never>? = nil
+    @State private var warmupCompleted = false
+    @State private var loggedCardIDs: Set<String> = []
+
+    @State private var kanjiSelectedOption: String? = nil
+    @State private var kanjiMCQChecked = false
+    @State private var kanjiWarmupStart = Date()
+    @State private var kanjiAnswerText: String = ""
+    @State private var kanjiRecallChecked = false
+    @State private var kanjiQualitySelection: Int = 3
+
+    @State private var kanjiWritePass1Scores: [String: RecallResult] = [:]
+    @State private var kanjiWritePass2Scores: [String: RecallResult] = [:]
+    @State private var kanjiMCQMeaningScores: [String: WarmupResult] = [:]
+    @State private var kanjiMCQExampleScores: [String: WarmupResult] = [:]
+    @State private var kanjiMCQReadingScores: [String: WarmupResult] = [:]
+    @State private var kanjiMCQContextScores: [String: WarmupResult] = [:]
 
     struct WarmupResult {
         let correct: Bool
@@ -751,6 +805,26 @@ struct PracticeSessionView: View {
         var quality: Int
         var correct: Bool?
         var userAnswer: String
+    }
+
+    private var isKanjiFlow: Bool { type == .kanji }
+
+    private var isRecallFirstFlow: Bool {
+        switch type {
+        case .kanji:
+            return false
+        case .vocab, .grammar, .particle:
+            return true
+        }
+    }
+
+    private var isKanjiMCQPhase: Bool {
+        switch kanjiPhase {
+        case .mcqMeaning, .mcqExample, .mcqReading, .mcqContext:
+            return true
+        default:
+            return false
+        }
     }
 
     private var currentCard: DeckCard? {
@@ -834,64 +908,133 @@ struct PracticeSessionView: View {
     var body: some View {
         ScrollView {
             VStack(spacing: 24) {
-                switch phase {
-                case .warmup:
-                    if let card = currentCard {
-                        WarmupQuestion(title: warmupPromptTitle(for: card),
-                                       options: warmupOptions(for: card),
-                                       selectedOption: $selectedOption,
-                                       checked: $warmupChecked,
-                                       onCheck: { handleWarmupCheck(for: card) })
-                        Button("Tiếp") { advanceWarmup() }
-                            .buttonStyle(.borderedProminent)
-                            .frame(maxWidth: .infinity)
-                            .disabled(!warmupChecked)
-                    }
-                case .warmupSummary:
-                    WarmupSummaryView(cards: cards, warmupScores: warmupScores)
-                    Button("Bắt đầu ôn tập chi tiết") {
-                        phase = .recall
-                        index = 0
-                        resetRecallState()
-                    }
-                    .buttonStyle(.borderedProminent)
-                case .recall:
-                    if let card = currentCard {
-                        RecallQuestion(card: card,
-                                       type: type,
-                                       promptText: recallPrompt(for: card),
-                                       expectedAnswer: recallExpectedAnswer(for: card),
-                                       answerText: $answerText,
-                                       recallChecked: $recallChecked,
-                                       qualitySelection: $qualitySelection,
-                                       onCheck: { handleRecallCheck(for: card) })
-                        HStack {
-                            Button("Quay lại") {
-                                goBackFromRecall()
-                            }
-                            .buttonStyle(.bordered)
-                            .disabled(index == 0)
+                if isKanjiFlow {
+                    switch kanjiPhase {
+                    case .writePass1, .writePass2:
+                        if let card = currentCard {
+                            let prompt = kanjiPhase == .writePass1 ? kanjiWritingPrompt(pass: 1, for: card) : kanjiWritingPrompt(pass: 2, for: card)
+                            let expected = recallExpectedAnswer(for: card)
+                            RecallQuestion(card: card,
+                                           type: .kanji,
+                                           promptText: prompt,
+                                           expectedAnswer: expected,
+                                           answerText: $kanjiAnswerText,
+                                           recallChecked: $kanjiRecallChecked,
+                                           qualitySelection: $kanjiQualitySelection,
+                                           onCheck: { handleKanjiWritingCheck(for: card) })
+                            HStack {
+                                Button("Quay lại") {
+                                    goBackKanji()
+                                }
+                                .buttonStyle(.bordered)
+                                .disabled(index == 0)
 
-                            Button(index + 1 == cards.count ? "Hoàn tất" : "Tiếp") {
-                                advanceRecall()
+                                let isLastCard = index + 1 == cards.count
+                                Button(kanjiAdvanceButtonTitle(isLastCard: isLastCard)) {
+                                    advanceKanjiWriting()
+                                }
+                                .buttonStyle(.borderedProminent)
+                                .disabled(!kanjiRecallChecked)
                             }
-                            .buttonStyle(.borderedProminent)
-                            .disabled((type != .kanji && answerText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty) || !recallChecked)
                         }
+                    case .mcqMeaning, .mcqExample, .mcqReading, .mcqContext:
+                        if let card = currentCard {
+                            let config = kanjiConfiguration(for: card)
+                            WarmupQuestion(title: config.title,
+                                           options: config.options,
+                                           selectedOption: $kanjiSelectedOption,
+                                           checked: $kanjiMCQChecked,
+                                           onCheck: { handleKanjiMCQCheck(for: card, expected: config.correct) })
+                            HStack {
+                                Button("Quay lại") {
+                                    goBackKanji()
+                                }
+                                .buttonStyle(.bordered)
+                                .disabled(index == 0)
+
+                                let isLastCard = index + 1 == cards.count
+                                Button(kanjiAdvanceButtonTitle(isLastCard: isLastCard)) {
+                                    advanceKanjiMCQ()
+                                }
+                                .buttonStyle(.borderedProminent)
+                                .disabled(!kanjiMCQChecked)
+                            }
+                        }
+                    case .results:
+                        SessionResultsView(cards: cards, finalScoreProvider: { finalScore(for: $0) })
+                        Button {
+                            completeSessionAndDismiss()
+                        } label: {
+                            if isCompletingSession {
+                                ProgressView()
+                            } else {
+                                Text(completionButtonTitle)
+                                    .frame(maxWidth: .infinity)
+                            }
+                        }
+                        .buttonStyle(.borderedProminent)
                     }
-                case .results:
-                    SessionResultsView(cards: cards, warmupScores: warmupScores, recallScores: recallScores)
-                    Button {
-                        completeSessionAndDismiss()
-                    } label: {
-                        if isCompletingSession {
-                            ProgressView()
-                        } else {
-                            Text(completionButtonTitle)
+                } else {
+                    switch phase {
+                    case .warmup:
+                        if let card = currentCard {
+                            WarmupQuestion(title: warmupPromptTitle(for: card),
+                                           options: warmupOptions(for: card),
+                                           selectedOption: $selectedOption,
+                                           checked: $warmupChecked,
+                                           onCheck: { handleWarmupCheck(for: card) })
+                            Button("Tiếp") { advanceWarmup() }
+                                .buttonStyle(.borderedProminent)
                                 .frame(maxWidth: .infinity)
+                                .disabled(!warmupChecked)
                         }
+                    case .warmupSummary:
+                        WarmupSummaryView(cards: cards, warmupScores: warmupScores)
+                        Button("Bắt đầu ôn tập chi tiết") {
+                            phase = .recall
+                            index = 0
+                            resetRecallState()
+                        }
+                        .buttonStyle(.borderedProminent)
+                    case .recall:
+                        if let card = currentCard {
+                            RecallQuestion(card: card,
+                                           type: type,
+                                           promptText: recallPrompt(for: card),
+                                           expectedAnswer: recallExpectedAnswer(for: card),
+                                           answerText: $answerText,
+                                           recallChecked: $recallChecked,
+                                           qualitySelection: $qualitySelection,
+                                           onCheck: { handleRecallCheck(for: card) })
+                            HStack {
+                                Button("Quay lại") {
+                                    goBackFromRecall()
+                                }
+                                .buttonStyle(.bordered)
+                                .disabled(index == 0)
+
+                                let isLastCard = index + 1 == cards.count
+                                Button(isLastCard && (!isRecallFirstFlow || warmupCompleted) ? "Hoàn tất" : "Tiếp") {
+                                    advanceRecall()
+                                }
+                                .buttonStyle(.borderedProminent)
+                                .disabled((type != .kanji && answerText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty) || !recallChecked)
+                            }
+                        }
+                    case .results:
+                        SessionResultsView(cards: cards, finalScoreProvider: { finalScore(for: $0) })
+                        Button {
+                            completeSessionAndDismiss()
+                        } label: {
+                            if isCompletingSession {
+                                ProgressView()
+                            } else {
+                                Text(completionButtonTitle)
+                                    .frame(maxWidth: .infinity)
+                            }
+                        }
+                        .buttonStyle(.borderedProminent)
                     }
-                    .buttonStyle(.borderedProminent)
                 }
             }
             .padding()
@@ -899,34 +1042,68 @@ struct PracticeSessionView: View {
         .navigationTitle("Luyện tập \(type.displayName.lowercased())")
         .navigationBarTitleDisplayMode(.inline)
         .onAppear {
-            warmupStart = Date()
-            scheduleAutoFlip()
+            if isKanjiFlow {
+                prepareKanjiForCurrentCard(resetSelection: true)
+            } else {
+                if phase == .warmup {
+                    warmupStart = Date()
+                } else if phase == .recall {
+                    resetRecallState()
+                }
+                scheduleAutoFlip()
+            }
         }
         .onDisappear {
             cancelAutoFlipTask()
         }
         .onChange(of: qualitySelection, initial: false) { _, newValue in
-            guard phase == .recall, let card = currentCard else { return }
+            guard !isKanjiFlow, phase == .recall, let card = currentCard else { return }
             var result = recallScores[card.id] ?? RecallResult(quality: newValue, correct: nil, userAnswer: answerText)
             result.quality = newValue
             recallScores[card.id] = result
         }
-        .onChange(of: phase, initial: false) { _, _ in
+        .onChange(of: kanjiQualitySelection, initial: false) { _, newValue in
+            guard isKanjiFlow, let card = currentCard else { return }
+            updateKanjiQuality(quality: newValue, for: card)
+        }
+        .onChange(of: phase, initial: false) { _, newValue in
+            guard !isKanjiFlow else { return }
+            if newValue == .warmup {
+                warmupStart = Date()
+                selectedOption = nil
+                warmupChecked = false
+            } else if newValue == .recall {
+                index = 0
+                resetRecallState()
+            }
             scheduleAutoFlip()
+        }
+        .onChange(of: kanjiPhase, initial: false) { _, _ in
+            guard isKanjiFlow else { return }
+            index = 0
+            prepareKanjiForCurrentCard(resetSelection: true)
         }
         .onChange(of: index, initial: false) { _, _ in
-            scheduleAutoFlip()
+            if isKanjiFlow {
+                prepareKanjiForCurrentCard(resetSelection: true)
+            } else {
+                scheduleAutoFlip()
+            }
         }
         .onChange(of: warmupChecked, initial: false) { _, _ in
+            guard !isKanjiFlow else { return }
             scheduleAutoFlip()
         }
         .onChange(of: recallChecked, initial: false) { _, _ in
+            guard !isKanjiFlow else { return }
             scheduleAutoFlip()
         }
         .onChange(of: reviewSettings.autoFlip, initial: false) { _, _ in
+            guard !isKanjiFlow else { return }
             scheduleAutoFlip()
         }
         .onChange(of: reviewSettings.cardOrientation, initial: false) { _, _ in
+            guard !isKanjiFlow else { return }
             handleOrientationChange()
         }
     }
@@ -972,14 +1149,23 @@ struct PracticeSessionView: View {
     }
 
     private func advanceWarmup() {
+        if let card = currentCard {
+            logIfReady(for: card)
+        }
         if index + 1 < cards.count {
             index += 1
             warmupStart = Date()
             selectedOption = nil
             warmupChecked = false
         } else {
-            phase = .warmupSummary
-            index = 0
+            warmupCompleted = true
+            if isRecallFirstFlow {
+                phase = .results
+                index = 0
+            } else {
+                phase = .warmupSummary
+                index = 0
+            }
         }
     }
 
@@ -1010,6 +1196,7 @@ struct PracticeSessionView: View {
 
     private func scheduleAutoFlip() {
         cancelAutoFlipTask()
+        guard !isKanjiFlow else { return }
         guard let config = autoFlipConfiguration else { return }
         guard let card = currentCard else { return }
 
@@ -1085,6 +1272,7 @@ struct PracticeSessionView: View {
     }
 
     private func handleOrientationChange() {
+        guard !isKanjiFlow else { return }
         if phase == .warmup {
             selectedOption = nil
             warmupChecked = false
@@ -1096,17 +1284,22 @@ struct PracticeSessionView: View {
     }
 
     private func advanceRecall() {
-        guard let card = currentCard, let recall = recallScores[card.id] else { return }
-        let warmupScore = warmupScores[card.id]?.score ?? 0
-        let finalScore = Int(round(Double(warmupScore + recall.quality) / 2.0))
-        Task {
-            await appState.logReview(for: card, warmup: warmupScore, recall: recall.quality, final: finalScore, quality: recall.quality)
-        }
+        guard let card = currentCard, let _ = recallScores[card.id] else { return }
+        logIfReady(for: card)
         if index + 1 < cards.count {
             index += 1
             resetRecallState()
         } else {
-            phase = .results
+            if isRecallFirstFlow && !warmupCompleted {
+                phase = .warmup
+                index = 0
+                warmupStart = Date()
+                selectedOption = nil
+                warmupChecked = false
+                warmupCompleted = false
+            } else {
+                phase = .results
+            }
         }
     }
 
@@ -1117,6 +1310,334 @@ struct PracticeSessionView: View {
         answerText = recallScores[card.id]?.userAnswer ?? ""
         recallChecked = recallScores[card.id] != nil
         qualitySelection = recallScores[card.id]?.quality ?? 3
+    }
+
+    private func warmupScore(for card: DeckCard) -> Int {
+        if isKanjiFlow {
+            return kanjiWarmupScore(for: card)
+        }
+        return warmupScores[card.id]?.score ?? 0
+    }
+
+    private func recallScore(for card: DeckCard) -> Int {
+        if isKanjiFlow {
+            return kanjiRecallScore(for: card)
+        }
+        return recallScores[card.id]?.quality ?? 0
+    }
+
+    private func finalScore(for card: DeckCard) -> Int {
+        if isKanjiFlow {
+            return kanjiFinalScore(for: card)
+        }
+        let warmup = warmupScore(for: card)
+        let recall = recallScores[card.id]?.quality ?? 0
+        let averaged = Int(round(Double(warmup + recall) / 2.0))
+        return max(0, min(5, averaged))
+    }
+
+    private func qualityScore(for card: DeckCard) -> Int {
+        if isKanjiFlow {
+            return kanjiFinalScore(for: card)
+        }
+        return recallScores[card.id]?.quality ?? 0
+    }
+
+    private func kanjiWarmupScore(for card: DeckCard) -> Int {
+        let values: [(Int, Int)] = [
+            (20, kanjiMCQMeaningScores[card.id]?.score ?? 0),
+            (20, kanjiMCQExampleScores[card.id]?.score ?? 0),
+            (10, kanjiMCQReadingScores[card.id]?.score ?? 0),
+            (5, kanjiMCQContextScores[card.id]?.score ?? 0)
+        ]
+        return weightedScore(values: values, denominator: 55)
+    }
+
+    private func kanjiRecallScore(for card: DeckCard) -> Int {
+        let values: [(Int, Int)] = [
+            (15, kanjiWritePass1Scores[card.id]?.quality ?? 0),
+            (20, kanjiWritePass2Scores[card.id]?.quality ?? 0)
+        ]
+        return weightedScore(values: values, denominator: 35)
+    }
+
+    private func kanjiFinalScore(for card: DeckCard) -> Int {
+        let values: [(Int, Int)] = [
+            (15, kanjiWritePass1Scores[card.id]?.quality ?? 0),
+            (20, kanjiMCQMeaningScores[card.id]?.score ?? 0),
+            (20, kanjiMCQExampleScores[card.id]?.score ?? 0),
+            (10, kanjiMCQReadingScores[card.id]?.score ?? 0),
+            (20, kanjiWritePass2Scores[card.id]?.quality ?? 0),
+            (5, kanjiMCQContextScores[card.id]?.score ?? 0)
+        ]
+        return weightedScore(values: values, denominator: 100)
+    }
+
+    private func weightedScore(values: [(Int, Int)], denominator: Int) -> Int {
+        guard denominator > 0 else { return 0 }
+        let numerator = values.reduce(0) { partial, entry in
+            let clamped = max(0, min(5, entry.1))
+            return partial + entry.0 * clamped
+        }
+        let raw = Double(numerator) / Double(denominator)
+        let rounded = Int(round(raw))
+        return max(0, min(5, rounded))
+    }
+
+    private func isCardReadyForLogging(_ card: DeckCard) -> Bool {
+        if isKanjiFlow {
+            return kanjiWritePass1Scores[card.id] != nil &&
+                   kanjiWritePass2Scores[card.id] != nil &&
+                   kanjiMCQMeaningScores[card.id] != nil &&
+                   kanjiMCQExampleScores[card.id] != nil &&
+                   kanjiMCQReadingScores[card.id] != nil &&
+                   kanjiMCQContextScores[card.id] != nil
+        }
+        return warmupScores[card.id] != nil && recallScores[card.id] != nil
+    }
+
+    private func logIfReady(for card: DeckCard) {
+        guard !loggedCardIDs.contains(card.id) else { return }
+        guard isCardReadyForLogging(card) else { return }
+        let warmup = warmupScore(for: card)
+        let recall = recallScore(for: card)
+        let final = finalScore(for: card)
+        let quality = qualityScore(for: card)
+        Task {
+            await appState.logReview(for: card, warmup: warmup, recall: recall, final: final, quality: quality)
+        }
+        loggedCardIDs.insert(card.id)
+    }
+
+    private func kanjiWritingPrompt(pass: Int, for card: DeckCard) -> String {
+        let prefix = pass == 1 ? "Phần 1 – Viết nét lần 1" : "Phần 5 – Viết nét lần 2"
+        return "\(prefix): \(card.front)"
+    }
+
+    private func handleKanjiWritingCheck(for card: DeckCard) {
+        let clamped = max(0, min(5, kanjiQualitySelection))
+        kanjiQualitySelection = clamped
+        kanjiRecallChecked = true
+        updateKanjiQuality(quality: clamped, for: card)
+    }
+
+    private func updateKanjiQuality(quality: Int, for card: DeckCard) {
+        let clamped = max(0, min(5, quality))
+        let result = RecallResult(quality: clamped, correct: nil, userAnswer: "")
+        switch kanjiPhase {
+        case .writePass1:
+            kanjiWritePass1Scores[card.id] = result
+        case .writePass2:
+            kanjiWritePass2Scores[card.id] = result
+        default:
+            break
+        }
+    }
+
+    private func advanceKanjiWriting() {
+        guard let card = currentCard else { return }
+        logIfReady(for: card)
+        if index + 1 < cards.count {
+            index += 1
+        } else if let next = kanjiPhase.next {
+            kanjiPhase = next
+        } else {
+            kanjiPhase = .results
+        }
+    }
+
+    private func goBackKanji() {
+        guard index > 0 else { return }
+        index -= 1
+    }
+
+    private func kanjiAdvanceButtonTitle(isLastCard: Bool) -> String {
+        if kanjiPhase == .mcqContext && isLastCard {
+            return "Hoàn tất"
+        }
+        return isLastCard ? "Sang phần tiếp theo" : "Tiếp"
+    }
+
+    private func kanjiConfiguration(for card: DeckCard) -> KanjiMCQConfiguration {
+        switch kanjiPhase {
+        case .mcqMeaning:
+            let title = "Phần 2 – MCQ: \(warmupPromptTitle(for: card))"
+            return KanjiMCQConfiguration(title: title,
+                                        options: warmupOptions(for: card),
+                                        correct: warmupAnswer(for: card))
+        case .mcqExample:
+            return kanjiExampleConfiguration(for: card)
+        case .mcqReading:
+            return kanjiReadingConfiguration(for: card)
+        case .mcqContext:
+            return kanjiContextConfiguration(for: card)
+        default:
+            let title = warmupPromptTitle(for: card)
+            return KanjiMCQConfiguration(title: title,
+                                        options: warmupOptions(for: card),
+                                        correct: warmupAnswer(for: card))
+        }
+    }
+
+    private func kanjiExampleConfiguration(for card: DeckCard) -> KanjiMCQConfiguration {
+        let example = card.exampleItems.first(where: { !$0.front.isEmpty || !$0.back.isEmpty })
+        let promptFront = example?.front.trimmingCharacters(in: .whitespacesAndNewlines)
+        let prompt = (promptFront?.isEmpty ?? true) ? "Phần 3 – MCQ ví dụ:\n\(normalizedFront(for: card))" : "Phần 3 – MCQ ví dụ:\n\(promptFront!)"
+        let defaultAnswer = normalizedBack(for: card)
+        let correct = {
+            let trimmed = example?.back.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+            return trimmed.isEmpty ? defaultAnswer : trimmed
+        }()
+
+        var options: [String] = []
+        appendOption(correct, to: &options)
+        for entry in card.exampleItems {
+            appendOption(entry.back, to: &options)
+        }
+        if options.count < 4 {
+            for other in cards.shuffled() where other.id != card.id {
+                for entry in other.exampleItems {
+                    appendOption(entry.back, to: &options)
+                    if options.count >= 4 { break }
+                }
+                if options.count >= 4 { break }
+            }
+        }
+        if options.count < 4 {
+            for other in cards.shuffled() where other.id != card.id {
+                appendOption(normalizedBack(for: other), to: &options)
+                if options.count >= 4 { break }
+            }
+        }
+        while options.count < 4 { options.append("—") }
+        return KanjiMCQConfiguration(title: prompt, options: options.shuffled(), correct: correct)
+    }
+
+    private func kanjiReadingConfiguration(for card: DeckCard) -> KanjiMCQConfiguration {
+        var options: [String] = []
+        for value in card.spellVariants {
+            appendOption(value, to: &options)
+        }
+        let fallback = card.warmupLabel
+        let correct = options.first ?? fallback
+        if options.count < 4 {
+            for other in cards.shuffled() where other.id != card.id {
+                for value in other.spellVariants {
+                    appendOption(value, to: &options)
+                    if options.count >= 4 { break }
+                }
+                if options.count >= 4 { break }
+            }
+        }
+        if options.count < 4 {
+            appendOption(card.onReading, to: &options)
+            appendOption(card.kunReading, to: &options)
+            appendOption(card.warmupLabel, to: &options)
+        }
+        while options.count < 4 { options.append("—") }
+        let title = "Phần 4 – MCQ âm đọc: \(card.front)"
+        return KanjiMCQConfiguration(title: title, options: options.shuffled(), correct: correct)
+    }
+
+    private func kanjiContextConfiguration(for card: DeckCard) -> KanjiMCQConfiguration {
+        let example = card.exampleItems.first(where: { !$0.spell.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }) ?? card.exampleItems.first
+        let promptFront = example?.front.trimmingCharacters(in: .whitespacesAndNewlines)
+        let prompt = (promptFront?.isEmpty ?? true) ? "Phần 6 – MCQ ngữ cảnh:\n\(normalizedFront(for: card))" : "Phần 6 – MCQ ngữ cảnh:\n\(promptFront!)"
+        var options: [String] = []
+        let defaultSpell = card.hanViet
+        let correct = {
+            let trimmed = example?.spell.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+            return trimmed.isEmpty ? defaultSpell : trimmed
+        }()
+        appendOption(correct, to: &options)
+        for entry in card.exampleItems {
+            appendOption(entry.spell, to: &options)
+        }
+        if options.count < 4 {
+            for other in cards.shuffled() where other.id != card.id {
+                for entry in other.exampleItems {
+                    appendOption(entry.spell, to: &options)
+                    if options.count >= 4 { break }
+                }
+                if options.count >= 4 { break }
+            }
+        }
+        if options.count < 4 {
+            appendOption(card.hanViet, to: &options)
+        }
+        while options.count < 4 { options.append("—") }
+        return KanjiMCQConfiguration(title: prompt, options: options.shuffled(), correct: correct)
+    }
+
+    private func appendOption(_ option: String, to options: inout [String]) {
+        let trimmed = option.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        if !options.contains(trimmed) {
+            options.append(trimmed)
+        }
+    }
+
+    private func handleKanjiMCQCheck(for card: DeckCard, expected: String) {
+        let selection = kanjiSelectedOption ?? ""
+        guard !selection.isEmpty else { return }
+        let elapsed = Int(Date().timeIntervalSince(kanjiWarmupStart))
+        let isCorrect = selection == expected
+        let score = isCorrect ? scoreForTime(elapsed) : 0
+        let result = WarmupResult(correct: isCorrect, time: elapsed, score: score)
+        switch kanjiPhase {
+        case .mcqMeaning:
+            kanjiMCQMeaningScores[card.id] = result
+        case .mcqExample:
+            kanjiMCQExampleScores[card.id] = result
+        case .mcqReading:
+            kanjiMCQReadingScores[card.id] = result
+        case .mcqContext:
+            kanjiMCQContextScores[card.id] = result
+        default:
+            break
+        }
+        if !isCorrect {
+            kanjiSelectedOption = expected
+        }
+        kanjiMCQChecked = true
+    }
+
+    private func advanceKanjiMCQ() {
+        guard let card = currentCard else { return }
+        logIfReady(for: card)
+        if index + 1 < cards.count {
+            index += 1
+        } else if let next = kanjiPhase.next {
+            kanjiPhase = next
+        } else {
+            kanjiPhase = .results
+        }
+    }
+
+    private func prepareKanjiForCurrentCard(resetSelection: Bool) {
+        guard isKanjiFlow else { return }
+        guard let card = currentCard else { return }
+        switch kanjiPhase {
+        case .writePass1:
+            kanjiQualitySelection = kanjiWritePass1Scores[card.id]?.quality ?? 3
+            kanjiRecallChecked = kanjiWritePass1Scores[card.id] != nil
+        case .writePass2:
+            kanjiQualitySelection = kanjiWritePass2Scores[card.id]?.quality ?? 3
+            kanjiRecallChecked = kanjiWritePass2Scores[card.id] != nil
+        default:
+            kanjiQualitySelection = 3
+            kanjiRecallChecked = false
+        }
+        kanjiAnswerText = ""
+        if isKanjiMCQPhase {
+            kanjiWarmupStart = Date()
+            if resetSelection {
+                kanjiSelectedOption = nil
+                kanjiMCQChecked = false
+            }
+        } else {
+            kanjiWarmupStart = Date()
+        }
     }
 
     private var isCompletingSession: Bool {
@@ -1153,10 +1674,8 @@ struct PracticeSessionView: View {
         let baseLevels = memoryBaseLevels()
         let memoryRows = memoryRowsByID()
         let updates: [(card: DeckCard, final: Int, base: Int?)] = cards.map { card in
-            let warmup = warmupScores[card.id]?.score ?? 0
-            let recall = recallScores[card.id]?.quality ?? 0
-            let averaged = Int(round(Double(warmup + recall) / 2.0))
-            let clamped = max(0, min(5, averaged))
+            let final = finalScore(for: card)
+            let clamped = max(0, min(5, final))
             let base = baseLevels[card.id.lowercased()]
             return (card, clamped, base)
         }
@@ -1223,9 +1742,9 @@ struct PracticeSessionView: View {
         var distribution = Array(repeating: 0, count: 6)
         var learned = 0
         let rows = cards.map { card -> APIClient.SessionResultPayload in
-            let warmup = warmupScores[card.id]?.score ?? 0
-            let recall = recallScores[card.id]?.quality ?? 0
-            let final = Int(round(Double(warmup + recall) / 2.0))
+            let warmup = warmupScore(for: card)
+            let recall = recallScore(for: card)
+            let final = finalScore(for: card)
             if final >= 0 && final < distribution.count {
                 distribution[final] += 1
                 if final >= 3 { learned += 1 }
@@ -1426,8 +1945,7 @@ private struct RecallQuestion: View {
 @available(iOS 16.0, *)
 private struct SessionResultsView: View {
     let cards: [DeckCard]
-    let warmupScores: [String: PracticeSessionView.WarmupResult]
-    let recallScores: [String: PracticeSessionView.RecallResult]
+    let finalScoreProvider: (DeckCard) -> Int
 
     var body: some View {
         GlassContainer {
@@ -1459,9 +1977,7 @@ private struct SessionResultsView: View {
         var dist = Array(repeating: 0, count: 6)
         var learned = 0
         for card in cards {
-            let warmup = warmupScores[card.id]?.score ?? 0
-            let recall = recallScores[card.id]?.quality ?? 0
-            let final = Int(round(Double(warmup + recall) / 2.0))
+            let final = max(0, min(5, finalScoreProvider(card)))
             if final >= 0 && final < dist.count {
                 dist[final] += 1
                 if final >= 3 { learned += 1 }
