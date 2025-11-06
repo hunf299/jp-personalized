@@ -21,6 +21,7 @@ const useSettings = _useSettings || (() => ({
 
 // ---------- utils ----------
 const safeArray = (x) => Array.isArray(x) ? x : [];
+const normalizeType = (value) => value == null ? '' : String(value).trim().toLowerCase();
 const getJSON = async (u) => { const r = await fetch(u); try { return await r.json(); } catch { return null; } };
 const msToSec = (ms) => Math.max(0, Math.round(ms/100)/10);
 const DAY_MS = 86400000;
@@ -251,7 +252,16 @@ export default function ReviewPage(){
         const meta = {};
         rows.forEach((row) => {
           if (!row || row.id == null) return;
-          meta[String(row.id)] = row;
+          const id = String(row.id);
+          const rowType = normalizeType(row.type);
+          if (!meta[id]) {
+            meta[id] = row;
+            return;
+          }
+          const existingType = normalizeType(meta[id]?.type);
+          if (existingType !== 'kanji' && rowType === 'kanji') {
+            meta[id] = row;
+          }
         });
         setCardMetaMap(meta);
         setExampleLookup(createExampleLookup(rows));
@@ -458,6 +468,7 @@ export default function ReviewPage(){
     deck.forEach((c) => {
       const examples = safeArray(exampleLookup.byCardId?.[String(c.id)]);
       examples.forEach((ex) => {
+        if (normalizeType(ex?.type) !== 'example') return;
         list.push({
           ...ex,
           parentId: c.id,

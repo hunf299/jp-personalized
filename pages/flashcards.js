@@ -14,6 +14,7 @@ const CHUNK_SIZE = 10;
 
 // ---------- helpers ----------
 const safeArray = (x) => (Array.isArray(x) ? x : []);
+const normalizeType = (value) => (value == null ? '' : String(value).trim().toLowerCase());
 const getJSON = async (url) => { try { const r = await fetch(url); return await r.json(); } catch { return null; } };
 
 // điểm theo giây
@@ -288,9 +289,12 @@ export default function FlashcardsPage() {
 
   // pool theo loại
   useEffect(() => {
+    const targetType = normalizeType(typeFilter);
     const next = safeArray(allCards).filter((c) => {
-      if (!c || c.type !== typeFilter) return false;
-      if (isKanji) {
+      if (!c) return false;
+      const cardType = normalizeType(c.type);
+      if (cardType !== targetType) return false;
+      if (targetType === 'kanji') {
         const examples = safeArray(c?.exampleCards);
         if (!examples.length) return false;
       }
@@ -318,6 +322,7 @@ export default function FlashcardsPage() {
     safeArray(batch).forEach((item) => {
       const examples = safeArray(item?.exampleCards);
       examples.forEach((ex) => {
+        if (normalizeType(ex?.type) !== 'example') return;
         list.push({
           ...ex,
           parentId: item.id != null ? String(item.id) : null,
@@ -329,7 +334,9 @@ export default function FlashcardsPage() {
     setExampleDeck(list);
     setExampleIndex(0);
     setExampleAnswers({});
-    const contextList = list.filter((entry) => normalizeSpellLabel(entry?.spell ?? '').length > 0);
+    const contextList = list
+        .filter((entry) => normalizeType(entry?.type) === 'example')
+        .filter((entry) => normalizeSpellLabel(entry?.spell ?? '').length > 0);
     setContextDeck(contextList);
     setContextIndex(0);
     setContextAnswers({});
