@@ -2064,11 +2064,16 @@ struct ProgressScreen: View {
     @State private var reviewCards: [DeckCard] = []
     @State private var showReviewSession = false
     @State private var showEmptyReviewAlert = false
+    @State private var showMemoryLevelDetail = false
+    @State private var selectedMemoryLevel: Int? = nil
 
     var body: some View {
         ScrollView {
             VStack(spacing: 24) {
-                MemoryDistributionCard(type: selectedType, snapshot: currentSnapshot)
+                MemoryDistributionCard(type: selectedType, snapshot: currentSnapshot) { level in
+                    selectedMemoryLevel = level
+                    showMemoryLevelDetail = true
+                }
                 ReviewOverviewCard(type: selectedType, snapshot: currentSnapshot) { rows, limit, randomize in
                     startReview(rows: rows, limit: limit, randomize: randomize)
                 }
@@ -2116,6 +2121,16 @@ struct ProgressScreen: View {
         .navigationDestination(isPresented: $showReviewSession) {
             PracticeSessionView(mode: .review, type: selectedType, cards: reviewCards)
         }
+        .navigationDestination(isPresented: $showMemoryLevelDetail) {
+            if let level = selectedMemoryLevel {
+                MemoryLevelDetailView(type: selectedType,
+                                      level: level,
+                                      rows: rows(for: level))
+                .onDisappear {
+                    selectedMemoryLevel = nil
+                }
+            }
+        }
         .alert("Không có thẻ phù hợp", isPresented: $showEmptyReviewAlert) {
             Button("Đóng", role: .cancel) { }
         } message: {
@@ -2129,6 +2144,16 @@ struct ProgressScreen: View {
 
     private var currentSnapshot: MemorySnapshot {
         appState.memorySnapshot(for: selectedType.rawValue)
+    }
+
+    private func rows(for level: Int) -> [MemoryRow] {
+        currentSnapshot.rows
+            .filter { $0.level == level }
+            .sorted { lhs, rhs in
+                let lhsDue = lhs.due ?? .distantFuture
+                let rhsDue = rhs.due ?? .distantFuture
+                return lhsDue < rhsDue
+            }
     }
 
     private var leechItems: [LeechBoardItem] {
@@ -2404,6 +2429,7 @@ struct ProgressScreen: View {
 private struct MemoryDistributionCard: View {
     let type: CardType
     let snapshot: MemorySnapshot
+    let onSelectLevel: (Int) -> Void
 
     private var dueCount: Int {
         let now = Date()
@@ -2426,20 +2452,99 @@ private struct MemoryDistributionCard: View {
                     ForEach(Array(snapshot.dist.enumerated()), id: \.offset) { pair in
                         let level = pair.offset
                         let value = pair.element
-                        HStack {
-                            Text("Mức \(level)")
-                            Spacer()
-                            ProgressView(value: snapshot.total == 0 ? 0 : Double(value) / Double(snapshot.total))
-                                .progressViewStyle(.linear)
-                                .tint(Color("LiquidAccent"))
-                            Text("\(value)")
-                                .monospacedDigit()
-                                .foregroundColor(.secondary)
+                        Button {
+                            onSelectLevel(level)
+                        } label: {
+                            HStack {
+                                Text("Mức \(level)")
+                                Spacer()
+                                ProgressView(value: snapshot.total == 0 ? 0 : Double(value) / Double(snapshot.total))
+                                    .progressViewStyle(.linear)
+                                    .tint(Color("LiquidAccent"))
+                                Text("\(value)")
+                                    .monospacedDigit()
+                                    .foregroundColor(.secondary)
+                            }
+                            .contentShape(Rectangle())
                         }
+                        .buttonStyle(.plain)
                     }
                 }
             }
         }
+    }
+}
+
+@available(iOS 16.0, *)
+private struct MemoryLevelDetailView: View {
+    let type: CardType
+    let level: Int
+    let rows: [MemoryRow]
+
+    var body: some View {
+        List {
+            if rows.isEmpty {
+                Section {
+                    Text("Chưa có thẻ nào ở mức này.")
+                        .foregroundColor(.secondary)
+                }
+            } else {
+                Section("Tổng cộng \(rows.count) thẻ") {
+                    ForEach(rows) { row in
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text(primaryText(for: row))
+                                .font(.headline)
+                                .foregroundColor(Color("LiquidPrimary"))
+
+                            if let back = secondaryText(for: row) {
+                                Text(back)
+                                    .font(.subheadline)
+                                    .foregroundColor(.secondary)
+                            }
+
+                            HStack(spacing: 12) {
+                                if let due = row.due {
+                                    Text("Đến hạn: \(due.formatted(date: .abbreviated, time: .shortened))")
+                                        .font(.caption)
+                                        .foregroundColor(.secondary)
+                                }
+
+                                if let reviewed = row.lastReviewedAt {
+                                    Text("Ôn gần nhất: \(reviewed.formatted(date: .abbreviated, time: .shortened))")
+                                        .font(.caption)
+                                        .foregroundColor(.secondary)
+                                }
+
+                                if row.leechCount > 0 || row.isLeech {
+                                    Label("Leech ×\(max(row.leechCount, 1))", systemImage: "exclamationmark.triangle.fill")
+                                        .font(.caption)
+                                        .labelStyle(.titleAndIcon)
+                                        .foregroundColor(.orange)
+                                }
+                            }
+                        }
+                        .padding(.vertical, 6)
+                    }
+                }
+            }
+        }
+        .listStyle(.insetGrouped)
+        .navigationTitle("Mức \(level) · \(type.displayName)")
+        .navigationBarTitleDisplayMode(.inline)
+    }
+
+    private func primaryText(for row: MemoryRow) -> String {
+        if let front = row.front?.trimmingCharacters(in: .whitespacesAndNewlines), !front.isEmpty {
+            return front
+        }
+        return row.cardID
+    }
+
+    private func secondaryText(for row: MemoryRow) -> String? {
+        guard let back = row.back?.trimmingCharacters(in: .whitespacesAndNewlines), !back.isEmpty else {
+            return nil
+        }
+        return back
     }
 }
 
