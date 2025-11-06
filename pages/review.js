@@ -21,6 +21,7 @@ const useSettings = _useSettings || (() => ({
 
 // ---------- utils ----------
 const safeArray = (x) => Array.isArray(x) ? x : [];
+const normalizeType = (value) => value == null ? '' : String(value).trim().toLowerCase();
 const getJSON = async (u) => { const r = await fetch(u); try { return await r.json(); } catch { return null; } };
 const msToSec = (ms) => Math.max(0, Math.round(ms/100)/10);
 const DAY_MS = 86400000;
@@ -56,6 +57,43 @@ function gainForAuto(auto){
   if(auto==='4+5') return 4;
   if(auto==='6+7') return 3;
   return null;
+}
+
+function normalizeSpellLabel(spell) {
+  if (spell == null) return '';
+  const raw = String(spell || '');
+  const parts = raw
+      .split(/[\n,;|·•・／、]/)
+      .map((item) => item.trim())
+      .filter(Boolean);
+  if (!parts.length) return '';
+  const seen = new Set();
+  const uniq = [];
+  parts.forEach((part) => {
+    const key = part.toLowerCase();
+    if (!seen.has(key)) {
+      seen.add(key);
+      uniq.push(part);
+    }
+  });
+  return uniq.join(' · ');
+}
+
+function makeMcqOptions(answer, otherOptions = []) {
+  const list = [answer, ...otherOptions]
+      .map((opt) => (opt == null ? '' : String(opt)))
+      .filter(Boolean);
+  if (!list.length) list.push('—');
+  const seen = new Set();
+  const uniq = [];
+  list.forEach((opt) => {
+    if (!seen.has(opt)) {
+      seen.add(opt);
+      uniq.push(opt);
+    }
+  });
+  if (uniq.length < 2) uniq.push('—');
+  return uniq.sort(() => Math.random() - 0.5);
 }
 
 // ------------------- Save API (sửa: trả JSON, log, lỗi rõ) -------------------
@@ -155,9 +193,8 @@ export default function ReviewPage(){
   // ----- State chính -----
   const [deck, setDeck] = React.useState([]);     // [{id, type, front, back, baseLv}]
   const [idx, setIdx] = React.useState(0);
-  const [stage, setStage] = React.useState('mcq'); // 'mcq'|'recall'|'example'|'done'
+  const [stage, setStage] = React.useState('mcq'); // dynamic stages
   const total = deck.length;
-  const cur = stage === 'example' ? total : Math.min(idx + 1, total);
 
   // input mode
   const [modeInput, setModeInput] = React.useState(type === 'kanji' ? 'handwrite' : 'typing');
@@ -186,11 +223,16 @@ export default function ReviewPage(){
   const [proposed, setProposed] = React.useState({});     // id -> level (recall)
   const [proposedSource, setProposedSource] = React.useState({}); // id -> 'auto' | 'manual'
   const [mcqScores, setMcqScores] = React.useState({});   // id -> { timeSec, score }
+  const [cardMetaMap, setCardMetaMap] = React.useState({});
   const [exampleLookup, setExampleLookup] = React.useState({ byCardId: {}, pool: [], refsByCardId: {} });
   const [examplesReady, setExamplesReady] = React.useState(false);
   const [exampleDeck, setExampleDeck] = React.useState([]);
   const [exampleIdx, setExampleIdx] = React.useState(0);
   const [exampleAnswers, setExampleAnswers] = React.useState({});
+  const [contextIdx, setContextIdx] = React.useState(0);
+  const [contextAnswers, setContextAnswers] = React.useState({});
+  const [writeScoresPass1, setWriteScoresPass1] = React.useState({});
+  const [onKunScores, setOnKunScores] = React.useState({});
 
   // Chấm thời gian ở MCQ
   const [mcqStartTs, setMcqStartTs] = React.useState(null);
@@ -207,6 +249,21 @@ export default function ReviewPage(){
       try {
         const rows = safeArray(await getJSON('/api/cards'));
         if (cancelled) return;
+        const meta = {};
+        rows.forEach((row) => {
+          if (!row || row.id == null) return;
+          const id = String(row.id);
+          const rowType = normalizeType(row.type);
+          if (!meta[id]) {
+            meta[id] = row;
+            return;
+          }
+          const existingType = normalizeType(meta[id]?.type);
+          if (existingType !== 'kanji' && rowType === 'kanji') {
+            meta[id] = row;
+          }
+        });
+        setCardMetaMap(meta);
         setExampleLookup(createExampleLookup(rows));
       } catch (e) {
         console.warn('Không thể tải cards cho ví dụ', e);
@@ -336,9 +393,21 @@ export default function ReviewPage(){
         setBaseLevels(base);
 
         // Reset trạng thái
-        setDeck(pick.map(p => ({ id: p.id, type: p.type, front: p.front, back: p.back, baseLv: p.baseLv, due: p.due ?? null })));
+        setDeck(pick.map((p) => {
+          const meta = cardMetaMap[String(p.id)] || {};
+          return {
+            id: p.id,
+            type: p.type,
+            front: p.front,
+            back: p.back,
+            baseLv: p.baseLv,
+            due: p.due ?? null,
+            spell: meta?.spell ?? '',
+          };
+        }));
         setIdx(0);
-        setStage(pick.length ? 'mcq' : 'done');
+        const initialStage = pick.length ? (type === 'kanji' ? 'write1' : 'mcq') : 'done';
+        setStage(initialStage);
         setSelected(null);
         setAnswer('');
         setShowAns(false);
@@ -346,6 +415,10 @@ export default function ReviewPage(){
         setProposedSource({});
         setMcqScores({});
         setMcqStartTs(Date.now());
+        setContextIdx(0);
+        setContextAnswers({});
+        setWriteScoresPass1({});
+        setOnKunScores({});
       }catch(e){
         console.error('load deck error', e);
         if (!cancelled) {
@@ -357,17 +430,33 @@ export default function ReviewPage(){
     })();
     return ()=> { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ready, type, isLevelMode, levelParam, count, settings?.recency_days, router.query?.since_days, orientation, dueMode, qp?.levels, qp?.card_ids, examplesReady, exampleLookup]);
+  }, [ready, type, isLevelMode, levelParam, count, settings?.recency_days, router.query?.since_days, orientation, dueMode, qp?.levels, qp?.card_ids, examplesReady, exampleLookup, cardMetaMap]);
+
+  const exampleTotal = exampleDeck.length;
+  const contextDeck = React.useMemo(
+      () => exampleDeck.filter((entry) => ((entry?.spell || '').toString().trim().length > 0)),
+      [exampleDeck]
+  );
+  const contextTotal = contextDeck.length;
+  const progressTotal = stage === 'mcqExample'
+      ? exampleTotal
+      : stage === 'mcqContext'
+          ? contextTotal
+          : total;
+  const progressCurrent = stage === 'mcqExample'
+      ? Math.min(exampleIdx + 1, Math.max(exampleTotal, 1))
+      : stage === 'mcqContext'
+          ? Math.min(contextIdx + 1, Math.max(contextTotal, 1))
+          : Math.min(idx + 1, Math.max(total, 1));
 
   const card = deck[idx] || null;
   const currentExamples = React.useMemo(() => safeArray(exampleLookup.byCardId?.[String(card?.id)]), [exampleLookup, card]);
   const exampleCard = exampleDeck[exampleIdx] || null;
+  const contextCard = contextDeck[contextIdx] || null;
   const examplePool = React.useMemo(() => safeArray(exampleLookup.pool), [exampleLookup]);
-  const cardHasExamples = React.useCallback((c) => {
-    if (!enableExamples || !c) return false;
-    const arr = safeArray(exampleLookup.byCardId?.[String(c.id)]);
-    return arr.length > 0;
-  }, [exampleLookup, enableExamples]);
+  const hasExampleStage = enableExamples && exampleDeck.length > 0;
+  const hasContextStage = enableExamples && contextDeck.length > 0;
+  const hasOnKunStage = type === 'kanji';
   React.useEffect(() => {
     if (!enableExamples) {
       setExampleDeck([]);
@@ -379,6 +468,7 @@ export default function ReviewPage(){
     deck.forEach((c) => {
       const examples = safeArray(exampleLookup.byCardId?.[String(c.id)]);
       examples.forEach((ex) => {
+        if (normalizeType(ex?.type) !== 'example') return;
         list.push({
           ...ex,
           parentId: c.id,
@@ -424,79 +514,261 @@ export default function ReviewPage(){
     return { question:q, correct:a, opts };
   }, [card, deck, qaForMCQ]);
 
+  const onKunMcq = React.useMemo(() => {
+    if (type !== 'kanji') return null;
+    if (!card) return null;
+    const meta = cardMetaMap[String(card.id)] || {};
+    const rawSpell = card?.spell ?? meta?.spell ?? '';
+    const correct = normalizeSpellLabel(rawSpell) || '—';
+    const pool = deck
+        .filter((entry) => entry.id !== card.id)
+        .map((entry) => {
+          const metaEntry = cardMetaMap[String(entry.id)] || {};
+          const raw = entry?.spell ?? metaEntry?.spell ?? '';
+          return normalizeSpellLabel(raw);
+        })
+        .filter(Boolean)
+        .sort(() => Math.random() - 0.5)
+        .slice(0, 3);
+    const opts = makeMcqOptions(correct, pool);
+    return { question: card.front, correct, opts };
+  }, [type, card, deck, cardMetaMap]);
+
+  const contextMcq = React.useMemo(() => {
+    if (type !== 'kanji') return null;
+    if (!contextCard) return null;
+    const correct = normalizeSpellLabel(contextCard?.spell ?? '') || '—';
+    const pool = contextDeck
+        .filter((entry) => entry !== contextCard)
+        .map((entry) => normalizeSpellLabel(entry?.spell ?? ''))
+        .filter(Boolean)
+        .sort(() => Math.random() - 0.5)
+        .slice(0, 3);
+    const opts = makeMcqOptions(correct, pool);
+    return {
+      question: contextCard.front,
+      correct,
+      opts,
+      parentId: contextCard.parentId,
+      key: exampleKey(contextCard) || null,
+    };
+  }, [type, contextCard, contextDeck]);
+
   // ----- Auto-flip -----
-  React.useEffect(()=>{
-    if(!autoCfg || !card) return;
+  React.useEffect(() => {
+    if (!autoCfg) return;
     let t;
-    if(stage==='mcq')    t = setTimeout(()=> setShowAns(true), autoCfg.mcq*1000);
-    if(stage==='recall') t = setTimeout(()=> setShowAns(true), autoCfg.recall*1000);
-    return ()=> clearTimeout(t);
-  }, [autoCfg, stage, card]);
+    if ((stage === 'mcq' || stage === 'mcqOnKun') && card) {
+      t = setTimeout(() => setShowAns(true), autoCfg.mcq * 1000);
+    } else if (stage === 'mcqContext' && contextCard) {
+      t = setTimeout(() => setShowAns(true), autoCfg.mcq * 1000);
+    } else if (stage === 'recall' && card) {
+      t = setTimeout(() => setShowAns(true), autoCfg.recall * 1000);
+    }
+    return () => clearTimeout(t);
+  }, [autoCfg, stage, card, contextCard]);
 
   // Sau khi show đáp án 2s → chuyển bước
-  React.useEffect(()=>{
-    if(!autoCfg || !showAns || !card) return;
-    const t = setTimeout(()=>{
-      if(stage==='mcq'){
-        const ok = (selected!=null && mcq && selected===mcq.correct);
-        const tsec = msToSec(Date.now() - (mcqStartTs||Date.now()));
+  React.useEffect(() => {
+    if (!autoCfg || !showAns) return;
+    const handle = setTimeout(() => {
+      if (stage === 'mcq' && card && mcq) {
+        const ok = selected != null && selected === mcq.correct;
+        const tsec = msToSec(Date.now() - (mcqStartTs || Date.now()));
         const score = ok ? timeToScoreSec(tsec) : 0;
-        setMcqScores(s => ({ ...s, [card.id]: { timeSec:tsec, score } }));
-
-        setSelected(null); setShowAns(false);
-        if(idx+1<deck.length){ setIdx(i=>i+1); setMcqStartTs(Date.now()); }
-        else { setStage('recall'); setIdx(0); }
-      } else if(stage==='recall'){
-        if(!isLevelMode && autoGain!=null){
-          const ans = (answer||'').trim().toLowerCase();
-          const sol = (qaForRecall(card).a||'').trim().toLowerCase();
-          const ok = !!ans && ans===sol;
-          if(ok){
-            const curLv = baseLevels[String(card.id).toLowerCase()] ?? -1;
-            const next  = curLv>=0 ? Math.max(curLv, autoGain) : autoGain;
-            setProposed(p => ({ ...p, [card.id]: next }));
-            // mark that this proposal came from auto
-            setProposedSource(s => ({ ...s, [card.id]: 'auto' }));
+        setMcqScores((s) => ({ ...s, [card.id]: { timeSec: tsec, score } }));
+        setSelected(null);
+        setShowAns(false);
+        if (idx + 1 < deck.length) {
+          setIdx((i) => i + 1);
+          setMcqStartTs(Date.now());
+        } else {
+          if (hasExampleStage) {
+            setStage('mcqExample');
+            setIdx(0);
+            setExampleIdx(0);
+          } else if (hasOnKunStage) {
+            setStage('mcqOnKun');
+            setIdx(0);
+          } else {
+            setStage('recall');
+            setIdx(0);
           }
         }
-        setAnswer(''); setShowAns(false);
-        if(idx+1<deck.length) {
-          setIdx(i=>i+1);
+      } else if (stage === 'mcqOnKun' && card && onKunMcq) {
+        const ok = selected != null && selected === onKunMcq.correct;
+        const tsec = msToSec(Date.now() - (mcqStartTs || Date.now()));
+        const score = ok ? timeToScoreSec(tsec) : 0;
+        setOnKunScores((s) => ({ ...s, [card.id]: { timeSec: tsec, score } }));
+        setSelected(null);
+        setShowAns(false);
+        if (idx + 1 < deck.length) {
+          setIdx((i) => i + 1);
+          setMcqStartTs(Date.now());
+        } else {
+          setStage('recall');
+          setIdx(0);
+        }
+      } else if (stage === 'mcqContext' && contextCard && contextMcq) {
+        const ok = selected != null && selected === contextMcq.correct;
+        const tsec = msToSec(Date.now() - (mcqStartTs || Date.now()));
+        const score = ok ? timeToScoreSec(tsec) : 0;
+        if (contextMcq.key) {
+          setContextAnswers((prev) => ({
+            ...prev,
+            [contextMcq.key]: {
+              timeSec: tsec,
+              score,
+              ok,
+              chosen: selected,
+              correct: contextMcq.correct,
+              parentId: contextMcq.parentId,
+            },
+          }));
+        }
+        setSelected(null);
+        setShowAns(false);
+        if (contextIdx + 1 < contextDeck.length) {
+          setContextIdx((i) => i + 1);
+          setMcqStartTs(Date.now());
+        } else {
+          setStage('done');
+        }
+      } else if (stage === 'recall' && card) {
+        if (!isLevelMode && autoGain != null) {
+          const ans = (answer || '').trim().toLowerCase();
+          const sol = (qaForRecall(card).a || '').trim().toLowerCase();
+          const ok = !!ans && ans === sol;
+          if (ok) {
+            const curLv = baseLevels[String(card.id).toLowerCase()] ?? -1;
+            const next = curLv >= 0 ? Math.max(curLv, autoGain) : autoGain;
+            setProposed((p) => ({ ...p, [card.id]: next }));
+            setProposedSource((s) => ({ ...s, [card.id]: 'auto' }));
+          }
+        }
+        setAnswer('');
+        setShowAns(false);
+        if (idx + 1 < deck.length) {
+          setIdx((i) => i + 1);
         } else {
           setIdx(0);
-          if (enableExamples && exampleDeck.length > 0) {
-            setExampleIdx(0);
-            setStage('example');
+          if (hasContextStage) {
+            setStage('mcqContext');
+            setContextIdx(0);
           } else {
             setStage('done');
           }
         }
       }
     }, 2000);
-    return ()=> clearTimeout(t);
-  }, [autoCfg, showAns, stage, card, idx, deck.length, selected, answer, isLevelMode, mcq, mcqStartTs, baseLevels, autoGain, exampleDeck.length, qaForRecall]);
+    return () => clearTimeout(handle);
+  }, [autoCfg, showAns, stage, card, mcq, onKunMcq, contextMcq, idx, deck.length, selected, hasExampleStage, hasOnKunStage, exampleDeck.length, onKunScores, contextDeck.length, contextIdx, contextCard, mcqStartTs, isLevelMode, autoGain, answer, qaForRecall, baseLevels, hasContextStage]);
 
   // ----- Manual actions -----
-  React.useEffect(()=>{ if(stage==='mcq') setMcqStartTs(Date.now()); }, [stage, idx]);
+  React.useEffect(() => {
+    if (stage === 'mcq' || stage === 'mcqOnKun') setMcqStartTs(Date.now());
+  }, [stage, idx]);
 
-  const checkMCQ_Manual = ()=>{
-    if(!card) return;
+  React.useEffect(() => {
+    if (stage === 'mcqContext') setMcqStartTs(Date.now());
+  }, [stage, contextIdx]);
+
+  const checkMCQ_Manual = () => {
     setShowAns(true);
 
-    const ok = (selected!=null && mcq && selected===mcq.correct);
-    const tsec = msToSec(Date.now() - (mcqStartTs||Date.now()));
-    let score = ok ? timeToScoreSec(tsec) : 0;
-    setMcqScores(s => ({ ...s, [card.id]: { timeSec:tsec, score } }));
+    if (stage === 'mcq' && card && mcq) {
+      const ok = selected != null && selected === mcq.correct;
+      const tsec = msToSec(Date.now() - (mcqStartTs || Date.now()));
+      const score = ok ? timeToScoreSec(tsec) : 0;
+      setMcqScores((s) => ({ ...s, [card.id]: { timeSec: tsec, score } }));
+    } else if (stage === 'mcqOnKun' && card && onKunMcq) {
+      const ok = selected != null && selected === onKunMcq.correct;
+      const tsec = msToSec(Date.now() - (mcqStartTs || Date.now()));
+      const score = ok ? timeToScoreSec(tsec) : 0;
+      setOnKunScores((s) => ({ ...s, [card.id]: { timeSec: tsec, score } }));
+    } else if (stage === 'mcqContext' && contextCard && contextMcq) {
+      const ok = selected != null && selected === contextMcq.correct;
+      const tsec = msToSec(Date.now() - (mcqStartTs || Date.now()));
+      const score = ok ? timeToScoreSec(tsec) : 0;
+      if (contextMcq.key) {
+        setContextAnswers((prev) => ({
+          ...prev,
+          [contextMcq.key]: {
+            timeSec: tsec,
+            score,
+            ok,
+            chosen: selected,
+            correct: contextMcq.correct,
+            parentId: contextMcq.parentId,
+          },
+        }));
+      }
+    }
   };
 
-  const nextMCQ_Manual = ()=>{
-    if(!card) return;
-    setSelected(null); setShowAns(false);
-    if(idx+1<deck.length){ setIdx(i=>i+1); setMcqStartTs(Date.now()); }
-    else { setStage('recall'); setIdx(0); }
+  const nextMCQ_Manual = () => {
+    setSelected(null);
+    setShowAns(false);
+
+    if (stage === 'mcq') {
+      if (idx + 1 < deck.length) {
+        setIdx((i) => i + 1);
+        setMcqStartTs(Date.now());
+      } else {
+        if (hasExampleStage) {
+          setStage('mcqExample');
+          setIdx(0);
+          setExampleIdx(0);
+        } else if (hasOnKunStage) {
+          setStage('mcqOnKun');
+          setIdx(0);
+        } else {
+          setStage('recall');
+          setIdx(0);
+        }
+      }
+    } else if (stage === 'mcqOnKun') {
+      if (idx + 1 < deck.length) {
+        setIdx((i) => i + 1);
+        setMcqStartTs(Date.now());
+      } else {
+        setStage('recall');
+        setIdx(0);
+      }
+    } else if (stage === 'mcqContext') {
+      if (contextIdx + 1 < contextDeck.length) {
+        setContextIdx((i) => i + 1);
+        setMcqStartTs(Date.now());
+      } else {
+        setStage('done');
+      }
+    }
   };
 
   const checkRecall_Manual = ()=> setShowAns(true);
+
+  const handleWrite1Check = () => {
+    setShowAns(true);
+  };
+
+  const handleWrite1Score = (score) => {
+    if (!card) return;
+    const value = Number.isFinite(Number(score)) ? Number(score) : 0;
+    setWriteScoresPass1((prev) => ({ ...prev, [card.id]: value }));
+  };
+
+  const handleWrite1Next = () => {
+    if (!card) return;
+    setShowAns(false);
+    setSelected(null);
+    if (idx + 1 < deck.length) {
+      setIdx((i) => i + 1);
+    } else {
+      setIdx(0);
+      setStage('mcq');
+      setMcqStartTs(Date.now());
+    }
+  };
 
   const handleExampleChecked = (payload) => {
     if (!exampleCard) return;
@@ -534,7 +806,15 @@ export default function ReviewPage(){
     if (!exampleCard) return;
     ensureExampleRecorded(exampleCard);
     if (exampleIdx + 1 < exampleDeck.length) setExampleIdx(i => i + 1);
-    else setStage('done');
+    else {
+      if (hasOnKunStage) {
+        setStage('mcqOnKun');
+        setIdx(0);
+      } else {
+        setStage('recall');
+        setIdx(0);
+      }
+    }
   };
 
   const exampleScoresByCard = React.useMemo(() => {
@@ -562,28 +842,67 @@ export default function ReviewPage(){
     return map;
   }, [deck, exampleScoresByCard]);
 
+  const contextScoresByCard = React.useMemo(() => {
+    const map = {};
+    Object.values(contextAnswers).forEach((entry) => {
+      if (!entry || entry.parentId == null) return;
+      const list = map[entry.parentId] || (map[entry.parentId] = []);
+      const value = Number.isFinite(Number(entry.score)) ? Number(entry.score) : 0;
+      list.push(value);
+    });
+    return map;
+  }, [contextAnswers]);
+
+  const contextAverages = React.useMemo(() => {
+    const map = {};
+    deck.forEach((c) => {
+      const arr = safeArray(contextScoresByCard[c.id]);
+      if (!arr.length) return;
+      const avg = Math.round(arr.reduce((sum, val) => sum + Number(val || 0), 0) / arr.length);
+      map[c.id] = avg;
+    });
+    return map;
+  }, [deck, contextScoresByCard]);
+
   // --- FINAL LEVELS (UI & summary) ---
   const finalLevels = React.useMemo(() => {
     const out = {};
     deck.forEach((c) => {
       const base = toNum(baseLevels[String(c.id).toLowerCase()], -1);
       const mcq = toNum(mcqScores[c.id]?.score, 0);
-
       const hasProposed = Object.prototype.hasOwnProperty.call(proposed, c.id);
 
-      if (isLevelMode) {
-        const rec = toNum(proposed[c.id], 0);
-        const fin = calcFinal('level', base, mcq, rec, hasProposed);
+      if (type === 'kanji') {
+        const write1 = toNum(writeScoresPass1[c.id], 0);
+        const exampleScore = toNum(exampleAverages[c.id], 0);
+        const onKun = toNum(onKunScores[c.id]?.score, 0);
+        const recallScore = hasProposed ? toNum(proposed[c.id], 0) : 0;
+        const contextScore = toNum(contextAverages[c.id], 0);
+        const weighted = (
+            write1 * 15 +
+            mcq * 20 +
+            exampleScore * 20 +
+            onKun * 10 +
+            recallScore * 20 +
+            contextScore * 5
+        ) / 100;
+        let fin = Math.max(0, Math.min(5, Math.round(weighted)));
+        if (autoNoDowngrade && proposedSource[c.id] === 'auto' && fin < base) fin = base;
         out[c.id] = fin;
       } else {
-        // omni: if proposed exists use it (allow decrease), otherwise no explicit recall provided
-        const rec = hasProposed ? toNum(proposed[c.id], base) : base;
-        const fin = calcFinal('omni', base, mcq, rec, hasProposed);
-        out[c.id] = fin;
+        if (isLevelMode) {
+          const rec = toNum(proposed[c.id], 0);
+          const fin = calcFinal('level', base, mcq, rec, hasProposed);
+          out[c.id] = fin;
+        } else {
+          const rec = hasProposed ? toNum(proposed[c.id], base) : base;
+          const fin = calcFinal('omni', base, mcq, rec, hasProposed);
+          out[c.id] = fin;
+        }
       }
     });
     return out;
-  }, [deck, baseLevels, isLevelMode, mcqScores, proposed]);
+  }, [deck, baseLevels, isLevelMode, mcqScores, proposed, type, writeScoresPass1, exampleAverages, onKunScores, contextAverages, autoNoDowngrade, proposedSource]);
 
   const finalDist = React.useMemo(() => {
     const d = [0,0,0,0,0,0];
@@ -592,6 +911,10 @@ export default function ReviewPage(){
     });
     return d;
   }, [finalLevels]);
+
+  const detailLabel = type === 'kanji'
+      ? 'Chi tiết (Kanji: Base · Viết1 · MCQ · Ví dụ · On/Kun · Viết 2 · Ngữ cảnh'
+      : `Chi tiết (mỗi thẻ: Base · MCQ · Recall${enableExamples ? ' · Ví dụ' : ''}`;
 
   // ===== Render =====
   return (
@@ -602,12 +925,12 @@ export default function ReviewPage(){
           </Typography>
           <Chip label={`Review Mode: ${settings?.review_mode || 'FSRS'}`} sx={{ mr:1 }} />
           <Chip label={(!isLevelMode && !disableAuto && parseAuto(auto)) ? 'Auto-flip' : 'Manual'} />
-          <Chip label={`Card: ${cur}/${total}`} />
+          <Chip label={`Card: ${progressCurrent}/${progressTotal || 0}`} />
         </Stack>
 
         {stage!=='done' && (
             <LinearProgress variant="determinate"
-                            value={total? Math.round(cur/total*100) : 0}
+                            value={progressTotal ? Math.round(progressCurrent / progressTotal * 100) : 0}
                             sx={{ mb:2, height:8, borderRadius:10 }}
             />
         )}
@@ -630,13 +953,70 @@ export default function ReviewPage(){
             </Card>
         )}
 
-        {/* MCQ */}
-        {stage==='mcq' && card && mcq && (
+        {/* Write pass 1 */}
+        {stage==='write1' && card && (
             <Card sx={{ borderRadius:3 }}>
               <CardContent>
-                <Typography variant="h6" sx={{ mb:1 }}>{mcq.question}</Typography>
+                <Typography variant="h6" sx={{ mb:1 }}>
+                  Viết nét (Lần 1): <b>{card.front}</b>
+                </Typography>
                 <Stack spacing={1}>
-                  {mcq.opts.map((opt, i)=>(
+                  <HandwritingCanvas width={260} height={180} />
+                  {showAns && (
+                      <Stack spacing={0.5}>
+                        <Typography>Đáp án đúng: <b>{card.front}</b></Typography>
+                        {card.back && <Typography>Nghĩa: <b>{card.back}</b></Typography>}
+                      </Stack>
+                  )}
+                </Stack>
+
+                <Button sx={{ mt:2 }} variant="contained" onClick={handleWrite1Check} fullWidth>
+                  Kiểm tra
+                </Button>
+
+                {showAns && (
+                    <>
+                      <Divider sx={{ my:2 }} />
+                      <Typography>Chọn điểm tự chấm (0–5):</Typography>
+                      <Stack className="responsive-stack" direction="row" spacing={1} sx={{ mt:1 }} flexWrap="wrap">
+                        {[0,1,2,3,4,5].map(v=>(
+                            <Button
+                                key={v}
+                                variant={(writeScoresPass1[card.id] ?? null)===v ? 'contained':'outlined'}
+                                onClick={()=> handleWrite1Score(v)}
+                                fullWidth
+                            >
+                              {v}
+                            </Button>
+                        ))}
+                      </Stack>
+                      <Stack className="responsive-stack" direction="row" spacing={1} sx={{ mt:2 }}>
+                        <Button
+                            variant="outlined"
+                            onClick={handleWrite1Next}
+                            disabled={writeScoresPass1[card.id] == null}
+                            fullWidth
+                        >
+                          {idx+1<deck.length ? 'Lưu & Tiếp' : 'Lưu & Sang MCQ'}
+                        </Button>
+                      </Stack>
+                    </>
+                )}
+              </CardContent>
+            </Card>
+        )}
+
+        {/* MCQ */}
+        {(stage==='mcq' || stage==='mcqOnKun') && card && ((stage==='mcq' && mcq) || (stage==='mcqOnKun' && onKunMcq)) && (
+            <Card sx={{ borderRadius:3 }}>
+              <CardContent>
+                <Typography variant="h6" sx={{ mb:1 }}>
+                  {stage==='mcqOnKun'
+                      ? <>Chọn âm On/Kun đúng cho: <b>{card.front}</b></>
+                      : mcq.question}
+                </Typography>
+                <Stack spacing={1}>
+                  {(stage==='mcq' ? mcq.opts : onKunMcq.opts).map((opt, i)=>(
                       <Button key={i}
                               variant={selected===opt ? 'contained' : 'outlined'}
                               onClick={()=> setSelected(opt)}
@@ -653,10 +1033,13 @@ export default function ReviewPage(){
                         <Button variant="outlined" onClick={nextMCQ_Manual} fullWidth>Tiếp</Button>
                       </>
                   )}
-                  {showAns && <Typography sx={{ ml:1 }}>Đáp án: <b>{mcq.correct}</b></Typography>}
-                  {showAns && mcqScores[card.id] &&
+                  {showAns && <Typography sx={{ ml:1 }}>Đáp án: <b>{stage==='mcq' ? mcq.correct : onKunMcq.correct}</b></Typography>}
+                  {showAns && stage==='mcq' && mcqScores[card.id] &&
                       <Chip sx={{ ml:1 }} size="small" color="info"
                             label={`MCQ: ${mcqScores[card.id].score}${mcqScores[card.id].timeSec!=null?` (${mcqScores[card.id].timeSec.toFixed(1)}s)`:''}`} />}
+                  {showAns && stage==='mcqOnKun' && onKunScores[card.id] &&
+                      <Chip sx={{ ml:1 }} size="small" color="info"
+                            label={`On/Kun: ${onKunScores[card.id].score}${onKunScores[card.id].timeSec!=null?` (${onKunScores[card.id].timeSec.toFixed(1)}s)`:''}`} />}
                   {showAns && currentExamples.length>0 && (
                       <Stack spacing={0.5} sx={{ ml:1, mt:1 }}>
                         <Typography variant="subtitle2">Ví dụ liên quan:</Typography>
@@ -686,7 +1069,6 @@ export default function ReviewPage(){
                   setModeInput(v);
                 }}>
                   <ToggleButton value="typing" disabled={type==='kanji'}>Gõ</ToggleButton>
-                  {/* Kanji chỉ để lại Gõ & Viết tay */}
                   <ToggleButton value="handwrite" disabled={type!=='kanji'}>Viết tay</ToggleButton>
                 </ToggleButtonGroup>
 
@@ -714,7 +1096,6 @@ export default function ReviewPage(){
                     <Button sx={{ mt:2 }} variant="contained" onClick={checkRecall_Manual} fullWidth>Kiểm tra</Button>
                 )}
 
-                {/* Sau khi hiện đáp án → chọn mức nhớ */}
                 {showAns && (
                     <>
                       <Divider sx={{ my:2 }} />
@@ -746,20 +1127,21 @@ export default function ReviewPage(){
                       </Stack>
                       <Stack className="responsive-stack" direction="row" spacing={1} sx={{ mt:2 }}>
                         <Button variant="outlined" onClick={()=>{
-                          setAnswer(''); setShowAns(false);
+                          setAnswer('');
+                          setShowAns(false);
                           if(idx+1<deck.length) {
                             setIdx(i=>i+1);
                           } else {
                             setIdx(0);
-                            if (exampleDeck.length > 0) {
-                              setExampleIdx(0);
-                              setStage('example');
+                            if (hasContextStage) {
+                              setContextIdx(0);
+                              setStage('mcqContext');
                             } else {
                               setStage('done');
                             }
                           }
                         }}>
-                          {idx+1<deck.length ? 'Lưu & Tiếp' : 'Lưu & Kết thúc'}
+                          {idx+1<deck.length ? 'Lưu & Tiếp' : (hasContextStage ? 'Lưu & MCQ Ngữ cảnh' : 'Lưu & Kết thúc')}
                         </Button>
                       </Stack>
                     </>
@@ -768,7 +1150,48 @@ export default function ReviewPage(){
             </Card>
         )}
 
-        {enableExamples && stage==='example' && exampleDeck.length>0 && exampleCard && (
+        {/* MCQ Context */}
+        {stage==='mcqContext' && contextCard && contextMcq && (
+            <Card sx={{ borderRadius:3, mt:2 }}>
+              <CardContent>
+                <Typography variant="h6" sx={{ mb:1 }}>
+                  Chọn âm Hán Việt phù hợp với ngữ cảnh:
+                </Typography>
+                <Typography sx={{ mb:2, fontStyle:'italic' }}>
+                  {contextMcq.question}
+                </Typography>
+                <Stack spacing={1}>
+                  {contextMcq.opts.map((opt, i) => (
+                      <Button
+                          key={i}
+                          variant={selected===opt ? 'contained' : 'outlined'}
+                          onClick={()=> setSelected(opt)}
+                          disabled={!!parseAuto(auto) && !isLevelMode && !disableAuto && showAns}
+                      >
+                        {opt}
+                      </Button>
+                  ))}
+                </Stack>
+                <Stack className="responsive-stack" direction="row" spacing={1} sx={{ mt:2 }} alignItems="center">
+                  {(!parseAuto(auto) || isLevelMode || disableAuto) && (
+                      <>
+                        <Button variant="contained" onClick={checkMCQ_Manual} fullWidth>Kiểm tra</Button>
+                        <Button variant="outlined" onClick={nextMCQ_Manual} fullWidth>Tiếp</Button>
+                      </>
+                  )}
+                  {showAns && (
+                      <Typography sx={{ ml:1 }}>Đáp án: <b>{contextMcq.correct}</b></Typography>
+                  )}
+                  {showAns && contextMcq.key && contextAnswers[contextMcq.key] && (
+                      <Chip sx={{ ml:1 }} size="small" color="info"
+                            label={`Ngữ cảnh: ${contextAnswers[contextMcq.key].score}${contextAnswers[contextMcq.key].timeSec!=null?` (${contextAnswers[contextMcq.key].timeSec.toFixed(1)}s)`:''}`} />
+                  )}
+                </Stack>
+              </CardContent>
+            </Card>
+        )}
+
+        {enableExamples && stage==='mcqExample' && exampleDeck.length>0 && exampleCard && (
             <Card sx={{ borderRadius:3, mt:2 }}>
               <CardContent>
                 <Typography variant="h6" sx={{ mb:1 }}>
@@ -811,28 +1234,52 @@ export default function ReviewPage(){
 
                 {/* Bảng chi tiết: Base · MCQ · Recall · Final */}
                 <Typography variant="subtitle2" sx={{ mb:1 }}>
-                  Chi tiết (mỗi thẻ: Base · MCQ · Recall{enableExamples ? ' · Ví dụ' : ''} · <b>Final</b>):
+                  {detailLabel} · <b>Final</b>):
                 </Typography>
                 <Stack spacing={1}>
                   {deck.map((c) => {
-                    const base = toNum(baseLevels[String(c.id).toLowerCase()], 0);
-                    const mcq  = toNum(mcqScores[c.id]?.score, 0);
-                    const exampleScore = exampleAverages[c.id];
-                    const expectsExample = String(c?.type || '').toLowerCase() === 'kanji' && cardHasExamples(c);
-                    const displayExampleScore = expectsExample ? toNum(exampleScore, 0) : exampleScore;
-
-                    // Đếm xem user/auto có thực sự đưa ra proposal không
+                    const baseKey = String(c.id).toLowerCase();
+                    const base = toNum(baseLevels[baseKey], 0);
+                    const mcqVal = toNum(mcqScores[c.id]?.score, 0);
                     const hasProposed = Object.prototype.hasOwnProperty.call(proposed, c.id);
+                    const source = proposedSource[c.id];
+                    let fin = toNum(finalLevels[c.id], 0);
+                    if (autoNoDowngrade && source === 'auto' && fin < base) fin = base;
 
-                    // Nếu có proposal thì dùng nó (cho phép giảm/ tăng), nếu không thì giữ mặc định (base / 0)
+                    if (type === 'kanji') {
+                      const write1Val = toNum(writeScoresPass1[c.id], 0);
+                      const exampleValRaw = exampleAverages[c.id];
+                      const exampleDisplay = Number.isFinite(Number(exampleValRaw)) ? toNum(exampleValRaw, 0) : '—';
+                      const onKunVal = toNum(onKunScores[c.id]?.score, 0);
+                      const recallVal = hasProposed ? toNum(proposed[c.id], 0) : 0;
+                      const contextValRaw = contextAverages[c.id];
+                      const contextDisplay = Number.isFinite(Number(contextValRaw)) ? toNum(contextValRaw, 0) : '—';
+
+                      return (
+                          <Stack key={c.id} direction={{ xs:'column', md:'row' }} spacing={1} alignItems="center"
+                                 sx={{ border:'1px solid #eee', borderRadius:2, p:1 }}>
+                            <Typography sx={{ flex:1, textAlign:{ xs:'center', md:'left' } }}>
+                              <b>{c.front}</b>{c.back ? ` · ${c.back}` : ''}
+                            </Typography>
+                            <Stack className="responsive-stack" direction="row" spacing={1} flexWrap="wrap" alignItems="center">
+                              <Chip size="small" label={`Base: ${base}`} />
+                              <Chip size="small" label={`Viết1: ${write1Val}`} />
+                              <Chip size="small" label={`MCQ: ${mcqVal}`} />
+                              <Chip size="small" label={`Ví dụ: ${exampleDisplay}`} />
+                              <Chip size="small" label={`On/Kun: ${onKunVal}`} />
+                              <Chip size="small" label={`Viết2: ${recallVal}`} />
+                              <Chip size="small" label={`Ngữ cảnh: ${contextDisplay}`} />
+                              <Chip size="small" color="success" label={`Final: ${fin}`} />
+                            </Stack>
+                          </Stack>
+                      );
+                    }
+
+                    const exampleScore = exampleAverages[c.id];
+                    const displayExampleScore = enableExamples ? (exampleScore != null ? toNum(exampleScore, 0) : '—') : null;
                     const rec = isLevelMode
                         ? (hasProposed ? toNum(proposed[c.id], 0) : 0)
                         : (hasProposed ? toNum(proposed[c.id], base) : base);
-
-                    // Truyền hasProposed để calcFinal biết đây có phải là recall "explicit" hay không
-                    const source = proposedSource[c.id]; // 'auto' | 'manual' | undefined
-                    let fin  = calcFinal(isLevelMode ? 'level' : 'omni', base, mcq, rec, hasProposed);
-                    if (autoNoDowngrade && source === 'auto' && fin < base) fin = base;
 
                     return (
                         <Stack key={c.id} direction={{ xs:'column', md:'row' }} spacing={1} alignItems="center"
@@ -842,7 +1289,7 @@ export default function ReviewPage(){
                           </Typography>
                           <Stack className="responsive-stack" direction="row" spacing={1} flexWrap="wrap" alignItems="center">
                             <Chip size="small" label={`Base: ${base}`} />
-                            <Chip size="small" label={`MCQ: ${mcq}`} />
+                            <Chip size="small" label={`MCQ: ${mcqVal}`} />
                             <Chip size="small" label={`Recall: ${rec}`} />
                             {enableExamples && (
                                 <Chip size="small" label={`Ví dụ: ${displayExampleScore != null ? displayExampleScore : '—'}`} />
@@ -864,22 +1311,10 @@ export default function ReviewPage(){
                           // Build save rows — per-card we include source and make auto_active
                           const rows = deck.map((c) => {
                             const base = toNum(baseLevels[String(c.id).toLowerCase()], 0);
-                            const mcq  = toNum(mcqScores[c.id]?.score, 0);
-                            const exampleScore = exampleAverages[c.id];
-                            const expectsExample = String(c?.type || '').toLowerCase() === 'kanji' && cardHasExamples(c);
-
-                            const hasProposed = Object.prototype.hasOwnProperty.call(proposed, c.id);
-                            const rec = isLevelMode ? (hasProposed ? toNum(proposed[c.id], 0) : 0)
-                                : (hasProposed ? toNum(proposed[c.id], base) : base);
-
-                            // Final level shown to user
-                            let lvl = calcFinal(isLevelMode ? 'level' : 'omni', base, mcq, rec, hasProposed);
-
-                            // Chỉ giữ mức cũ nếu auto-flip (omni) đề xuất mức thấp hơn.
-                            const source = proposedSource[c.id]; // 'auto' | 'manual' | undefined
+                            const source = proposedSource[c.id];
+                            let lvl = toNum(finalLevels[c.id], 0);
                             if (autoNoDowngrade && source === 'auto' && lvl < base) lvl = base;
 
-                            // If backend expects 'final' or 'quality' use both to be safe.
                             const final = Number(lvl);
                             const quality = Number(lvl);
 
