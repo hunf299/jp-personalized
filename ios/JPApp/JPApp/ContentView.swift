@@ -435,6 +435,8 @@ struct StudyScreen: View {
     @State private var searchText: String = ""
     @State private var practiceCards: [DeckCard] = []
     @State private var showPractice = false
+    @State private var isPreparingPractice = false
+    @State private var loadedSnapshotTypes: Set<String> = []
 
     var body: some View {
         List {
@@ -477,17 +479,38 @@ struct StudyScreen: View {
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Button {
-                    practiceCards = preparePracticeBatch()
-                    showPractice = !practiceCards.isEmpty
+                    Task { @MainActor in
+                        guard !isPreparingPractice else { return }
+                        isPreparingPractice = true
+                        defer { isPreparingPractice = false }
+                        await loadSnapshotIfNeeded(for: selectedType, force: true)
+                        let batch = preparePracticeBatch()
+                        practiceCards = batch
+                        showPractice = !batch.isEmpty
+                    }
                 } label: {
                     Label("Bắt đầu học", systemImage: "play.circle.fill")
                 }
-                .disabled(!canPractice)
+                .disabled(isPreparingPractice || !canPractice)
+                .overlay {
+                    if isPreparingPractice {
+                        ProgressView()
+                            .progressViewStyle(.circular)
+                            .controlSize(.small)
+                            .allowsHitTesting(false)
+                    }
+                }
             }
         }
         .searchable(text: $searchText, placement: .navigationBarDrawer(displayMode: .automatic), prompt: "Tìm thẻ…")
         .navigationDestination(isPresented: $showPractice) {
             PracticeSessionView(mode: .study, type: selectedType, cards: practiceCards)
+        }
+        .task {
+            await loadSnapshotIfNeeded(for: selectedType)
+        }
+        .onChange(of: selectedType, initial: false) { _, newValue in
+            Task { await loadSnapshotIfNeeded(for: newValue) }
         }
     }
 
@@ -503,12 +526,56 @@ struct StudyScreen: View {
     }
 
     private func preparePracticeBatch() -> [DeckCard] {
-        let pool = appState.cards.filter { $0.type.lowercased() == selectedType.rawValue }
+        let pool = availablePracticeCards
         return Array(pool.shuffled().prefix(10))
     }
 
     private var canPractice: Bool {
-        appState.cards.contains { $0.type.lowercased() == selectedType.rawValue }
+        !availablePracticeCards.isEmpty
+    }
+
+    private var availablePracticeCards: [DeckCard] {
+        let key = selectedType.rawValue
+        let snapshot = appState.memorySnapshot(for: key)
+        let excludedIDs: Set<String> = Set(snapshot.rows.compactMap { row in
+            let trimmedID = row.cardID.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !trimmedID.isEmpty else { return nil }
+            return trimmedID.lowercased()
+        })
+
+        return appState.cards.filter { card in
+            let normalizedType = card.type.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+            guard normalizedType == key else { return false }
+            let identifier = card.id.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+            return !excludedIDs.contains(identifier)
+        }
+    }
+
+    private func loadSnapshotIfNeeded(for type: CardType, force: Bool = false) async {
+        let key = type.rawValue
+        if force {
+            await appState.refreshProgress(for: key)
+            await MainActor.run {
+                loadedSnapshotTypes.insert(key)
+            }
+            return
+        }
+
+        if loadedSnapshotTypes.contains(key) {
+            return
+        }
+
+        let shouldFetch: Bool = await MainActor.run {
+            appState.memorySnapshot(for: key).rows.isEmpty
+        }
+
+        if shouldFetch {
+            await appState.refreshProgress(for: key)
+        }
+
+        await MainActor.run {
+            loadedSnapshotTypes.insert(key)
+        }
     }
 }
 
