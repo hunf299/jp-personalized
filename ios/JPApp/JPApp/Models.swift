@@ -413,6 +413,48 @@ extension DeckCard {
 }
 
 extension DeckCard {
+    private func normalized(_ value: String?) -> String {
+        value?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+    }
+
+    var primaryMeaning: String {
+        let candidates = [back, displayMeaning]
+        for candidate in candidates {
+            let trimmed = normalized(candidate)
+            if !trimmed.isEmpty {
+                return trimmed
+            }
+        }
+        return ""
+    }
+
+    var primarySpell: String {
+        for variant in spellVariants {
+            let trimmed = normalized(variant)
+            if !trimmed.isEmpty, trimmed != "—" {
+                return trimmed
+            }
+        }
+        return ""
+    }
+
+    var kanjiMeaningWithSpell: String {
+        let meaning = primaryMeaning
+        let spell = primarySpell
+        switch (meaning.isEmpty, spell.isEmpty) {
+        case (false, false):
+            return "\(meaning) - \(spell)"
+        case (false, true):
+            return meaning
+        case (true, false):
+            return spell
+        default:
+            return ""
+        }
+    }
+}
+
+extension DeckCard {
     // Attempt to generate readings from available text fields when explicit on/kun readings are missing.
     private var readingSourceTexts: [String] {
         var texts: [String] = []

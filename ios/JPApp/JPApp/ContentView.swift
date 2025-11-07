@@ -829,6 +829,87 @@ struct PracticeSessionView: View {
         let correct: String
     }
 
+    private struct ExampleCardLookup {
+        let allExamples: [DeckCard]
+        private let byID: [String: DeckCard]
+        private let byFront: [String: [DeckCard]]
+        private let byBack: [String: [DeckCard]]
+        private let bySpell: [String: [DeckCard]]
+
+        init(cards: [DeckCard]) {
+            var examples: [DeckCard] = []
+            var idMap: [String: DeckCard] = [:]
+            var frontMap: [String: [DeckCard]] = [:]
+            var backMap: [String: [DeckCard]] = [:]
+            var spellMap: [String: [DeckCard]] = [:]
+
+            for card in cards {
+                guard card.type.lowercased() == "example" else { continue }
+                examples.append(card)
+
+                let idKey = card.id.lowercased()
+                idMap[idKey] = card
+                if let numeric = card.numericID {
+                    idMap[String(numeric).lowercased()] = card
+                }
+
+                if let frontKey = ExampleCardLookup.normalized(card.front) {
+                    frontMap[frontKey, default: []].append(card)
+                }
+
+                if let backValue = card.back, let backKey = ExampleCardLookup.normalized(backValue) {
+                    backMap[backKey, default: []].append(card)
+                }
+
+                if let meaningKey = ExampleCardLookup.normalized(card.displayMeaning) {
+                    backMap[meaningKey, default: []].append(card)
+                }
+
+                var spellCandidates: [String] = []
+                if let direct = card.extra["spell"]?.stringValue { spellCandidates.append(direct) }
+                if let fallback = card.extra["example_spell"]?.stringValue { spellCandidates.append(fallback) }
+                for variant in card.spellVariants {
+                    spellCandidates.append(variant)
+                }
+                for candidate in spellCandidates {
+                    if let key = ExampleCardLookup.normalized(candidate) {
+                        spellMap[key, default: []].append(card)
+                    }
+                }
+            }
+
+            allExamples = examples
+            byID = idMap
+            byFront = frontMap
+            byBack = backMap
+            bySpell = spellMap
+        }
+
+        private static func normalized(_ value: String) -> String? {
+            let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !trimmed.isEmpty else { return nil }
+            return trimmed.lowercased()
+        }
+
+        func cards(matching raw: String) -> [DeckCard] {
+            guard let key = ExampleCardLookup.normalized(raw) else { return [] }
+            var results: [DeckCard] = []
+            if let match = byID[key] {
+                results.append(match)
+            }
+            if let frontMatches = byFront[key] {
+                results.append(contentsOf: frontMatches)
+            }
+            if let backMatches = byBack[key] {
+                results.append(contentsOf: backMatches)
+            }
+            if let spellMatches = bySpell[key] {
+                results.append(contentsOf: spellMatches)
+            }
+            return results
+        }
+    }
+
     @State private var phase: Phase
     @State private var kanjiPhase: KanjiPhase = .writePass1
     @State private var index: Int = 0
@@ -936,14 +1017,18 @@ struct PracticeSessionView: View {
 
     private func warmupAnswer(for card: DeckCard) -> String {
         if type == .kanji {
-            return trimmed(card.warmupLabel)
+            let combined = card.kanjiMeaningWithSpell.trimmingCharacters(in: .whitespacesAndNewlines)
+            if combined.isEmpty {
+                return trimmed(card.warmupLabel)
+            }
+            return combined
         }
         return orientationSetting == .reversed ? normalizedFront(for: card) : normalizedBack(for: card)
     }
 
     private func warmupPromptTitle(for card: DeckCard) -> String {
         if type == .kanji {
-            return "Chọn Hán Việt + on/kun cho \(normalizedFront(for: card))"
+            return "Chọn nghĩa + spell cho \(normalizedFront(for: card))"
         }
         let question = warmupQuestionValue(for: card)
         if orientationSetting == .reversed {
@@ -967,7 +1052,7 @@ struct PracticeSessionView: View {
 
     private func recallExpectedAnswer(for card: DeckCard) -> String {
         if type == .kanji {
-            return normalizedFront(for: card)
+            return kanjiExpectedAnswer(for: card)
         }
         return orientationSetting == .reversed ? normalizedFront(for: card) : normalizedBack(for: card)
     }
@@ -1477,8 +1562,25 @@ struct PracticeSessionView: View {
     }
 
     private func kanjiWritingPrompt(pass: Int, for card: DeckCard) -> String {
-        let prefix = pass == 1 ? "Phần 1 – Viết nét lần 1" : "Phần 5 – Viết nét lần 2"
-        return "\(prefix): \(card.front)"
+        if pass == 1 {
+            return "Phần 1 – Viết nét lần 1 (15%): \(card.front)"
+        }
+        let combined = card.kanjiMeaningWithSpell.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !combined.isEmpty {
+            return "Phần 5 – Viết nét lần 2 (20%): \(combined)"
+        }
+        let meaning = card.primaryMeaning.trimmingCharacters(in: .whitespacesAndNewlines)
+        let promptValue = meaning.isEmpty ? normalizedBack(for: card) : meaning
+        return "Phần 5 – Viết nét lần 2 (20%): \(promptValue)"
+    }
+
+    private func kanjiExpectedAnswer(for card: DeckCard) -> String {
+        switch kanjiPhase {
+        case .writePass2:
+            return normalizedFront(for: card)
+        default:
+            return normalizedFront(for: card)
+        }
     }
 
     private func handleKanjiWritingCheck(for card: DeckCard) {
@@ -1528,7 +1630,7 @@ struct PracticeSessionView: View {
     private func kanjiConfiguration(for card: DeckCard) -> KanjiMCQConfiguration {
         switch kanjiPhase {
         case .mcqMeaning:
-            let title = "Phần 2 – MCQ: \(warmupPromptTitle(for: card))"
+            let title = "Phần 2 – MCQ (20%): \(warmupPromptTitle(for: card))"
             return KanjiMCQConfiguration(title: title,
                                         options: warmupOptions(for: card),
                                         correct: warmupAnswer(for: card))
@@ -1547,10 +1649,18 @@ struct PracticeSessionView: View {
     }
 
     private func kanjiExampleConfiguration(for card: DeckCard) -> KanjiMCQConfiguration {
-        let example = card.exampleItems.first(where: { !$0.front.isEmpty || !$0.back.isEmpty })
+        let lookup = buildExampleLookup()
+        let exampleItems = kanjiExampleItems(for: card, using: lookup)
+        let fallbackItems = card.exampleItems
+        let example = exampleItems.first(where: { !$0.front.isEmpty || !$0.back.isEmpty })
+            ?? fallbackItems.first(where: { !$0.front.isEmpty || !$0.back.isEmpty })
         let promptFront = example?.front.trimmingCharacters(in: .whitespacesAndNewlines)
-        let prompt = (promptFront?.isEmpty ?? true) ? "Phần 3 – MCQ ví dụ:\n\(normalizedFront(for: card))" : "Phần 3 – MCQ ví dụ:\n\(promptFront!)"
-        let defaultAnswer = normalizedBack(for: card)
+        let promptBase = (promptFront?.isEmpty ?? true) ? normalizedFront(for: card) : promptFront!
+        let prompt = "Phần 3 – MCQ ví dụ (20%):\n\(promptBase)"
+        let defaultAnswer = {
+            let meaning = card.primaryMeaning.trimmingCharacters(in: .whitespacesAndNewlines)
+            return meaning.isEmpty ? normalizedBack(for: card) : meaning
+        }()
         let correct = {
             let trimmed = example?.back.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
             return trimmed.isEmpty ? defaultAnswer : trimmed
@@ -1558,12 +1668,13 @@ struct PracticeSessionView: View {
 
         var options: [String] = []
         appendOption(correct, to: &options)
-        for entry in card.exampleItems {
+        for entry in exampleItems {
             appendOption(entry.back, to: &options)
         }
         if options.count < 4 {
             for other in cards.shuffled() where other.id != card.id {
-                for entry in other.exampleItems {
+                let otherItems = kanjiExampleItems(for: other, using: lookup)
+                for entry in otherItems {
                     appendOption(entry.back, to: &options)
                     if options.count >= 4 { break }
                 }
@@ -1571,8 +1682,9 @@ struct PracticeSessionView: View {
             }
         }
         if options.count < 4 {
-            for other in cards.shuffled() where other.id != card.id {
-                appendOption(normalizedBack(for: other), to: &options)
+            for exampleCard in lookup.allExamples.shuffled() {
+                let item = exampleItem(from: exampleCard)
+                appendOption(item.back, to: &options)
                 if options.count >= 4 { break }
             }
         }
@@ -1602,27 +1714,37 @@ struct PracticeSessionView: View {
             appendOption(card.warmupLabel, to: &options)
         }
         while options.count < 4 { options.append("—") }
-        let title = "Phần 4 – MCQ âm đọc: \(card.front)"
+        let title = "Phần 4 – MCQ âm đọc (10%): \(card.front)"
         return KanjiMCQConfiguration(title: title, options: options.shuffled(), correct: correct)
     }
 
     private func kanjiContextConfiguration(for card: DeckCard) -> KanjiMCQConfiguration {
-        let example = card.exampleItems.first(where: { !$0.spell.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }) ?? card.exampleItems.first
+        let lookup = buildExampleLookup()
+        let exampleItems = kanjiExampleItems(for: card, using: lookup)
+        let fallbackItems = card.exampleItems
+        let example = exampleItems.first(where: { !$0.spell.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty })
+            ?? exampleItems.first
+            ?? fallbackItems.first
         let promptFront = example?.front.trimmingCharacters(in: .whitespacesAndNewlines)
-        let prompt = (promptFront?.isEmpty ?? true) ? "Phần 6 – MCQ ngữ cảnh:\n\(normalizedFront(for: card))" : "Phần 6 – MCQ ngữ cảnh:\n\(promptFront!)"
+        let promptBase = (promptFront?.isEmpty ?? true) ? normalizedFront(for: card) : promptFront!
+        let prompt = "Phần 6 – MCQ ngữ cảnh (5%):\n\(promptBase)"
         var options: [String] = []
-        let defaultSpell = card.hanViet
+        let defaultSpell = {
+            let spell = card.primarySpell.trimmingCharacters(in: .whitespacesAndNewlines)
+            return spell.isEmpty ? card.hanViet : spell
+        }()
         let correct = {
             let trimmed = example?.spell.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
             return trimmed.isEmpty ? defaultSpell : trimmed
         }()
         appendOption(correct, to: &options)
-        for entry in card.exampleItems {
+        for entry in exampleItems {
             appendOption(entry.spell, to: &options)
         }
         if options.count < 4 {
             for other in cards.shuffled() where other.id != card.id {
-                for entry in other.exampleItems {
+                let otherItems = kanjiExampleItems(for: other, using: lookup)
+                for entry in otherItems {
                     appendOption(entry.spell, to: &options)
                     if options.count >= 4 { break }
                 }
@@ -1630,7 +1752,11 @@ struct PracticeSessionView: View {
             }
         }
         if options.count < 4 {
-            appendOption(card.hanViet, to: &options)
+            for exampleCard in lookup.allExamples.shuffled() {
+                let item = exampleItem(from: exampleCard)
+                appendOption(item.spell, to: &options)
+                if options.count >= 4 { break }
+            }
         }
         while options.count < 4 { options.append("—") }
         return KanjiMCQConfiguration(title: prompt, options: options.shuffled(), correct: correct)
@@ -1642,6 +1768,136 @@ struct PracticeSessionView: View {
         if !options.contains(trimmed) {
             options.append(trimmed)
         }
+    }
+
+    private func buildExampleLookup() -> ExampleCardLookup {
+        ExampleCardLookup(cards: appState.cards)
+    }
+
+    private func kanjiExampleItems(for card: DeckCard, using lookup: ExampleCardLookup) -> [DeckCard.ExampleItem] {
+        var items: [DeckCard.ExampleItem] = []
+        var seen: Set<DeckCard.ExampleItem> = []
+
+        let resolvedCards = resolvedExampleCards(for: card, using: lookup)
+        for exampleCard in resolvedCards {
+            let item = exampleItem(from: exampleCard)
+            if seen.insert(item).inserted {
+                items.append(item)
+            }
+        }
+
+        for fallback in card.exampleItems {
+            if seen.insert(fallback).inserted {
+                items.append(fallback)
+            }
+        }
+
+        return items
+    }
+
+    private func resolvedExampleCards(for card: DeckCard, using lookup: ExampleCardLookup) -> [DeckCard] {
+        var matches: [DeckCard] = []
+        var seenIDs: Set<String> = []
+
+        appendExampleMatches(from: exampleReferences(for: card), using: lookup, to: &matches, seenIDs: &seenIDs)
+
+        for item in card.exampleItems {
+            appendExampleMatches(from: [item.front, item.back, item.spell], using: lookup, to: &matches, seenIDs: &seenIDs)
+        }
+
+        return matches
+    }
+
+    private func appendExampleMatches(from values: [String], using lookup: ExampleCardLookup, to matches: inout [DeckCard], seenIDs: inout Set<String>) {
+        for value in values {
+            for candidate in lookup.cards(matching: value) {
+                let key = candidate.id.lowercased()
+                if seenIDs.insert(key).inserted {
+                    matches.append(candidate)
+                }
+            }
+        }
+    }
+
+    private func exampleItem(from card: DeckCard) -> DeckCard.ExampleItem {
+        let front = card.front.trimmingCharacters(in: .whitespacesAndNewlines)
+        let backBase = card.back ?? card.displayMeaning
+        let back = backBase.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        var spell = card.extra["spell"]?.stringValue?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        if spell.isEmpty {
+            spell = card.extra["example_spell"]?.stringValue?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        }
+        if spell.isEmpty {
+            for variant in card.spellVariants {
+                let trimmed = variant.trimmingCharacters(in: .whitespacesAndNewlines)
+                if !trimmed.isEmpty {
+                    spell = trimmed
+                    break
+                }
+            }
+        }
+
+        return DeckCard.ExampleItem(front: front, back: back, spell: spell)
+    }
+
+    private func exampleReferences(for card: DeckCard) -> [String] {
+        var results: [String] = []
+        var seen: Set<String> = []
+
+        func append(_ value: String?) {
+            guard let value else { return }
+            let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !trimmed.isEmpty else { return }
+            let key = trimmed.lowercased()
+            if seen.insert(key).inserted {
+                results.append(trimmed)
+            }
+        }
+
+        func appendComponents(from text: String) {
+            let separators = CharacterSet(charactersIn: ",;|/\n\r\t")
+            let components = text.components(separatedBy: separators)
+            for component in components {
+                append(component)
+            }
+        }
+
+        let keys = [
+            "example_id",
+            "example_ids",
+            "example_card_id",
+            "example_card_ids",
+            "example_cards",
+            "example_reference",
+            "example_references",
+            "example"
+        ]
+
+        for key in keys {
+            guard let value = card.extra[key] else { continue }
+            let list = value.stringList
+            if list.isEmpty {
+                if let single = value.stringValue {
+                    appendComponents(from: single)
+                }
+            } else {
+                for entry in list { append(entry) }
+            }
+        }
+
+        if let array = card.extra["examples"]?.arrayValue {
+            for element in array {
+                if let text = element.stringValue {
+                    appendComponents(from: text)
+                } else if let object = element.objectValue {
+                    append(object["id"]?.stringValue)
+                    append(object["card_id"]?.stringValue)
+                }
+            }
+        }
+
+        return results
     }
 
     private func handleKanjiMCQCheck(for card: DeckCard, expected: String) {
@@ -1984,7 +2240,7 @@ private struct RecallQuestion: View {
                             .font(.subheadline.weight(.semibold))
                             .foregroundColor(Color("LiquidPrimary"))
                         if type == .kanji {
-                            let meaning = (card.back ?? card.displayMeaning)
+                            let meaning = card.kanjiMeaningWithSpell
                                 .trimmingCharacters(in: .whitespacesAndNewlines)
                             if !meaning.isEmpty {
                                 Text("Nghĩa: \(meaning)")
