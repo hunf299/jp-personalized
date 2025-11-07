@@ -936,14 +936,18 @@ struct PracticeSessionView: View {
 
     private func warmupAnswer(for card: DeckCard) -> String {
         if type == .kanji {
-            return trimmed(card.warmupLabel)
+            let combined = card.kanjiMeaningWithSpell.trimmingCharacters(in: .whitespacesAndNewlines)
+            if combined.isEmpty {
+                return trimmed(card.warmupLabel)
+            }
+            return combined
         }
         return orientationSetting == .reversed ? normalizedFront(for: card) : normalizedBack(for: card)
     }
 
     private func warmupPromptTitle(for card: DeckCard) -> String {
         if type == .kanji {
-            return "Chọn Hán Việt + on/kun cho \(normalizedFront(for: card))"
+            return "Chọn nghĩa + spell cho \(normalizedFront(for: card))"
         }
         let question = warmupQuestionValue(for: card)
         if orientationSetting == .reversed {
@@ -967,7 +971,7 @@ struct PracticeSessionView: View {
 
     private func recallExpectedAnswer(for card: DeckCard) -> String {
         if type == .kanji {
-            return normalizedFront(for: card)
+            return kanjiExpectedAnswer(for: card)
         }
         return orientationSetting == .reversed ? normalizedFront(for: card) : normalizedBack(for: card)
     }
@@ -1477,8 +1481,23 @@ struct PracticeSessionView: View {
     }
 
     private func kanjiWritingPrompt(pass: Int, for card: DeckCard) -> String {
-        let prefix = pass == 1 ? "Phần 1 – Viết nét lần 1" : "Phần 5 – Viết nét lần 2"
-        return "\(prefix): \(card.front)"
+        if pass == 1 {
+            return "Phần 1 – Viết nét lần 1 (15%): \(card.front)"
+        }
+        let meaning = card.primaryMeaning.trimmingCharacters(in: .whitespacesAndNewlines)
+        let promptValue = meaning.isEmpty ? normalizedBack(for: card) : meaning
+        return "Phần 5 – Viết nét lần 2 (20%): \(promptValue)"
+    }
+
+    private func kanjiExpectedAnswer(for card: DeckCard) -> String {
+        switch kanjiPhase {
+        case .writePass2:
+            let meaning = card.primaryMeaning.trimmingCharacters(in: .whitespacesAndNewlines)
+            let fallback = normalizedBack(for: card)
+            return meaning.isEmpty ? fallback : meaning
+        default:
+            return normalizedFront(for: card)
+        }
     }
 
     private func handleKanjiWritingCheck(for card: DeckCard) {
@@ -1528,7 +1547,7 @@ struct PracticeSessionView: View {
     private func kanjiConfiguration(for card: DeckCard) -> KanjiMCQConfiguration {
         switch kanjiPhase {
         case .mcqMeaning:
-            let title = "Phần 2 – MCQ: \(warmupPromptTitle(for: card))"
+            let title = "Phần 2 – MCQ (20%): \(warmupPromptTitle(for: card))"
             return KanjiMCQConfiguration(title: title,
                                         options: warmupOptions(for: card),
                                         correct: warmupAnswer(for: card))
@@ -1549,8 +1568,12 @@ struct PracticeSessionView: View {
     private func kanjiExampleConfiguration(for card: DeckCard) -> KanjiMCQConfiguration {
         let example = card.exampleItems.first(where: { !$0.front.isEmpty || !$0.back.isEmpty })
         let promptFront = example?.front.trimmingCharacters(in: .whitespacesAndNewlines)
-        let prompt = (promptFront?.isEmpty ?? true) ? "Phần 3 – MCQ ví dụ:\n\(normalizedFront(for: card))" : "Phần 3 – MCQ ví dụ:\n\(promptFront!)"
-        let defaultAnswer = normalizedBack(for: card)
+        let promptBase = (promptFront?.isEmpty ?? true) ? normalizedFront(for: card) : promptFront!
+        let prompt = "Phần 3 – MCQ ví dụ (20%):\n\(promptBase)"
+        let defaultAnswer = {
+            let meaning = card.primaryMeaning.trimmingCharacters(in: .whitespacesAndNewlines)
+            return meaning.isEmpty ? normalizedBack(for: card) : meaning
+        }()
         let correct = {
             let trimmed = example?.back.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
             return trimmed.isEmpty ? defaultAnswer : trimmed
@@ -1567,12 +1590,6 @@ struct PracticeSessionView: View {
                     appendOption(entry.back, to: &options)
                     if options.count >= 4 { break }
                 }
-                if options.count >= 4 { break }
-            }
-        }
-        if options.count < 4 {
-            for other in cards.shuffled() where other.id != card.id {
-                appendOption(normalizedBack(for: other), to: &options)
                 if options.count >= 4 { break }
             }
         }
@@ -1602,16 +1619,20 @@ struct PracticeSessionView: View {
             appendOption(card.warmupLabel, to: &options)
         }
         while options.count < 4 { options.append("—") }
-        let title = "Phần 4 – MCQ âm đọc: \(card.front)"
+        let title = "Phần 4 – MCQ âm đọc (10%): \(card.front)"
         return KanjiMCQConfiguration(title: title, options: options.shuffled(), correct: correct)
     }
 
     private func kanjiContextConfiguration(for card: DeckCard) -> KanjiMCQConfiguration {
         let example = card.exampleItems.first(where: { !$0.spell.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }) ?? card.exampleItems.first
         let promptFront = example?.front.trimmingCharacters(in: .whitespacesAndNewlines)
-        let prompt = (promptFront?.isEmpty ?? true) ? "Phần 6 – MCQ ngữ cảnh:\n\(normalizedFront(for: card))" : "Phần 6 – MCQ ngữ cảnh:\n\(promptFront!)"
+        let promptBase = (promptFront?.isEmpty ?? true) ? normalizedFront(for: card) : promptFront!
+        let prompt = "Phần 6 – MCQ ngữ cảnh (5%):\n\(promptBase)"
         var options: [String] = []
-        let defaultSpell = card.hanViet
+        let defaultSpell = {
+            let spell = card.primarySpell.trimmingCharacters(in: .whitespacesAndNewlines)
+            return spell.isEmpty ? card.hanViet : spell
+        }()
         let correct = {
             let trimmed = example?.spell.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
             return trimmed.isEmpty ? defaultSpell : trimmed
@@ -1628,9 +1649,6 @@ struct PracticeSessionView: View {
                 }
                 if options.count >= 4 { break }
             }
-        }
-        if options.count < 4 {
-            appendOption(card.hanViet, to: &options)
         }
         while options.count < 4 { options.append("—") }
         return KanjiMCQConfiguration(title: prompt, options: options.shuffled(), correct: correct)
@@ -1984,7 +2002,7 @@ private struct RecallQuestion: View {
                             .font(.subheadline.weight(.semibold))
                             .foregroundColor(Color("LiquidPrimary"))
                         if type == .kanji {
-                            let meaning = (card.back ?? card.displayMeaning)
+                            let meaning = card.kanjiMeaningWithSpell
                                 .trimmingCharacters(in: .whitespacesAndNewlines)
                             if !meaning.isEmpty {
                                 Text("Nghĩa: \(meaning)")
