@@ -42,10 +42,12 @@ function getKanjiMeta(card) {
   return { hv, on, kun };
 }
 function kanjiLabel(card) {
-  const { hv, on, kun } = getKanjiMeta(card);
-  const onPart  = on ? `on:${on}`   : 'on:—';
-  const kunPart = kun? `kun:${kun}` : 'kun:—';
-  return hv ? `${hv} · ${onPart} · ${kunPart}` : `${onPart} · ${kunPart}`;
+  const { hv } = getKanjiMeta(card);
+  const meaning = (card?.back || hv || '').trim();
+  const spellLabel = normalizeSpellLabel(card?.spell ?? '');
+  if (meaning && spellLabel) return `${meaning} · ${spellLabel}`;
+  if (meaning) return meaning;
+  return spellLabel || '—';
 }
 
 function normalizeSpellLabel(spell) {
@@ -85,8 +87,22 @@ function makeMcqOptions(answer, otherOptions = []) {
   return uniq.sort(() => Math.random() - 0.5);
 }
 
+const toNum = (v, d = 0) => {
+  const n = Number(v);
+  return Number.isFinite(n) ? n : d;
+};
+
+function computeLevelDistribution(values = []) {
+  const dist = [0, 0, 0, 0, 0, 0];
+  values.forEach((raw) => {
+    const level = Math.max(0, Math.min(5, Math.round(toNum(raw, 0))));
+    dist[level] += 1;
+  });
+  return { dist, total: values.length };
+}
+
 // ---------- Warmup MCQ ----------
-function WarmupMCQ({ card, deck, isKanji, onCheck, examples }) {
+function WarmupMCQ({ card, deck, isKanji, onCheck, spellLabel }) {
   const startRef = React.useRef(Date.now());
   const firstHitSecRef = React.useRef(null);
 
@@ -131,8 +147,6 @@ function WarmupMCQ({ card, deck, isKanji, onCheck, examples }) {
     onCheck({ ok, timeSec: sec, score });
   };
 
-  const exampleList = Array.isArray(examples) ? examples : [];
-
   return (
       <Card sx={{ borderRadius: 3, border: '1px solid #ffe0e0', background: '#fff' }}>
         <CardContent>
@@ -157,16 +171,10 @@ function WarmupMCQ({ card, deck, isKanji, onCheck, examples }) {
                   {result ? 'Đúng' : <>Sai · Đáp án đúng: <b>{correctLabel}</b></>}
                 </Typography>
             )}
-            {checked && exampleList.length > 0 && (
-                <Stack spacing={0.5} sx={{ textAlign: { xs: 'center', sm: 'left' } }}>
-                  <Divider sx={{ my: 1 }} />
-                  <Typography variant="subtitle2">Ví dụ liên quan:</Typography>
-                  {exampleList.map((ex, idx) => (
-                      <Typography key={idx} sx={{ fontSize: 14 }}>
-                        <b>{ex.front}</b>{ex.back ? ` · ${ex.back}` : ''}
-                      </Typography>
-                  ))}
-                </Stack>
+            {checked && isKanji && spellLabel && (
+                <Typography sx={{ textAlign: { xs: 'center', sm: 'left' } }}>
+                  On/Kun: <b>{spellLabel}</b>
+                </Typography>
             )}
           </Stack>
         </CardContent>
@@ -386,7 +394,7 @@ export default function FlashcardsPage() {
   }, [router.isReady, router.query?.sessionId, hasTypeData, order, typeFilter, isKanji, recallFirst]);
 
   const card = batch[index] || null;
-  const currentExamples = useMemo(() => safeArray(card?.exampleCards), [card]);
+  const cardSpellLabel = isKanji && card ? normalizeSpellLabel(card?.spell ?? '') : '';
   const exampleCard = exampleDeck[exampleIndex] || null;
   const examplePool = useMemo(() => safeArray(exampleLookup?.pool), [exampleLookup]);
   const contextCard = contextDeck[contextIndex] || null;
@@ -717,6 +725,26 @@ export default function FlashcardsPage() {
     return map;
   }, [exampleDeck, exampleAnswers]);
 
+  const exampleParentIds = useMemo(() => {
+    const set = new Set();
+    safeArray(exampleDeck).forEach((entry) => {
+      if (entry?.parentId == null) return;
+      set.add(String(entry.parentId));
+    });
+    return Array.from(set);
+  }, [exampleDeck]);
+
+  const exampleAverages = useMemo(() => {
+    const map = {};
+    exampleParentIds.forEach((id) => {
+      const arr = safeArray(exampleScoresByCard[id]);
+      if (!arr.length) return;
+      const avg = Math.round(arr.reduce((sum, val) => sum + Number(val || 0), 0) / arr.length);
+      map[id] = avg;
+    });
+    return map;
+  }, [exampleParentIds, exampleScoresByCard]);
+
   const contextScoresByCard = useMemo(() => {
     const map = {};
     Object.values(contextAnswers).forEach((entry) => {
@@ -739,6 +767,19 @@ export default function FlashcardsPage() {
     });
     return set;
   }, [contextDeck]);
+
+  const contextParentIds = useMemo(() => Array.from(contextParentSet), [contextParentSet]);
+
+  const contextAverages = useMemo(() => {
+    const map = {};
+    contextParentIds.forEach((id) => {
+      const arr = safeArray(contextScoresByCard[id]);
+      if (!arr.length) return;
+      const avg = Math.round(arr.reduce((sum, val) => sum + Number(val || 0), 0) / arr.length);
+      map[id] = avg;
+    });
+    return map;
+  }, [contextParentIds, contextScoresByCard]);
 
   const aggregated = useMemo(() => {
     const rows = batch.map(b => {
@@ -812,14 +853,74 @@ export default function FlashcardsPage() {
     return { rows, dist };
   }, [batch, warmupScores, recallScores, exampleScoresByCard, isKanji, writePass1Scores, onKunScores, contextScoresByCard, contextParentSet]);
 
-  const warmupDist = useMemo(() => {
-    const dist = [0,1,2,3,4,5].map(()=>0);
+  const write1Summary = useMemo(() => {
+    if (!isKanji) return null;
+    if (!batch.length) return null;
+    const values = [];
+    for (const b of batch) {
+      if (writePass1Scores[b.id] == null) return null;
+      values.push(toNum(writePass1Scores[b.id], 0));
+    }
+    return computeLevelDistribution(values);
+  }, [isKanji, batch, writePass1Scores]);
+
+  const mcqSummary = useMemo(() => {
+    if (!isKanji) return null;
+    if (!batch.length) return null;
+    const values = [];
     for (const b of batch) {
       const sc = warmupScores[b.id]?.score;
-      if (Number.isInteger(sc) && sc>=0 && sc<=5) dist[sc] += 1;
+      if (!Number.isFinite(Number(sc))) return null;
+      values.push(toNum(sc, 0));
     }
-    return dist;
-  }, [batch, warmupScores]);
+    return computeLevelDistribution(values);
+  }, [isKanji, batch, warmupScores]);
+
+  const exampleSummary = useMemo(() => {
+    if (!isKanji) return null;
+    if (!exampleParentIds.length) return null;
+    const values = [];
+    for (const id of exampleParentIds) {
+      if (exampleAverages[id] == null) return null;
+      values.push(toNum(exampleAverages[id], 0));
+    }
+    return computeLevelDistribution(values);
+  }, [isKanji, exampleParentIds, exampleAverages]);
+
+  const onKunSummary = useMemo(() => {
+    if (!isKanji) return null;
+    if (!batch.length) return null;
+    const values = [];
+    for (const b of batch) {
+      const sc = onKunScores[b.id]?.score;
+      if (!Number.isFinite(Number(sc))) return null;
+      values.push(toNum(sc, 0));
+    }
+    return computeLevelDistribution(values);
+  }, [isKanji, batch, onKunScores]);
+
+  const recallSummary = useMemo(() => {
+    if (!isKanji) return null;
+    if (!batch.length) return null;
+    const values = [];
+    for (const b of batch) {
+      const sc = recallScores[b.id]?.score;
+      if (!Number.isFinite(Number(sc))) return null;
+      values.push(toNum(sc, 0));
+    }
+    return computeLevelDistribution(values);
+  }, [isKanji, batch, recallScores]);
+
+  const contextSummary = useMemo(() => {
+    if (!isKanji) return null;
+    if (!contextParentIds.length) return null;
+    const values = [];
+    for (const id of contextParentIds) {
+      if (contextAverages[id] == null) return null;
+      values.push(toNum(contextAverages[id], 0));
+    }
+    return computeLevelDistribution(values);
+  }, [isKanji, contextParentIds, contextAverages]);
 
   // save session + bump offset
   useEffect(() => {
@@ -877,6 +978,57 @@ export default function FlashcardsPage() {
   })();
   const progressPct = totalSteps ? Math.round((completedSteps / totalSteps) * 100) : 0;
 
+  const PHASE_ORDER = useMemo(() => ({
+    write1: 0,
+    warmup: 1,
+    warmup_summary: 2,
+    example: 3,
+    on_kun: 4,
+    recall: 5,
+    context: 6,
+    done: 7,
+  }), []);
+  const phaseOrderIndex = PHASE_ORDER[phase] ?? 0;
+
+  const summaryCards = [];
+  const pushSummaryCard = (key, title, summary, note) => {
+    if (!summary || summary.total <= 0) return;
+    summaryCards.push(
+        <Card key={key} sx={{ borderRadius:3, border:'1px solid #ffe0e0', background:'#fff', mt:2 }}>
+          <CardContent>
+            <Typography variant="subtitle1" sx={{ fontWeight:600, mb:1 }}>{title}</Typography>
+            <Typography sx={{ opacity:0.7, mb:1 }}>{note || `Tổng thẻ: ${summary.total}`}</Typography>
+            <Stack direction="row" spacing={1} flexWrap="wrap">
+              {summary.dist.map((count, level) => (
+                  <Chip key={level} label={`Mức ${level}: ${count}`} />
+              ))}
+            </Stack>
+          </CardContent>
+        </Card>
+    );
+  };
+
+  if (isKanji) {
+    if (phaseOrderIndex > PHASE_ORDER.write1) {
+      pushSummaryCard('summary-write1', 'Tổng kết · Viết nét lần 1', write1Summary);
+    }
+    if (phaseOrderIndex > PHASE_ORDER.warmup) {
+      pushSummaryCard('summary-mcq', 'Tổng kết · MCQ', mcqSummary);
+    }
+    if (phaseOrderIndex > PHASE_ORDER.example) {
+      pushSummaryCard('summary-example', 'Tổng kết · MCQ Ví dụ', exampleSummary, exampleSummary ? `Số thẻ có ví dụ: ${exampleSummary.total}` : null);
+    }
+    if (phaseOrderIndex > PHASE_ORDER.on_kun) {
+      pushSummaryCard('summary-onkun', 'Tổng kết · MCQ Âm đọc On/Kun', onKunSummary);
+    }
+    if (phaseOrderIndex > PHASE_ORDER.recall) {
+      pushSummaryCard('summary-recall', 'Tổng kết · Viết nét lần 2', recallSummary);
+    }
+    if (phaseOrderIndex > PHASE_ORDER.context) {
+      pushSummaryCard('summary-context', 'Tổng kết · MCQ Ngữ cảnh', contextSummary, contextSummary ? `Số thẻ có ngữ cảnh: ${contextSummary.total}` : null);
+    }
+  }
+
   // render
   return (
       <Container>
@@ -926,6 +1078,8 @@ export default function FlashcardsPage() {
                 {isKanji && phase==='context' && <>Phần 6 – Ngữ cảnh {contextDeck.length ? `${contextIndex+1}/${contextDeck.length}` : ''}</>}
               </Typography>
 
+              {summaryCards.map((node) => node)}
+
               {phase==='write1' && card && (
                   <Card sx={{ borderRadius:3, border:'1px solid #ffe0e0', background:'#fff' }}>
                     <CardContent>
@@ -937,7 +1091,14 @@ export default function FlashcardsPage() {
                         {showWrite1Answer && (
                             <Stack spacing={0.5}>
                               <Typography>Đáp án đúng: <b>{card.front}</b></Typography>
-                              {card.back && <Typography>Nghĩa: <b>{card.back}</b></Typography>}
+                              {card.back && (
+                                  <Typography>
+                                    Nghĩa: <b>{card.back}</b>{cardSpellLabel ? ` - ${cardSpellLabel}` : ''}
+                                  </Typography>
+                              )}
+                              {!card.back && cardSpellLabel && (
+                                  <Typography>On/Kun: <b>{cardSpellLabel}</b></Typography>
+                              )}
                             </Stack>
                         )}
                       </Stack>
@@ -948,13 +1109,14 @@ export default function FlashcardsPage() {
                           <>
                             <Divider sx={{ my:2 }} />
                             <Typography>Chọn điểm tự chấm (0–5):</Typography>
-                            <Stack className="responsive-stack" direction="row" spacing={1} sx={{ mt:1 }} flexWrap="wrap">
+                            <Stack className="responsive-stack" direction="row" spacing={1}
+                                   sx={{ mt:1, flexWrap:'nowrap', overflowX:'auto' }}>
                               {[0,1,2,3,4,5].map(v => (
                                   <Button
                                       key={v}
                                       variant={(writePass1Scores[card.id] ?? null) === v ? 'contained' : 'outlined'}
                                       onClick={() => handleWrite1Score(v)}
-                                      fullWidth
+                                      sx={{ flex:1, minWidth:0 }}
                                   >
                                     {v}
                                   </Button>
@@ -978,14 +1140,14 @@ export default function FlashcardsPage() {
 
               {phase==='warmup' && card && (
                   <>
-                    <WarmupMCQ
-                        key={card.id}
-                        card={card}
-                        deck={batch}
-                        isKanji={isKanji}
-                        examples={currentExamples}
-                        onCheck={onWarmupChecked}
-                    />
+                <WarmupMCQ
+                    key={card.id}
+                    card={card}
+                    deck={batch}
+                    isKanji={isKanji}
+                    onCheck={onWarmupChecked}
+                    spellLabel={cardSpellLabel}
+                />
                     <Stack className="responsive-stack" direction="row" spacing={1} sx={{ mt:2 }}>
                       <Button variant="outlined" onClick={nextWarmup} fullWidth>Tiếp</Button>
                     </Stack>
@@ -998,9 +1160,16 @@ export default function FlashcardsPage() {
                       <Typography variant="h6" sx={{ mb:1, color:'#a33b3b' }}>
                         {isKanji ? 'Tổng quan phần 2 – MCQ (20%)' : 'Tổng quan Warm-up (10 thẻ)'}
                       </Typography>
-                      <Stack direction="row" spacing={1} flexWrap="wrap">
-                        {[0,1,2,3,4,5].map(v => <Chip key={v} label={`Mức ${v}: ${warmupDist[v]}`} />)}
-                      </Stack>
+                      {mcqSummary && (
+                          <>
+                            <Typography sx={{ opacity:0.7, mb:1 }}>Tổng thẻ: {mcqSummary.total}</Typography>
+                            <Stack direction="row" spacing={1} flexWrap="wrap">
+                              {mcqSummary.dist.map((count, level) => (
+                                  <Chip key={level} label={`Mức ${level}: ${count}`} />
+                              ))}
+                            </Stack>
+                          </>
+                      )}
                       <Divider sx={{ my:2 }} />
                       <Button
                           variant="contained"
@@ -1083,28 +1252,27 @@ export default function FlashcardsPage() {
                           <>
                             <Divider sx={{ my:2 }} />
                             {isKanji ? (
-                                (recallScores[card.id].mode === 'handwrite')
-                                    ? (<Typography>Đáp án đúng (KANJI): <b>{card.front}</b></Typography>)
-                                    : (
-                                        <Typography>
-                                          Kết quả: {recallScores[card.id].correct ? 'Đúng' : <>Sai · Đúng là: <b>{card.front}</b></>}
-                                        </Typography>
-                                    )
+                                <>
+                                  {recallScores[card.id].mode === 'handwrite'
+                                      ? (<Typography>Đáp án đúng (KANJI): <b>{card.front}</b></Typography>)
+                                      : (
+                                          <Typography>
+                                            Kết quả: {recallScores[card.id].correct ? 'Đúng' : <>Sai · Đúng là: <b>{card.front}</b></>}
+                                          </Typography>
+                                      )}
+                                  {card.back && (
+                                      <Typography>
+                                        Nghĩa: <b>{card.back}</b>{cardSpellLabel ? ` - ${cardSpellLabel}` : ''}
+                                      </Typography>
+                                  )}
+                                  {!card.back && cardSpellLabel && (
+                                      <Typography>On/Kun: <b>{cardSpellLabel}</b></Typography>
+                                  )}
+                                </>
                             ) : (
                                 <Typography>
                                   Kết quả: {recallScores[card.id].correct ? 'Đúng' : <>Sai · Đúng là: <b>{card.back}</b></>}
                                 </Typography>
-                            )}
-
-                            {currentExamples.length > 0 && (
-                                <Stack spacing={0.5} sx={{ mt:1 }}>
-                                  <Typography variant="subtitle2">Ví dụ liên quan:</Typography>
-                                  {currentExamples.map((ex, idx) => (
-                                      <Typography key={idx} sx={{ fontSize: 14 }}>
-                                        <b>{ex.front}</b>{ex.back ? ` · ${ex.back}` : ''}
-                                      </Typography>
-                                  ))}
-                                </Stack>
                             )}
 
                             <Typography sx={{ mt:1 }}>Chọn mức độ nhớ (0–5):</Typography>
@@ -1125,12 +1293,6 @@ export default function FlashcardsPage() {
                       <Typography variant="h6" sx={{ mb:1, color:'#a33b3b' }}>
                         Phần 6 – MCQ ngữ cảnh
                       </Typography>
-                      {contextMcq.parentFront && (
-                          <Typography sx={{ mb:1 }}>
-                            Thuộc Kanji: <b>{contextMcq.parentFront}</b>
-                            {contextMcq.parentBack ? ` · ${contextMcq.parentBack}` : ''}
-                          </Typography>
-                      )}
                       <Typography sx={{ mb:2, fontStyle:'italic' }}>
                         {contextMcq.question}
                       </Typography>
@@ -1175,11 +1337,6 @@ export default function FlashcardsPage() {
                       <Typography variant="h6" sx={{ mb:1, color:'#a33b3b' }}>
                         Phần 3 – Ví dụ {exampleIndex + 1}/{exampleDeck.length}
                       </Typography>
-                      {exampleCard.parentFront && (
-                          <Typography sx={{ mb:1 }}>
-                            Thuộc Kanji: <b>{exampleCard.parentFront}</b>
-                          </Typography>
-                      )}
                       <ExampleMCQ
                           key={exampleKey(exampleCard) || `example-${exampleIndex}`}
                           example={exampleCard}
