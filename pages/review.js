@@ -27,6 +27,15 @@ const msToSec = (ms) => Math.max(0, Math.round(ms/100)/10);
 const DAY_MS = 86400000;
 const DUE_SOON_DAYS = 3;
 const RECALL_FIRST_TYPES = new Set(['vocab', 'vocal', 'grammar', 'particle']);
+const STAGE_ORDER = Object.freeze({
+  write1: 0,
+  mcq: 1,
+  mcqExample: 2,
+  mcqOnKun: 3,
+  recall: 4,
+  mcqContext: 5,
+  done: 6,
+});
 
 function shuffle(arr) {
   const copy = Array.isArray(arr) ? [...arr] : [];
@@ -95,6 +104,15 @@ function makeMcqOptions(answer, otherOptions = []) {
   });
   if (uniq.length < 2) uniq.push('—');
   return uniq.sort(() => Math.random() - 0.5);
+}
+
+function computeLevelDistribution(values = []) {
+  const dist = [0, 0, 0, 0, 0, 0];
+  values.forEach((raw) => {
+    const level = Math.max(0, Math.min(5, Math.round(toNum(raw, 0))));
+    dist[level] += 1;
+  });
+  return { dist, total: values.length };
 }
 
 // ------------------- Save API (sửa: trả JSON, log, lỗi rõ) -------------------
@@ -452,7 +470,7 @@ export default function ReviewPage(){
           : Math.min(idx + 1, Math.max(total, 1));
 
   const card = deck[idx] || null;
-  const currentExamples = React.useMemo(() => safeArray(exampleLookup.byCardId?.[String(card?.id)]), [exampleLookup, card]);
+  const cardSpellLabel = normalizeSpellLabel(card?.spell ?? '');
   const exampleCard = exampleDeck[exampleIdx] || null;
   const contextCard = contextDeck[contextIdx] || null;
   const examplePool = React.useMemo(() => safeArray(exampleLookup.pool), [exampleLookup]);
@@ -483,6 +501,22 @@ export default function ReviewPage(){
     setExampleIdx(0);
     setExampleAnswers({});
   }, [deck, exampleLookup, enableExamples]);
+
+  const exampleParentIds = React.useMemo(() => {
+    const set = new Set();
+    exampleDeck.forEach((entry) => {
+      if (entry?.parentId != null) set.add(entry.parentId);
+    });
+    return Array.from(set);
+  }, [exampleDeck]);
+
+  const contextParentIds = React.useMemo(() => {
+    const set = new Set();
+    contextDeck.forEach((entry) => {
+      if (entry?.parentId != null) set.add(entry.parentId);
+    });
+    return Array.from(set);
+  }, [contextDeck]);
 
   // ======= Helper: chọn mặt hỏi/đáp theo orientation & loại =======
   // Trả về {q: question, a: answer} cho MCQ
@@ -876,6 +910,58 @@ export default function ReviewPage(){
     return map;
   }, [deck, contextScoresByCard]);
 
+  const write1Summary = React.useMemo(() => {
+    if (type !== 'kanji') return null;
+    if (!deck.length) return null;
+    const values = [];
+    for (const c of deck) {
+      const raw = writeScoresPass1[c.id];
+      if (raw == null) return null;
+      values.push(toNum(raw, 0));
+    }
+    return computeLevelDistribution(values);
+  }, [type, deck, writeScoresPass1]);
+
+  const mcqSummary = React.useMemo(() => {
+    if (type !== 'kanji') return null;
+    if (!deck.length) return null;
+    const values = deck.map((c) => toNum(mcqScores[c.id]?.score, 0));
+    return computeLevelDistribution(values);
+  }, [type, deck, mcqScores]);
+
+  const exampleSummary = React.useMemo(() => {
+    if (type !== 'kanji') return null;
+    if (!exampleParentIds.length) return null;
+    const values = exampleParentIds.map((id) => toNum(exampleAverages[id], 0));
+    return computeLevelDistribution(values);
+  }, [type, exampleParentIds, exampleAverages]);
+
+  const onKunSummary = React.useMemo(() => {
+    if (type !== 'kanji') return null;
+    if (!deck.length) return null;
+    const values = deck.map((c) => toNum(onKunScores[c.id]?.score, 0));
+    return computeLevelDistribution(values);
+  }, [type, deck, onKunScores]);
+
+  const recallSummary = React.useMemo(() => {
+    if (type !== 'kanji') return null;
+    if (!deck.length) return null;
+    const values = deck.map((c) => {
+      if (Object.prototype.hasOwnProperty.call(proposed, c.id)) {
+        return toNum(proposed[c.id], 0);
+      }
+      return 0;
+    });
+    return computeLevelDistribution(values);
+  }, [type, deck, proposed]);
+
+  const contextSummary = React.useMemo(() => {
+    if (type !== 'kanji') return null;
+    if (!contextParentIds.length) return null;
+    const values = contextParentIds.map((id) => toNum(contextAverages[id], 0));
+    return computeLevelDistribution(values);
+  }, [type, contextParentIds, contextAverages]);
+
   // --- FINAL LEVELS (UI & summary) ---
   const finalLevels = React.useMemo(() => {
     const out = {};
@@ -927,6 +1013,60 @@ export default function ReviewPage(){
   const detailLabel = type === 'kanji'
       ? 'Chi tiết (Kanji: Base · Viết1 · MCQ · Ví dụ · On/Kun · Viết 2 · Ngữ cảnh'
       : `Chi tiết (mỗi thẻ: Base · ${recallFirst ? 'Recall · MCQ' : 'MCQ · Recall'}${enableExamples ? ' · Ví dụ' : ''}`;
+  const stageOrderIndex = STAGE_ORDER[stage] ?? 0;
+  const summaryNodes = [];
+
+  const pushSummary = (key, title, summary, note) => {
+    if (!summary || summary.total <= 0) return;
+    summaryNodes.push(
+        <Card key={key} sx={{ borderRadius: 3, mt: 2 }}>
+          <CardContent>
+            <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1 }}>
+              {title}
+            </Typography>
+            <Typography sx={{ opacity: 0.7, mb: 1 }}>
+              {note || `Tổng thẻ: ${summary.total}`}
+            </Typography>
+            <Stack direction="row" spacing={1} flexWrap="wrap">
+              {summary.dist.map((count, level) => (
+                  <Chip key={level} label={`Mức ${level}: ${count}`} />
+              ))}
+            </Stack>
+          </CardContent>
+        </Card>
+    );
+  };
+
+  if (type === 'kanji') {
+    if (stageOrderIndex > STAGE_ORDER.write1) {
+      pushSummary('summary-write1', 'Tổng kết · Viết nét lần 1', write1Summary);
+    }
+    if (stageOrderIndex > STAGE_ORDER.mcq) {
+      pushSummary('summary-mcq', 'Tổng kết · MCQ', mcqSummary);
+    }
+    if (stageOrderIndex > STAGE_ORDER.mcqExample) {
+      pushSummary(
+          'summary-example',
+          'Tổng kết · MCQ Ví dụ',
+          exampleSummary,
+          exampleSummary ? `Số thẻ có ví dụ: ${exampleSummary.total}` : null,
+      );
+    }
+    if (stageOrderIndex > STAGE_ORDER.mcqOnKun) {
+      pushSummary('summary-onkun', 'Tổng kết · MCQ Âm đọc On/Kun', onKunSummary);
+    }
+    if (stageOrderIndex > STAGE_ORDER.recall) {
+      pushSummary('summary-recall', 'Tổng kết · Viết nét lần 2', recallSummary);
+    }
+    if (stageOrderIndex > STAGE_ORDER.mcqContext) {
+      pushSummary(
+          'summary-context',
+          'Tổng kết · MCQ Ngữ cảnh',
+          contextSummary,
+          contextSummary ? `Số thẻ có ngữ cảnh: ${contextSummary.total}` : null,
+      );
+    }
+  }
 
   // ===== Render =====
   return (
@@ -946,6 +1086,8 @@ export default function ReviewPage(){
                             sx={{ mb:2, height:8, borderRadius:10 }}
             />
         )}
+
+        {summaryNodes.map((node) => node)}
 
         {/* Empty deck (khi số thẻ < n hoặc không có) */}
         {stage==='done' && total===0 && (
@@ -977,7 +1119,14 @@ export default function ReviewPage(){
                   {showAns && (
                       <Stack spacing={0.5}>
                         <Typography>Đáp án đúng: <b>{card.front}</b></Typography>
-                        {card.back && <Typography>Nghĩa: <b>{card.back}</b></Typography>}
+                        {card.back && (
+                            <Typography>
+                              Nghĩa: <b>{card.back}</b>{cardSpellLabel ? ` - ${cardSpellLabel}` : ''}
+                            </Typography>
+                        )}
+                        {!card.back && cardSpellLabel && (
+                            <Typography>On/Kun: <b>{cardSpellLabel}</b></Typography>
+                        )}
                       </Stack>
                   )}
                 </Stack>
@@ -990,13 +1139,13 @@ export default function ReviewPage(){
                     <>
                       <Divider sx={{ my:2 }} />
                       <Typography>Chọn điểm tự chấm (0–5):</Typography>
-                      <Stack className="responsive-stack" direction="row" spacing={1} sx={{ mt:1 }} flexWrap="wrap">
+                      <Stack direction="row" spacing={1} sx={{ mt:1, flexWrap:'nowrap', overflowX:'auto' }}>
                         {[0,1,2,3,4,5].map(v=>(
                             <Button
                                 key={v}
                                 variant={(writeScoresPass1[card.id] ?? null)===v ? 'contained':'outlined'}
                                 onClick={()=> handleWrite1Score(v)}
-                                fullWidth
+                                sx={{ flex:1, minWidth:0 }}
                             >
                               {v}
                             </Button>
@@ -1046,22 +1195,15 @@ export default function ReviewPage(){
                       </>
                   )}
                   {showAns && <Typography sx={{ ml:1 }}>Đáp án: <b>{stage==='mcq' ? mcq.correct : onKunMcq.correct}</b></Typography>}
+                  {showAns && stage==='mcq' && cardSpellLabel && (
+                      <Typography sx={{ ml:1 }}>On/Kun: <b>{cardSpellLabel}</b></Typography>
+                  )}
                   {showAns && stage==='mcq' && mcqScores[card.id] &&
                       <Chip sx={{ ml:1 }} size="small" color="info"
                             label={`MCQ: ${mcqScores[card.id].score}${mcqScores[card.id].timeSec!=null?` (${mcqScores[card.id].timeSec.toFixed(1)}s)`:''}`} />}
                   {showAns && stage==='mcqOnKun' && onKunScores[card.id] &&
                       <Chip sx={{ ml:1 }} size="small" color="info"
                             label={`On/Kun: ${onKunScores[card.id].score}${onKunScores[card.id].timeSec!=null?` (${onKunScores[card.id].timeSec.toFixed(1)}s)`:''}`} />}
-                  {showAns && currentExamples.length>0 && (
-                      <Stack spacing={0.5} sx={{ ml:1, mt:1 }}>
-                        <Typography variant="subtitle2">Ví dụ liên quan:</Typography>
-                        {currentExamples.map((ex, i) => (
-                            <Typography key={i} sx={{ fontSize: 14 }}>
-                              <b>{ex.front}</b>{ex.back ? ` · ${ex.back}` : ''}
-                            </Typography>
-                        ))}
-                      </Stack>
-                  )}
                 </Stack>
               </CardContent>
             </Card>
@@ -1087,7 +1229,14 @@ export default function ReviewPage(){
                 {(modeInput==='handwrite' || type==='kanji') ? (
                     <Stack spacing={1} sx={{ mt:1 }}>
                       <HandwritingCanvas width={260} height={180} />
-                      {showAns && <Typography>Đáp án đúng: <b>{qaForRecall(card).a}</b></Typography>}
+                      {showAns && (
+                          <Stack spacing={0.5}>
+                            <Typography>Đáp án đúng: <b>{qaForRecall(card).a}</b></Typography>
+                            {type==='kanji' && cardSpellLabel && (
+                                <Typography>On/Kun: <b>{cardSpellLabel}</b></Typography>
+                            )}
+                          </Stack>
+                      )}
                     </Stack>
                 ) : (
                     <Stack spacing={1} sx={{ mt:1 }}>
@@ -1099,7 +1248,12 @@ export default function ReviewPage(){
                           disabled={type==='kanji' || (!!parseAuto(auto) && !disableAuto && showAns)}
                       />
                       {showAns && (
-                          <Typography>Đáp án đúng: <b>{qaForRecall(card).a}</b></Typography>
+                          <Stack spacing={0.5}>
+                            <Typography>Đáp án đúng: <b>{qaForRecall(card).a}</b></Typography>
+                            {type==='kanji' && cardSpellLabel && (
+                                <Typography>On/Kun: <b>{cardSpellLabel}</b></Typography>
+                            )}
+                          </Stack>
                       )}
                     </Stack>
                 )}
@@ -1112,16 +1266,6 @@ export default function ReviewPage(){
                     <>
                       <Divider sx={{ my:2 }} />
                       <Typography>Chọn mức nhớ (Recall) cho thẻ này:</Typography>
-                      {currentExamples.length>0 && (
-                          <Stack spacing={0.5} sx={{ mt:1 }}>
-                            <Typography variant="subtitle2">Ví dụ liên quan:</Typography>
-                            {currentExamples.map((ex, i) => (
-                                <Typography key={i} sx={{ fontSize: 14 }}>
-                                  <b>{ex.front}</b>{ex.back ? ` · ${ex.back}` : ''}
-                                </Typography>
-                            ))}
-                          </Stack>
-                      )}
                       <Stack className="responsive-stack" direction="row" spacing={1} sx={{ mt:1 }} flexWrap="wrap">
                         {[0,1,2,3,4,5].map(v=>(
                             <Button
@@ -1213,11 +1357,6 @@ export default function ReviewPage(){
                 <Typography variant="h6" sx={{ mb:1 }}>
                   Ví dụ {exampleIdx + 1}/{exampleDeck.length}
                 </Typography>
-                {exampleCard.parentFront && (
-                    <Typography sx={{ mb:1 }}>
-                      Thuộc Kanji: <b>{exampleCard.parentFront}</b>
-                    </Typography>
-                )}
                 <ExampleMCQ
                     key={exampleKey(exampleCard) || `example-${exampleIdx}`}
                     example={exampleCard}
