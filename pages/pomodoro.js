@@ -27,7 +27,7 @@ export default function PomodoroPage() {
               ) : (
                 <Button variant="outlined" onClick={pause} fullWidth>Pause</Button>
               )}
-              <Button variant="contained" color="warning" onClick={reset} fullWidth>Reset 2h</Button>
+              <Button variant="contained" color="warning" onClick={reset} fullWidth>Reset</Button>
             </Stack>
           </Stack>
 
