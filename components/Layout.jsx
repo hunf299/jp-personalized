@@ -168,7 +168,7 @@ export default function Layout({ children }) {
                                     flexShrink: { xs: 1, md: 0 },
                                 }}
                             >
-                                일본어를Learnします
+                                web này để ôn jan
                             </Typography>
                             {/* Desktop nav */}
                             {isMdUp && <NavButtons />}
